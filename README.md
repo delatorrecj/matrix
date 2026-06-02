@@ -70,4 +70,18 @@ data/
 
 ---
 
+## Team — ATLAN
+
+| Member | Role |
+|---|---|
+| **Carlos Jerico Dela Torre** | AI & Software Development · Product & Business Architecture · **Team Lead** |
+| **Yushin Bjorn Matsuda** | AI & Software Development · UI/UX Design |
+| **Maria Espina** | QA · UI/UX Design |
+| **Rica Mae Mago** | QA · Research & Marketing |
+| **Russell Jay Fajardo** | QA · Research & Marketing |
+
+Ownership, DRIs, and the RACI are in [docs/prd-matrix.md §10](docs/prd-matrix.md).
+
+---
+
 *Team ATLAN — Polytechnic University of the Philippines · ASEAN AI Hackathon 2026 · Smart Cities · Pilot: Iloilo City*

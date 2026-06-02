@@ -21,6 +21,7 @@
 - **Confidence is first-class (`PRD-F5`).** Every output carries High/Medium/Low + a range; anything below the floor renders "directional only," never as precision.
 - **Deterministic where it counts.** SUMO + Python do the physics and scoring; Gemini orchestrates and narrates, constrained by the bias auditor (`PRD-F6`). LLMs decide and describe; they do not invent the numbers.
 - **Pre-warm + delta to hit 90 s.** Cached persona pool + nightly baseline + parallel modules + streaming/progressive UI (MATRIX.md §5.2).
+- **Glass box, not black box.** Every output traces to an equation + named data + a computed confidence; the LLM narrates and cites but **never originates a number**. Canonical ledger: [methods-matrix.md](methods-matrix.md) (`PRD-F14`).
 
 **Key trade-offs (explicit V1 debt):**
 - 90-second budget holds for **single-user**; multi-user needs a queue (deferred — acceptable for hackathon).
@@ -114,6 +115,10 @@ graph TD
 | `confidence` | TEXT | No | — | — | CHECK in ('H','M','L') |
 | `range_low` / `range_high` | NUMERIC | Yes | — | — | honest bounds, not point estimates |
 | `directional_only` | BOOL | No | false | — | true when below confidence floor |
+| `equation_id` | TEXT | No | — | — | → methods-matrix equation (e.g. `ECO-1`) — glass-box |
+| `input_dataset_ids` | TEXT[] | No | — | — | → INVENTORY IDs (data lineage) |
+| `assumptions` | JSONB | Yes | — | — | assumptions used in the calc |
+| `references` | TEXT[] | Yes | — | — | citations backing the number |
 
 **Table: `bias_audit_log`** *(public-readable — `PRD-F6`)*
 
@@ -124,6 +129,17 @@ graph TD
 | `mode_share` / `ground_truth` | JSONB | No | — | — | generated vs Iloilo anchor |
 | `max_delta` | NUMERIC | No | — | — | ±3% threshold |
 | `reweighted` | BOOL | No | — | — | did it trigger reweighting |
+
+**Table: `run_trace`** *(decision/AI trace — glass-box `PRD-F14`; backs [methods-matrix.md](methods-matrix.md) §4)*
+
+| Column | Type | Null? | Key | Constraint |
+|--------|------|-------|-----|------------|
+| `id` | UUID | No | PK | — |
+| `run_id` | UUID | No | FK → `simulation_runs.id` | ON DELETE CASCADE |
+| `step` | TEXT | No | — | parse / retrieve / plan / synthesize |
+| `prompt` | JSONB | No | — | the prompt + params sent to Gemini |
+| `retrieved` | JSONB | Yes | — | GraphRAG chunks + citations used |
+| `seed` | BIGINT | Yes | — | RNG seed (reproducibility) |
 
 **Table: `datasets`** *(provenance — mirrors [../data/INVENTORY.md](../data/INVENTORY.md))*
 

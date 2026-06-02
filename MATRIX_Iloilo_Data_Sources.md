@@ -8,6 +8,8 @@
 
 ---
 
+> **Role of this file (source-of-truth map — [docs/index.md §0](docs/index.md)):** this is the **sourcing rationale** — *why* each source, tiers, and the OSM bounding boxes. **Live acquisition status is canonical in [data/INVENTORY.md](data/INVENTORY.md)** (manifest) and **[data/READINESS.md](data/READINESS.md)** (per-dimension confidence). Don't track status here — link to those.
+
 ## Why Iloilo City for MATRIX
 
 1. **ASEAN Clean Tourist City Award 2026** — direct narrative alignment with AAIH 2026 jury expectations.

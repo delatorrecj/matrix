@@ -11,6 +11,12 @@
 **Hackathon:** ASEAN AI Hackathon 2026 (AAIH 2026)
 **Pilot City:** Iloilo City, Western Visayas, Philippines
 **Team Leader:** Carlos Jerico Dela Torre — carlosjericodelatorre@gmail.com — +63 949 636 9705
+**Team ATLAN:**
+- **Carlos Jerico Dela Torre** — AI & Software Development · Product & Business Architecture · Team Lead
+- **Yushin Bjorn Matsuda** — AI & Software Development · UI/UX Design
+- **Maria Espina** — QA · UI/UX Design
+- **Rica Mae Mago** — QA · Research & Marketing
+- **Russell Jay Fajardo** — QA · Research & Marketing
 
 ---
 
