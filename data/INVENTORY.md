@@ -6,7 +6,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 **Confidence:** H/M/L (propagates to the product's per-dimension confidence layer)
 **Dim:** Behav · Soc · Econ · Eco · Societal · KB (knowledge base for GraphRAG) · Base (engine)
 **Bbox (Iloilo City Proper):** `10.65,122.50,10.78,122.61` · **Metro Iloilo–Guimaras:** `10.55,122.40,10.85,122.80`
-**Last refresh:** 2026-06-02 (OSM, CCHAIN + Iloilo subset, Overture, literature, LPTRP)
+**Last refresh:** 2026-06-02 (OSM, CCHAIN + Iloilo subset, Overture, literature, LPTRP, economic: PSA OpenStat poverty/trade/tourism/GVA, World Bank indicators, HDX poverty XLSX)
 
 ---
 
@@ -36,10 +36,16 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 ### Economic (currently weakest dimension — biggest uplift)
 | ID | Dataset | Dim | Vintage | License | Access | Conf | Status |
 |---|---|---|---|---|---|---|---|
-| BIR-ZV | [BIR zonal values RDO 74 Iloilo](https://www.bir.gov.ph/zonal-values) (land-value baseline; 1,590 entries) | Econ | current | gov | PDF | M | ☐ |
-| ASPBI | [PSA establishments / ASPBI](https://psa.gov.ph/statistics/establishments) (business + jobs counts) | Econ | 2023 | open gov | direct | M | ☐ |
-| FIES | [PSA FIES](https://psa.gov.ph/statistics/income-expenditure/fies) income/expenditure | Econ | 2023 | open gov | direct | M | ☐ |
-| DOT-TOUR | [DOT tourism arrivals](http://tourism.gov.ph/tourism_dem_sup_pub.aspx) (ties to Clean Tourist City) | Econ | 2024 | open gov | direct | M | ☐ |
+| BIR-ZV | [BIR zonal values RDO 74 Iloilo](https://www.bir.gov.ph/zonal-values) (land-value baseline; 1,590 entries) | Econ | current | gov | PDF | M | ☐ (manual: bir.gov.ph/zonal-values → Region VI → RDO 74; bir-cdn.bir.gov.ph returns 403 to scripts; site is a JS SPA. Save PDF to `raw/economic/BIR_ZV_RDO74_IloiloCity.pdf`) |
+| ASPBI | [PSA establishments / ASPBI](https://psa.gov.ph/statistics/establishments) (business + jobs counts; full 2023 release) | Econ | 2023 | open gov | direct | M | ☐ (manual: psa.gov.ph returns 403 to scripts. Browser: psa.gov.ph/statistics/establishments → ASPBI 2023 → Region VI Excel. Save to `raw/economic/PSA_ASPBI2023_RegionVI.xlsx`. Partial proxy in hand: `psa_openstat_trade_establishments_2015.csv` — wholesale/retail sector only, 2015 vintage) |
+| PSA-PVRTY | [PSA OpenStat DB__3D](https://openstat.psa.gov.ph) — poverty threshold + incidence by region/province (incl. Region VI + Iloilo province) | Econ | 2006–2015 | open gov | PSA OpenStat PX-Web API | M | ✅ CSV 11 KB (`psa_openstat_poverty_threshold_by_region.csv`) |
+| PSA-TRADE | [PSA OpenStat DB__2D](https://openstat.psa.gov.ph) — wholesale & retail trade establishments (partial ASPBI proxy) | Econ | 2015 | open gov | PSA OpenStat PX-Web API | M | ✅ CSV 49 KB (`psa_openstat_trade_establishments_2015.csv`) |
+| FIES | [PSA FIES](https://psa.gov.ph/statistics/income-expenditure/fies) income/expenditure 2023 (full survey) | Econ | 2023 | open gov | direct | M | ☐ (manual: psa.gov.ph returns 403 to scripts; OpenStat has poverty thresholds to 2015 only — 2021/2023 FIES releases not in OpenStat. Browser: psa.gov.ph/statistics/income-expenditure/fies → 2023 FIES Summary → Region VI. Save to `raw/economic/PSA_FIES2023_RegionVI.xlsx`) |
+| DOT-TOUR | [DOT tourism arrivals](https://tourism.gov.ph/tourism-statistics) (visitor arrivals by region 2024) | Econ | 2024 | open gov | direct | M | ☐ (manual: tourism.gov.ph is a JS SPA; OpenStat DB__2I has national expenditure 2000–2024 only. Browser: tourism.gov.ph/tourism-statistics → Demand Statistics → Visitor Arrivals by Region 2024. Save to `raw/economic/DOT_VisitorArrivals_Region_2024.xlsx`. National totals in hand: `psa_openstat_tourism_expenditure_national.csv`) |
+| PSA-TOUR | [PSA OpenStat DB__2I](https://openstat.psa.gov.ph) — national inbound tourism expenditure 2000–2024 | Econ | 2000–2024 | open gov | PSA OpenStat PX-Web API | M | ✅ CSV 2.4 KB (`psa_openstat_tourism_expenditure_national.csv`) |
+| PSA-GVA | [PSA OpenStat DB__2B__NA](https://openstat.psa.gov.ph) — GVA in accommodation & food service 2000–2025 | Econ | 2000–2025 | open gov | PSA OpenStat PX-Web API | M | ✅ CSV 2.6 KB (`psa_openstat_gva_accommodation_food_service.csv`) |
+| WB-ECON | [World Bank Open Data API](https://api.worldbank.org/v2/country/PH/) — Philippines GDP/cap, GINI, poverty, unemployment, GNI, urban %, GDP growth (2017–2024) | Econ | 2017–2024 | CC BY 4.0 | REST API | M | ✅ 7 JSON files (1.6–2.1 KB each): `wb_ph_gdp_per_capita_usd.json`, `wb_ph_gini_index.json`, `wb_ph_poverty_headcount_215usd.json`, `wb_ph_unemployment_rate.json`, `wb_ph_gni_per_capita_atlas.json`, `wb_ph_urban_population_pct.json`, `wb_ph_gdp_growth_rate.json` |
+| HDX-PVRTY | [HDX Philippines poverty statistics](https://data.humdata.org/dataset/philippines-poverty-statistics) — annual per-capita poverty threshold by region XLSX (cross-reference to PSA-PVRTY) | Econ | 2006–2020 | open gov | HDX direct | M | ✅ XLSX 2.7 MB (`hdx_ph_poverty_threshold_by_region.xlsx`) |
 
 ### Ecological / Societal
 | ID | Dataset | Dim | Vintage | License | Access | Conf | Status |
