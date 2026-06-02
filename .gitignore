@@ -1,0 +1,18 @@
+# ── matrix repo root ──────────────────────────────────────────────────────
+# FMD/ is a SEPARATE, independently-versioned git repository vendored into this
+# folder (its own remote). It is NOT part of the matrix repo — never embed it as
+# a gitlink. Operate on it with:  git -C FMD ...
+/FMD/
+
+# Python tooling cruft (from data/fetch/*.py)
+__pycache__/
+*.pyc
+
+# Secrets — API keys (e.g. data/.env)
+.env
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Note: data/raw and data/interim are ignored by data/.gitignore (nested).

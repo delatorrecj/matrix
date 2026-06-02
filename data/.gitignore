@@ -1,0 +1,16 @@
+# Raw + intermediate data are large / third-party-licensed / regenerable.
+# They are NOT committed. Reproduce them with the fetch scripts:
+#   python fetch/fetch_open.py        (see README.md and INVENTORY.md)
+raw/
+interim/
+
+# Secrets — API keys for Tier B sources (TomTom, OpenWeather, Gemini, OpenAQ, ...)
+.env
+*.env
+!.env.example
+
+# tooling cruft
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

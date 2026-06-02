@@ -20,6 +20,29 @@
 
 ---
 
+## 2026-06 Update — Currency & Additions (live manifest: `data/INVENTORY.md`)
+
+This catalog's narrative still holds, but **acquisition has moved to a live, tracked manifest at [`data/INVENTORY.md`](data/INVENTORY.md)** with re-runnable scripts in `data/fetch/`. Key changes from a June 2026 open-data review:
+
+**Currency upgrades (prefer the newer vintage):**
+- **PSA 2020 Census → 2024 POPCEN-CBMS** (enumerated Dec 2024, official 2025; all 180 Iloilo barangays). Adds household-profile indicators (water, electricity, internet, sanitation, food insecurity, disaster-prep) + geotagging. Keep 2020 only for time-trend. *(PSA blocks scripted downloads — fetch via browser.)*
+- **Microsoft Building Footprints → Overture Maps (2026-05)** — buildings + places (POIs) + transportation; monthly.
+- **ESA WorldCover 2021 → + Google Dynamic World** (near-real-time) for current land cover.
+- **CLUP is 2021–2029** (not 2023–2032); pair with the **CDP 2023–2028**.
+- **Transit:** the current **Enhanced LPTRP (LTFRB MC 2023-036)** — 25 routes, ~600 modern jeepneys — is published street-by-street; reconstruct from public guides + OSM (no FOI needed for the build).
+
+**Major addition — Project CCHAIN (HDX, open):** 20 years (2003–2022) of **barangay-level** data for Iloilo across 30 tables — climate, **air quality**, ESA WorldCover, NOAH hazards, WorldPop population, Google/Microsoft buildings, **Meta Relative Wealth Index**, nighttime lights, **health-facility accessibility isochrones**, OSM POIs. One download covering large parts of the Social, Economic, and Ecological dimensions.
+
+**Other additions by dimension (all open / contact-free):**
+- *Engine:* Copernicus GLO-30 DEM; **PhilLiDAR/LiPAD** Iloilo 10 m flood maps + DTM; HazardHunterPH.
+- *Economic (was weakest):* **BIR zonal values** (RDO 74); PSA ASPBI establishments; FIES income; DOT tourism arrivals.
+- *Social / Societal:* **DOH National Health Facility Registry**; DepEd school masterlist; GHSL/WorldPop; **NHCP** heritage sites.
+- *Ecological:* **OpenAQ + EMB** live air sensors; Sentinel-5P NO₂; Landsat 8/9 LST (urban heat); **Copernicus Sentinel-1 Global Flood Monitoring** (2024 Iloilo flood extent, for validation).
+
+**Outreach is last-resort only.** Four send-ready drafts in [`data/outreach/`](data/outreach/) (LTFRB VI, PSA CBMS, PhilLiDAR 1 m DTM, Clean Air Asia) — each a *fidelity upgrade* with an open substitute already in hand; **none blocks the build.**
+
+---
+
 ## Tier 1 — Core Geospatial and Network Data (Day 1 download)
 
 ### 1.1 OpenStreetMap Iloilo City Extract
@@ -83,7 +106,7 @@
 
 ---
 
-### 2.2 Iloilo City Comprehensive Land Use Plan (CLUP) 2023–2032
+### 2.2 Iloilo City Comprehensive Land Use Plan (CLUP) 2021–2029
 
 **Why:** Zoning, infrastructure, transport vision documented by the city itself. Use for land-use overlay and TOD scoring inputs.
 
