@@ -15,7 +15,8 @@ This is the **planning and documentation workspace for MATRIX** (Multi-Agent Twi
 - [MATRIX_Iloilo_Data_Sources.md](MATRIX_Iloilo_Data_Sources.md) — tiered catalog of every Iloilo data source, with access method, license, confidence tier, and the **OSM bounding boxes** for the pilot area.
 - [`reference/PUP-ATLAN_TECHNICAL ROADMAP TEMPLATE _ AAIH 2026.md`](<reference/PUP-ATLAN_TECHNICAL ROADMAP TEMPLATE _ AAIH 2026.md>) — the **filled** AAIH roadmap deliverable (deadline May 17, 2026).
 - [`reference/TECHNICAL ROADMAP TEMPLATE _ AAIH 2026.md`](<reference/TECHNICAL ROADMAP TEMPLATE _ AAIH 2026.md>) — the blank AAIH template it was filled from.
-- [`docs/index.md`](docs/index.md) — the **FMD documentation suite** (PRD, SDD, methods/glass-box ledger, DSD, QAD, CLR) and its **§0 source-of-truth map**. For *what / how / test / comply* detail the `docs/` suite is canonical and de-duplicated; **MATRIX.md owns vision + business case (it serves the BRD role)**. Read §0 first to know which doc owns which fact.
+- [`docs/index.md`](docs/index.md) — the **FMD documentation suite** (PRD, SDD, DSD, Methods/glass-box ledger, QAD, SAD, BUILD, CLR, GTM, OPS, plus RFC-001 on the real-time pipeline) and its **§0 source-of-truth map**. For *what / how / test / comply* detail the `docs/` suite is canonical and de-duplicated; **MATRIX.md owns vision + business case (it serves the BRD role)**. Read §0 first to know which doc owns which fact.
+- [`data/READINESS.md`](data/READINESS.md) — per-dimension data confidence map (what's in hand vs. scripted vs. outreach-only). The bridge between INVENTORY and the spec: it declares the confidence floor each impact module must advertise.
 
 > **The filled roadmap predates the current vision.** It still describes the older "ATLAN" framing (transit-only digital twin, Gemini 1.5 Pro, reactive "behavioral nudges"). MATRIX.md **supersedes** it — see MATRIX.md Appendix A for the full list of pivots. When the two disagree, MATRIX.md wins. Do not reintroduce the older framing.
 
@@ -47,7 +48,7 @@ These were chosen deliberately with documented justification (MATRIX.md §6). Tr
 `FMD/` is a **distinct git repository vendored into this folder** (its own remote `github.com/delatorrecj/fmd.git`, its own history; it appears as *untracked* in the parent's `git status` and is **not** a submodule). It is the **Foundational Matrix Documents** system: a suite of documentation templates plus a trigger-phrase routing layer for generating a project's formal doc suite (BRD, PRD, DSD, SDD, RFC, QAD, SAD, BUILD, CLR, GTM, OPS, plus CR/PM/INDEX).
 
 - When the user asks for a formal document ("write a PRD", "architect the system / write an SDD", "compliance review", etc.), **follow [FMD/AGENTS.md](FMD/AGENTS.md)** (its canonical operating guide) and [FMD/CLAUDE.md](FMD/CLAUDE.md) (Claude-Code-specific notes). That guide owns the trigger→template mapping, project-scale rules, sequencing, and living-docs/traceability conventions — do not duplicate them here.
-- Generated documents for MATRIX go in a **`docs/`** folder at this repo root (e.g. `docs/prd-matrix.md`), per FMD's naming convention. `docs/` does not exist yet.
+- Generated documents for MATRIX live in the **`docs/`** folder at this repo root (e.g. `docs/prd-matrix.md`), per FMD's naming convention. The full suite (PRD · SDD · DSD · Methods · QAD · SAD · BUILD · CLR · GTM · OPS · RFC-001) was generated 2026-06-02 and all docs are currently in `Draft` status.
 - The `FMD/*_Template.md` files are **canonical sources** — never hand-edit them as part of MATRIX work, and never delete them (FMD's `exit fmd` cleanup only removes generated `docs/` output, never templates).
 - The editor rule files under `FMD/.cursor/` and `FMD/.windsurf/` are thin pointers to FMD/AGENTS.md and apply only when operating inside FMD.
 
@@ -63,4 +64,13 @@ Commands run from the root operate on the **matrix** repo (`github.com/delatorre
 
 ## Data acquisition (`data/`)
 
-Iloilo pilot data lives under `data/` — an **open-data-first, contact-free** workflow. Orient from [data/INVENTORY.md](data/INVENTORY.md), the live manifest (every dataset: link, license, vintage, confidence, status). Raw data is **gitignored** (large/third-party/regenerable) — reproduce it with the idempotent scripts in `data/fetch/`: `python data/fetch/fetch_open.py` (direct HTTP + OSM Overpass), then `fetch_geo.py` (Overture/rasters, needs `pip install overturemaps`) and `scrape_lptrp.py` (transit). Tier B API keys go in a gitignored `data/.env` (template `data/fetch/.env.example`). Tier C outreach drafts in `data/outreach/` are last-resort fidelity upgrades — each has an open substitute, so none blocks the build. **Prefer newest vintages** (e.g. 2024 POPCEN-CBMS, not 2020). [MATRIX_Iloilo_Data_Sources.md](MATRIX_Iloilo_Data_Sources.md) keeps the source rationale; INVENTORY tracks acquisition. The single richest source is **Project CCHAIN** (barangay-level Iloilo data across climate/air/wealth/health/buildings).
+Iloilo pilot data lives under `data/` — an **open-data-first, contact-free** workflow. Orient from [data/INVENTORY.md](data/INVENTORY.md) (what we have) and [data/READINESS.md](data/READINESS.md) (per-dimension confidence). Raw data is **gitignored** (large/third-party/regenerable) — reproduce it with the idempotent scripts in `data/fetch/`:
+
+```
+python data/fetch/fetch_open.py       # direct HTTP + OSM Overpass; stdlib only
+python data/fetch/fetch_economic.py   # PSA OpenStat + World Bank APIs; stdlib only
+python data/fetch/fetch_geo.py        # Overture/rasters; needs: pip install overturemaps
+python data/fetch/scrape_lptrp.py     # transit routes (LPTRP)
+```
+
+Tier B API keys go in a gitignored `data/.env` (template `data/fetch/.env.example`). **Four economic datasets require manual browser download** (PSA/BIR sites block scripts with 403): BIR zonal values RDO 74, PSA FIES 2023, PSA ASPBI 2023, DOT visitor arrivals 2024 — see INVENTORY.md for exact URLs and save targets under `data/raw/economic/`. Tier C outreach drafts in `data/outreach/` are last-resort fidelity upgrades — each has an open substitute, so none blocks the build. **Prefer newest vintages** (e.g. 2024 POPCEN-CBMS, not 2020). [MATRIX_Iloilo_Data_Sources.md](MATRIX_Iloilo_Data_Sources.md) keeps the source rationale; INVENTORY tracks acquisition. The single richest source is **Project CCHAIN** (barangay-level Iloilo data across climate/air/wealth/health/buildings).

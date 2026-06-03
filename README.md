@@ -84,4 +84,4 @@ Ownership, DRIs, and the RACI are in [docs/prd-matrix.md §10](docs/prd-matrix.m
 
 ---
 
-*Team ATLAN — Polytechnic University of the Philippines · ASEAN AI Hackathon 2026 · Smart Cities · Pilot: Iloilo City*
+*PUP-ATLAN · Polytechnic University of the Philippines · ASEAN AI Hackathon 2026 · Smart City*
