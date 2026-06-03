@@ -1,0 +1,48 @@
+# Local dev datastores for MATRIX (Gate 0). Postgres+PostGIS, Redis, ChromaDB.
+#   docker compose up -d     # start (first run pulls images)
+#   docker compose ps        # status / health
+#   docker compose down      # stop  (add -v to wipe volumes)
+# Connection strings match app/.env.example.
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: matrix-postgres
+    environment:
+      POSTGRES_USER: matrix
+      POSTGRES_PASSWORD: matrix
+      POSTGRES_DB: matrix
+    ports:
+      - "5432:5432"
+    volumes:
+      - matrix-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matrix -d matrix"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: matrix-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - matrix-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: matrix-chroma
+    ports:
+      - "8001:8000"   # host 8001 -> container 8000 (keeps 8000 free for the API)
+    volumes:
+      - matrix-chromadata:/data
+
+volumes:
+  matrix-pgdata:
+  matrix-redisdata:
+  matrix-chromadata:

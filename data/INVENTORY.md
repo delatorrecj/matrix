@@ -6,7 +6,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 **Confidence:** H/M/L (propagates to the product's per-dimension confidence layer)
 **Dim:** Behav · Soc · Econ · Eco · Societal · KB (knowledge base for GraphRAG) · Base (engine)
 **Bbox (Iloilo City Proper):** `10.65,122.50,10.78,122.61` · **Metro Iloilo–Guimaras:** `10.55,122.40,10.85,122.80`
-**Last refresh:** 2026-06-02 (OSM, CCHAIN + Iloilo subset, Overture, literature, LPTRP, economic: PSA OpenStat poverty/trade/tourism/GVA, World Bank indicators, HDX poverty XLSX)
+**Last refresh:** 2026-06-03 (OSM, CCHAIN + Iloilo subset, Overture, literature, LPTRP, economic: PSA OpenStat poverty/trade/tourism/GVA, World Bank indicators, HDX poverty XLSX, **BIR zonal values RDO 74 — DO17-2021 manual .xls**)
 
 ---
 
@@ -36,7 +36,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 ### Economic (currently weakest dimension — biggest uplift)
 | ID | Dataset | Dim | Vintage | License | Access | Conf | Status |
 |---|---|---|---|---|---|---|---|
-| BIR-ZV | [BIR zonal values RDO 74 Iloilo](https://www.bir.gov.ph/zonal-values) (land-value baseline; 1,590 entries) | Econ | current | gov | PDF | M | ☐ (manual: bir.gov.ph/zonal-values → Region VI → RDO 74; bir-cdn.bir.gov.ph returns 403 to scripts; site is a JS SPA. Save PDF to `raw/economic/BIR_ZV_RDO74_IloiloCity.pdf`) |
+| BIR-ZV | [BIR zonal values RDO 74 Iloilo](https://www.bir.gov.ph/zonal-values) — current **DO 17-2021** (4th rev., eff. 2021-09-09→present) | Econ | 2021 | gov | XLS (manual) | M | ✅ `raw/economic/BIR_ZV_RDO74_IloiloCity.xls` (2.5 MB, 10 sheets). **Sheet 9 (DO17-2021)** = current Iloilo City schedule (9,709 rows incl. legal preamble + classification legend RR/CR/RC/I…); Sheets 1–8 = historical revisions 1990–2012. Grabbed the **.xls** via the site's "View RDO excel" link — richer than the assumed PDF. **Phase-1 parse Sheet 9 → `processed/economic/bir_zonal_rdo74_2021.csv`** (skip preamble, extract location→classification→PHP/m²). Unblocks **ECON-1 L→M**. |
 | ASPBI | [PSA establishments / ASPBI](https://psa.gov.ph/statistics/establishments) (business + jobs counts; full 2023 release) | Econ | 2023 | open gov | direct | M | ☐ (manual: psa.gov.ph returns 403 to scripts. Browser: psa.gov.ph/statistics/establishments → ASPBI 2023 → Region VI Excel. Save to `raw/economic/PSA_ASPBI2023_RegionVI.xlsx`. Partial proxy in hand: `psa_openstat_trade_establishments_2015.csv` — wholesale/retail sector only, 2015 vintage) |
 | PSA-PVRTY | [PSA OpenStat DB__3D](https://openstat.psa.gov.ph) — poverty threshold + incidence by region/province (incl. Region VI + Iloilo province) | Econ | 2006–2015 | open gov | PSA OpenStat PX-Web API | M | ✅ CSV 11 KB (`psa_openstat_poverty_threshold_by_region.csv`) |
 | PSA-TRADE | [PSA OpenStat DB__2D](https://openstat.psa.gov.ph) — wholesale & retail trade establishments (partial ASPBI proxy) | Econ | 2015 | open gov | PSA OpenStat PX-Web API | M | ✅ CSV 49 KB (`psa_openstat_trade_establishments_2015.csv`) |
