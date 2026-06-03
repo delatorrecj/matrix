@@ -8,7 +8,7 @@
 **Last reconciled:** N/A — not yet reconciled with code
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **SAD:** [sad-matrix.md](sad-matrix.md)
 
-> The spec→code bridge. Materializes to the **monorepo's root `AGENTS.md`** at scaffold (Sprint 1) — not this planning repo. Owners per [PRD §10](prd-matrix.md).
+> The spec→code bridge. Materialized to the app monorepo's root **[`../app/AGENTS.md`](../app/AGENTS.md)** at scaffold — the app is **nested at `app/`** in this repo (one clone), not a separate repo. Owners per [PRD §10](prd-matrix.md).
 
 ---
 

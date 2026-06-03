@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **planning and documentation workspace for MATRIX** (Multi-Agent Twin for Routing & Infrastructure eXchange) — a pre-construction infrastructure impact simulator built by **Team ATLAN** (Polytechnic University of the Philippines) for the **ASEAN AI Hackathon 2026**, Smart Cities track, piloting in **Iloilo City**.
 
-**There is no application source code here yet.** The repo currently holds the product specification, the data-source catalog, and the hackathon roadmap deliverables. Application code is scheduled to be scaffolded into a separate monorepo during the sprints described in [MATRIX.md](MATRIX.md) §8 — so do not look for or invent build/test/lint commands until that scaffold exists.
+**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. Minimal build/test commands exist today: kernel `cd app/packages/kernel; pip install -e ".[dev]"; pytest` (the glass-box contract — 5 passing tests) and API `cd app/apps/api; uvicorn matrix_api.main:app --reload` (health + WS skeleton). The frontend (`app/apps/web`) is intentionally **not** generated yet — see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) (verify-live before scaffolding).
 
 ## Read this first
 

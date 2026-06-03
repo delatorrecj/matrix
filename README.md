@@ -2,7 +2,7 @@
 
 **Multi-Agent Twin for Routing & Infrastructure eXchange** — a pre-construction infrastructure impact simulator for ASEAN cities, piloting in **Iloilo City**. Built by Team **ATLAN** (Polytechnic University of the Philippines) for the **ASEAN AI Hackathon 2026**, Smart Cities track.
 
-> **Repo status:** this is the **planning, data, and documentation** workspace. There is no app to run yet — application code is scaffolded into a separate monorepo per [MATRIX.md](MATRIX.md) §8. What's here today: the spec, a working Iloilo data pipeline, and (in `docs/`) the formal doc suite.
+> **Repo status:** the **planning, data, and documentation** workspace — now with the build nested in [`app/`](app/) (scaffolded Phase 0; one clone, data co-located). What's here today: the spec, a working Iloilo data pipeline, the `docs/` suite, and the `app/` monorepo (kernel + API skeleton; frontend pending).
 
 ---
 

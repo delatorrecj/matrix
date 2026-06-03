@@ -2,7 +2,7 @@
 
 **Project slug:** `matrix`
 **Maintained by:** Carlos Jerico Dela Torre (Team ATLAN)
-**Last updated:** 2026-06-02
+**Last updated:** 2026-06-03
 
 ---
 
@@ -26,6 +26,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | Tests · validation · AI/traceability gates | [qad-matrix.md](qad-matrix.md) | — |
 | Compliance (RA 10173, licenses) | [clr-matrix.md](clr-matrix.md) | — |
 | Data: what we have, links, confidence | [../data/INVENTORY.md](../data/INVENTORY.md) + [../data/READINESS.md](../data/READINESS.md) | [MATRIX_Iloilo_Data_Sources.md](../MATRIX_Iloilo_Data_Sources.md) = sourcing *rationale* only |
+| Execution order · phase gates · checkpoints | [implementation-plan-matrix.md](implementation-plan-matrix.md) | the *when / in-what-order / done-when*; BUILD owns *how* |
 
 **Rule:** a fact lives in its canonical doc; everything else links. This is the anti-poisoning contract.
 
@@ -43,6 +44,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
 | SAD — Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — 5-agent build roster |
 | BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — materializes to monorepo AGENTS.md at scaffold |
+| Implementation Plan — phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.1 | Draft | 2026-06-03 | N/A — execution sequence + gates; companion to BUILD |
 | CLR — Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — banner set: PWA needs PIA + counsel |
 | GTM — Go-To-Market | [gtm-matrix.md](gtm-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — AAIH journey + post-hackathon LGU path |
 | OPS — Ops & Observability | [ops-matrix.md](ops-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — SLOs incl. 90 s budget; RA 10173 breach runbook |

@@ -1,0 +1,35 @@
+# --- Secrets (never commit; CLR-matrix RA 10173) ---
+.env
+.env.local
+*.key
+credentials.json
+token.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+
+# --- SUMO / simulation outputs (regenerable) ---
+*.sumocfg.out
+tripinfo*.xml
+fcd-output*.xml
+*.tmp
+
+# --- Local data / caches (regenerable; raw data lives in ../data, gitignored there) ---
+.chroma/
+*.duckdb
+.tmp/
