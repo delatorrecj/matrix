@@ -4,7 +4,7 @@
 **Date:** 2026-06-02
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** Draft
+**Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record per [index.md](index.md) §2)
 **Last reconciled:** N/A — not yet reconciled with code
 **PRD:** [prd-matrix.md](prd-matrix.md)
 

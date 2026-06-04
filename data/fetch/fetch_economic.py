@@ -221,6 +221,40 @@ def fetch_psa_openstat():
         query_filter=None,
     )
 
+    # --- FIES 2023 — income & expenditure by Region/Province/HUC (incl. City of Iloilo) ---
+    # DB 1E (Income and Consumption) -> IE (Family Income and Expenditure Survey).
+    # The full 2023 release IS on OpenStat (the older "not in OpenStat" note was stale):
+    # Table 1 has Region VI, Iloilo province, and a City-of-Iloilo HUC row.
+    pxweb_csv(
+        "FIES2023-IE",
+        "DB/1E/IE/001E3ANIE0.px",
+        "psa_openstat_fies2023_income_expenditure_by_region.csv",
+        query_filter=None,
+    )
+    pxweb_csv(
+        "FIES2023-GINI",
+        "DB/1E/IE/0051E3AGCF0.px",
+        "psa_openstat_fies2023_gini_by_region.csv",
+        query_filter=None,
+    )
+
+    # --- ASPBI 2022 — establishments & employment by region & sector ---
+    # DB 2D (Services Statistics) -> 2022 ASPBI. 2022 is the latest on OpenStat
+    # (2023 not yet published there). Geolocation includes "Western Visayas".
+    # Far richer than the 2015 wholesale/retail subset previously in hand.
+    pxweb_csv(
+        "ASPBI2022-WRT",
+        "DB/2D/2022/0222D4BAG00.px",
+        "psa_openstat_aspbi2022_wholesale_retail_by_region.csv",
+        query_filter=None,
+    )
+    pxweb_csv(
+        "ASPBI2022-ACC",
+        "DB/2D/2022/0222D4BAI00.px",
+        "psa_openstat_aspbi2022_accommodation_food_by_region.csv",
+        query_filter=None,
+    )
+
 
 def fetch_worldbank():
     """World Bank Open Data API — Philippines national economic indicators.
@@ -284,36 +318,25 @@ def fetch_hdx_poverty():
 def manual_access_reminder():
     """Print a clear reminder of what still needs manual download."""
     print("""
-== MANUAL DOWNLOAD REQUIRED (not scriptable) ==
+== STATUS OF THE FOUR ONCE-MANUAL ECONOMIC SETS (updated 2026-06-03) ==
 
-1. BIR-ZV  BIR Zonal Values RDO 74 — Iloilo City (land-value baseline)
-   URL:    https://www.bir.gov.ph/zonal-values
-   Action: Click "Region VI" then "RDO 74 -- Iloilo City" to trigger PDF download.
-   Save:   data/raw/economic/BIR_ZV_RDO74_IloiloCity.pdf
-   Reason: bir-cdn.bir.gov.ph returns HTTP 403 to all scripted requests; the
-           landing page is a JavaScript SPA so PDF links are not in the HTML source.
+[DONE manually] BIR-ZV  Zonal Values RDO 74, DO 17-2021 (4th rev) -- .xls in hand at
+   data/raw/economic/BIR_ZV_RDO74_IloiloCity.xls (10 sheets; Sheet 9 = current schedule).
+   Parse to a clean CSV with:  python data/fetch/parse_bir_zonal.py
+   Source: bir.gov.ph/zonal-values -> RR 11 -> RDO 74 -> "View RDO excel".
+   (Manual because bir.gov.ph SPA + bir-cdn 403 to scripts.)
 
-2. ASPBI   PSA ASPBI 2023 -- establishments by region (full survey)
-   URL:    https://psa.gov.ph/statistics/establishments
-   Action: Click "ASPBI 2023" release; download Excel for Region VI.
-   Save:   data/raw/economic/PSA_ASPBI2023_RegionVI.xlsx
-   Reason: psa.gov.ph returns HTTP 403 to all scripted requests.
+[NOW SCRIPTED] FIES 2023 + ASPBI 2022 -- fetched above from OpenStat. The 403 wall is on
+   psa.gov.ph, NOT openstat.psa.gov.ph. FIES 2023 (DB 1E/IE) includes a City-of-Iloilo
+   HUC row; ASPBI 2022 (DB 2D/2022) is by region & sector. (2023 ASPBI not yet on
+   OpenStat -> 2022 is the latest available.) No manual step required.
 
-3. FIES    PSA FIES 2023 -- Family Income and Expenditure Survey (2023 release)
-   URL:    https://psa.gov.ph/statistics/income-expenditure/fies
-   Action: Download "2023 FIES Summary Statistics", Region VI tables.
-   Save:   data/raw/economic/PSA_FIES2023_RegionVI.xlsx
-   Reason: psa.gov.ph returns HTTP 403; OpenStat DB__3D has poverty thresholds
-           to 2015 only -- the 2021/2023 FIES releases are not in OpenStat.
-
-4. DOT-TOUR  DOT Visitor Arrivals by Region 2024
-   URL:    https://tourism.gov.ph/tourism-statistics
-           or https://tourism.gov.ph/tourism_dem_sup_pub.aspx
-   Action: Look for "Visitor Arrivals by Region" 2024 Excel under
-           "Demand Statistics" or "Regional Tourism Statistics".
-   Save:   data/raw/economic/DOT_VisitorArrivals_Region_2024.xlsx
-   Reason: tourism.gov.ph is a JavaScript SPA; no direct file paths are exposed.
-           OpenStat DB__2I has national expenditure only (no regional arrivals).
+[UNAVAILABLE on OpenStat] DOT-TOUR  Visitor Arrivals BY REGION 2024.
+   OpenStat 2I carries tourism EXPENDITURE only (national) -- already in hand as
+   psa_openstat_tourism_expenditure_national.csv. Regional ARRIVALS exist only on
+   tourism.gov.ph (a JS SPA). Browser-download only if the fidelity is needed:
+   tourism.gov.ph/tourism-statistics -> "Visitor Arrivals by Region" 2024 ->
+   save to data/raw/economic/DOT_VisitorArrivals_Region_2024.xlsx
 """)
 
 

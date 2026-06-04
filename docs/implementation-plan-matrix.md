@@ -41,15 +41,15 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 0.2 | Toolchain: Python 3.12 (`uv`), Node 20, SUMO 1.x (Docker image), pinned per [build-matrix.md §3](build-matrix.md) | Jerico | **Verify-live-before-coding** the Gemini `google-genai` SDK, Next.js, Deck.gl, Tailwind v4 versions at scaffold — do not trust training memory. |
 | 0.3 | Local-first datastores: ChromaDB (local), Postgres+PostGIS (local/Supabase), Redis (local/Upstash). Cloud provisioning deferred to Phase 4 unless trivial. | Jerico | `.env` template; never commit secrets ([clr-matrix.md](clr-matrix.md)). |
 | 0.4 | **Manual data downloads** (browser-gated; PSA/BIR return 403 to scripts): BIR ZV RDO 74 → `data/raw/economic/BIR_ZV_RDO74_IloiloCity.pdf`; PSA FIES 2023; PSA ASPBI 2023; DOT visitor arrivals 2024. See [INVENTORY.md](../data/INVENTORY.md) for exact URLs/targets. | Jerico | **Confirmed still pending** as of 2026-06-03. `ECON-1` land-value confidence stays **L** until BIR-ZV lands. Not a hard blocker — substitutes (CCHAIN RWI + nighttime lights) are in hand. |
-| 0.5 | Lock the build-blocking docs once their equations/IDs are final: **PRD, SDD, methods-matrix**. Draft → Locked; subsequent changes need a Change Record. | Jerico | Governance decision — owner's call. Locking `methods-matrix` means the equation registry (BEH/ECO/SOC/ECON/SOCI) is frozen as the contract the modules implement. |
+| 0.5 | Lock the build-blocking docs once their equations/IDs are final: **PRD, SDD, methods-matrix**. Draft → Locked; subsequent changes need a Change Record. | Jerico | Governance decision — owner's call. Locking `methods-matrix` means the equation registry (BEH/ECO/SOC/ECON/SOCI) is frozen as the contract the modules implement. **✅ Done — PRD + SDD + methods Locked 2026-06-03 (CR-001).** |
 
 ### Gate 0 — Foundation checkpoint
-- [ ] App monorepo exists with the four package skeletons and root `AGENTS.md`; `apps/web` and `apps/api` each boot a hello-world locally.
-- [ ] SUMO runs in its container; `python -c "import traci"` succeeds.
-- [ ] `google-genai`, Next.js, Deck.gl, Tailwind versions verified against live docs and pinned (drift rows added to [build-matrix.md §3](build-matrix.md) if found).
-- [ ] Datastores reachable from a local smoke script.
-- [ ] Manual downloads either completed **or** explicitly accepted as deferred-with-substitute, with the confidence-floor impact recorded.
-- [ ] Decision recorded: are PRD/SDD/methods Locked now, or held at Draft until Gate 2?
+- [x] App monorepo exists: `apps/api` (FastAPI health + WS) + `packages/kernel` (**5 tests pass**) + `packages/data` + root `AGENTS.md`. **`apps/web` intentionally deferred** (SCAFFOLD.md — verify-live at Phase 5).
+- [x] `import traci` + `sumolib` 1.27.0 verified (`app/.venv`). **SUMO Docker image deferred to Phase 2** (`ghcr.io/eclipse-sumo/sumo:latest`; not needed for Phase 1).
+- [~] Framework version-verify (`google-genai`/Next/Deck/Tailwind) — **deferred to when that code is written** (Phase 4/5); the rule is wired into `apps/web/SCAFFOLD.md` + [build-matrix.md §3](build-matrix.md).
+- [x] Datastores reachable: Postgres+**PostGIS 3.4** (5432), Redis (6379, PONG), Chroma v2 (8001, HTTP 200) — all verified from host via `app/docker-compose.yml`.
+- [x] Economic data resolved: **BIR (DO17-2021) + FIES 2023 + ASPBI 2022 acquired**; DOT deferred-with-substitute (no confidence impact). Economic now solidly **M**.
+- [x] **PRD + SDD + methods-matrix Locked 2026-06-03 (CR-001)** — equation registry frozen as the module contract.
 
 ---
 

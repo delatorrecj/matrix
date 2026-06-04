@@ -37,10 +37,10 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | Document | File | Version | Status | Last Updated | Last Reconciled |
 |----------|------|---------|--------|--------------|-----------------|
 | BRD — Business Requirements | — | — | N/A — covered by [MATRIX.md](../MATRIX.md) §1–3, §Appendix B | — | — |
-| PRD — Product Requirements | [prd-matrix.md](prd-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
+| PRD — Product Requirements | [prd-matrix.md](prd-matrix.md) | 0.1 | **Locked** | 2026-06-03 | N/A — not yet reconciled with code |
 | DSD — Design System | [dsd-matrix.md](dsd-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
-| SDD — System Design | [sdd-matrix.md](sdd-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
-| Methods & Traceability (glass-box ledger) | [methods-matrix.md](methods-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — equation/provenance registry; backs PRD-F14 |
+| SDD — System Design | [sdd-matrix.md](sdd-matrix.md) | 0.1 | **Locked** | 2026-06-03 | N/A — not yet reconciled with code |
+| Methods & Traceability (glass-box ledger) | [methods-matrix.md](methods-matrix.md) | 0.1 | **Locked** | 2026-06-03 | N/A — equation/provenance registry; backs PRD-F14 |
 | QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
 | SAD — Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — 5-agent build roster |
 | BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — materializes to monorepo AGENTS.md at scaffold |
@@ -61,7 +61,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 
 | CR ID | Date | Summary | Trigger doc | Docs touched | File |
 |-------|------|---------|-------------|--------------|------|
-| — | — | none yet | — | — | — |
+| CR-001 | 2026-06-03 | Phase 0: scaffolded `app/` (nested in this repo, not a separate monorepo); acquired BIR DO17-2021 + FIES 2023 + ASPBI 2022 economic data; **Locked PRD + SDD + methods-matrix**. | implementation-plan-matrix.md | prd, sdd, methods, build, README, CLAUDE, INVENTORY, READINESS, this index | (logged here) |
 
 ---
 
