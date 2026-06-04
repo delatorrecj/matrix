@@ -28,7 +28,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 |---|---|---|---|---|---|---|---|
 | POPCEN24 | [2024 POPCEN-CBMS](https://psa.gov.ph/content/2024-census-population-popcen-population-counts-declared-official-president) barangay pop + [CBMS](https://cbms.psa.gov.ph/) household profile | Soc | 2024 | open gov | direct (public tables) | H | ☐ |
 | CENSUS20 | [PSA 2020 Census Region VI](https://psa.gov.ph/system/files/phcd/2022-12/%281%29%20Region%206_final.xlsx) (time-trend) | Soc | 2020 | open gov | XLSX | H | ☐ (manual; PSA 403 to scripts) |
-| CCHAIN | [Project CCHAIN](https://data.humdata.org/dataset/project-cchain) — 20-yr barangay climate/socioeco/health, Iloilo | Soc/Eco/Societal | 2003-22 | open | direct (HDX/CKAN) | H | ✅ 25 tbl, 180 brgy |
+| CCHAIN | [Project CCHAIN](https://data.humdata.org/dataset/project-cchain) — 20-yr barangay climate/socioeco/health, Iloilo | Soc/Eco/Societal | 2003-22 | open | direct (HDX/CKAN) | H | ✅ 25 tbl, 180 brgy — raw tables in `raw/hdx/`. Iloilo subset (barangay-filtered) written to `data/processed/cchain_iloilo/` by `data/fetch/subset_iloilo.py` (run script to populate). |
 | NHFR | [DOH National Health Facility Registry](https://nhfr.doh.gov.ph/Home) | Soc/Societal | live | open gov | direct / data.gov.ph | H | ☐ |
 | DEPED | [DepEd school masterlist](https://ebeis.deped.gov.ph/beis/reports_info/masterlist) (+ coords via OSM) | Soc/Societal | 2024 | open gov | direct / data.gov.ph | M | ☐ |
 | GHSL | [GHSL built-up + population](https://human-settlement.emergency.copernicus.eu/download.php) + [WorldPop](https://www.worldpop.org/) | Soc | 2023 | open | direct | H | ⏳ |
@@ -69,7 +69,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 | LIT-UNESCAP | [UNESCAP Iloilo e-mobility 2025](https://www.unescap.org/sites/default/d8files/event-documents/Session4_IloiloCity_Mr.Ronald.pdf) | KB | 2025 | PDF | H | ☐ |
 | LIT-ICLEI | [ICLEI Iloilo roadmap](https://talkofthecities.iclei.org/rising-for-a-sustainable-future-iloilo-citys-roadmap/) | KB | 2025 | web | H | ☐ |
 | LIT-CAA | [Clean Air Asia SMMR Iloilo (article)](https://cleanairasia.org/our-news/iloilo-city-strengthens-sustainable-urban-mobility-planning-through-training-workshop-data) | KB | 2024 | web | H | ☐ |
-| LPTRP | [Enhanced LPTRP routes (MC 2023-036)](https://ilonggoengineer.com/iloilocity-lptrp/) — 25 routes, scrape to `raw/transport/` | Behav/KB | 2023 | scrape | M | ✅ 24 pages |
+| LPTRP | [Enhanced LPTRP routes (MC 2023-036)](https://ilonggoengineer.com/iloilocity-lptrp/) — 25 routes, scrape to `raw/transport/` | Behav/KB | 2023 | scrape | M | ✅ **URL index only** — `raw/transport/routes.json` has 24 route titles + source URLs; **no route geometries**. Actual route geometries must be extracted from the linked URLs or from the **49 OSM PT relations** already in `raw/osm/iloilo_osm.json`. `lptrp_index.txt` mirrors the title list. |
 
 ---
 

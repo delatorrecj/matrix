@@ -2,7 +2,7 @@
 
 **Project slug:** `matrix`
 **Maintained by:** Carlos Jerico Dela Torre (Team ATLAN)
-**Last updated:** 2026-06-03
+**Last updated:** 2026-06-04
 
 ---
 
@@ -44,7 +44,8 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
 | SAD — Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — 5-agent build roster |
 | BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — materializes to monorepo AGENTS.md at scaffold |
-| Implementation Plan — phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.1 | Draft | 2026-06-03 | N/A — execution sequence + gates; companion to BUILD |
+| Implementation Plan — phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.2 | Draft | 2026-06-04 | N/A — execution sequence + gates; companion to BUILD |
+| Implementation Plan — critical path (file-level) | [implementation-plan-critical-path.md](implementation-plan-critical-path.md) | 0.1 | Draft | 2026-06-04 | N/A — granular vertical-slice walk; companion to the gated plan |
 | CLR — Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — banner set: PWA needs PIA + counsel |
 | GTM — Go-To-Market | [gtm-matrix.md](gtm-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — AAIH journey + post-hackathon LGU path |
 | OPS — Ops & Observability | [ops-matrix.md](ops-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — SLOs incl. 90 s budget; RA 10173 breach runbook |
@@ -62,6 +63,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | CR ID | Date | Summary | Trigger doc | Docs touched | File |
 |-------|------|---------|-------------|--------------|------|
 | CR-001 | 2026-06-03 | Phase 0: scaffolded `app/` (nested in this repo, not a separate monorepo); acquired BIR DO17-2021 + FIES 2023 + ASPBI 2022 economic data; **Locked PRD + SDD + methods-matrix**. | implementation-plan-matrix.md | prd, sdd, methods, build, README, CLAUDE, INVENTORY, READINESS, this index | (logged here) |
+| CR-002 | 2026-06-04 | Refreshed the gated plan for **solo-dev mode** (owners paused, Track B parallelism deferred, code-state + solo-dev capacity risk noted); added the **file-level critical-path plan**; improved root [CLAUDE.md](../CLAUDE.md) (accurate `uv` test commands + a "Working in `app/`" code-orientation section). | implementation-plan-matrix.md | implementation-plan-matrix, implementation-plan-critical-path, CLAUDE, this index | (logged here) |
 
 ---
 

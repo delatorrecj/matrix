@@ -7,9 +7,10 @@
 ## Read order each session
 1. [`../docs/index.md`](../docs/index.md) §0 — canonical source-of-truth map.
 2. [`../docs/implementation-plan-matrix.md`](../docs/implementation-plan-matrix.md) — current phase + its Gate.
-3. [`../docs/prd-matrix.md`](../docs/prd-matrix.md) → [`../docs/sdd-matrix.md`](../docs/sdd-matrix.md) → [`../docs/rfc-matrix-realtime-pipeline.md`](../docs/rfc-matrix-realtime-pipeline.md).
-4. [`../docs/methods-matrix.md`](../docs/methods-matrix.md) — **read before coding any module** (the equation registry).
-5. [`../docs/dsd-matrix.md`](../docs/dsd-matrix.md) — before any UI surface.
+3. [`../docs/implementation-plan-critical-path.md`](../docs/implementation-plan-critical-path.md) — file-level walk of the critical path (S1–S8); which stub to open next.
+4. [`../docs/prd-matrix.md`](../docs/prd-matrix.md) → [`../docs/sdd-matrix.md`](../docs/sdd-matrix.md) → [`../docs/rfc-matrix-realtime-pipeline.md`](../docs/rfc-matrix-realtime-pipeline.md).
+5. [`../docs/methods-matrix.md`](../docs/methods-matrix.md) — **read before coding any module** (the equation registry).
+6. [`../docs/dsd-matrix.md`](../docs/dsd-matrix.md) — before any UI surface.
 
 ## The two non-negotiable guardrails
 - **Glass box (PRD-F14).** Every emitted number carries `equation_id` +

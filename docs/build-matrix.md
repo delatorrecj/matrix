@@ -23,7 +23,7 @@ Source of truth is the suite. Read order each session:
 6. **[methods-matrix](methods-matrix.md)** — equations + provenance (glass-box). **Read before coding any module.**
 7. **This guide** — stack, patterns, guardrails.
 
-Docs are currently **Draft** (pre-scaffold); when implementation starts, Lock them. If reality diverges from a Locked doc, file a Change Record (`docs/cr-*.md`) — don't silently code around it.
+**PRD, SDD, and methods-matrix are Locked** (CR-001, 2026-06-03); subsequent changes require a Change Record. The remaining docs are Draft. If reality diverges from a Locked doc, file a Change Record (`docs/cr-*.md`) — don't silently code around it.
 
 ### Traceability — "to build X, read Y"
 | To implement… | Read | Verify against |
@@ -34,6 +34,9 @@ Docs are currently **Draft** (pre-scaffold); when implementation starts, Lock th
 | The 90 s pipeline / WS | RFC §2/§3 | QAD `PERF-01` |
 | An AI behavior | SDD §8/§8.1 → RFC §5 | QAD §7 evals |
 | A UI surface | DSD §4/§9–12 + PRD §5 | DSD a11y self-check |
+| Phase order / gate criteria | [implementation-plan-matrix.md](implementation-plan-matrix.md) | Gate checklists per phase |
+| Which file to open next (critical path) | [implementation-plan-critical-path.md](implementation-plan-critical-path.md) | Milestone A DoD |
+| Phase 1 data pipeline (`iloilo.net.xml`) | `app/packages/data/build_network.py` — Stage 1–3 | Gate 1 checklist |
 
 ---
 
@@ -106,7 +109,7 @@ Follow [`data/fetch/fetch_open.py`](../data/fetch/fetch_open.py): stdlib, idempo
 
 ## 5. Conventions & Guardrails
 
-**Repo layout (monorepo, at scaffold):** `apps/web` (Next.js) · `services/api` (FastAPI+WS) · `services/sim` (SUMO/TraCI + modules) · `packages/methods` (equations) · `data/` (this repo's pipeline) · `docs/` (this suite).
+**Repo layout (nested monorepo at `app/`, as built):** `apps/web` (Next.js, Phase 5) · `apps/api` (FastAPI+WS, health + WS skeleton) · `packages/kernel` (SUMO/TraCI + 5 glass-box modules) · `packages/data` (processing pipeline → `build_network.py`) · `data/` (this repo's raw data + fetch scripts) · `docs/` (this suite).
 
 **Always:** validate external input at the boundary (Pydantic/Zod); **every emitted number carries `equation_id` + `input_dataset_ids` + confidence**; tag confidence on every dimension; cite sources in narratives.
 
@@ -129,8 +132,8 @@ Follow [`data/fetch/fetch_open.py`](../data/fetch/fetch_open.py): stdlib, idempo
 | Target | File | Notes |
 |--------|------|-------|
 | Canonical | `docs/build-matrix.md` | edit here |
-| All agents | `AGENTS.md` (monorepo root) | full content; auto-read by Codex/Cursor/Gemini/Claude Code |
-| Claude Code | `CLAUDE.md` (monorepo root) | thin pointer to `AGENTS.md` |
+| App agents | `app/AGENTS.md` | quick-reference materialized from this doc at scaffold; auto-read by Codex/Cursor/Gemini/Claude Code when in `app/` |
+| Claude Code | `CLAUDE.md` (repo root) | full code-orientation guide (Working in `app/`, commands, guardrails) — not a thin pointer |
 | Cursor / Gemini | `.cursor/rules/build.mdc` · `GEMINI.md` | pointers |
 
-Materialize at monorepo scaffold (Sprint 1); re-materialize on change. Root copies are build artifacts, not sources of truth.
+Materialize `app/AGENTS.md` from this doc on any significant guardrail change; re-check `CLAUDE.md` for drift. Root copies are build artifacts, not sources of truth.

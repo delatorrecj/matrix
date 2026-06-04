@@ -1,13 +1,15 @@
 # Implementation Plan — MATRIX
 
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
-**Date:** 2026-06-03
-**Version:** 0.1
+**Date:** 2026-06-04
+**Version:** 0.2
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Draft
-**Companion to:** [build-matrix.md](build-matrix.md) (the *how*: stack, patterns, guardrails). This doc is the *when / in-what-order / done-when*: the phase-gated execution sequence.
+**Companion to:** [build-matrix.md](build-matrix.md) (the *how*: stack, patterns, guardrails) and [implementation-plan-critical-path.md](implementation-plan-critical-path.md) (the *granular, file-level* walk of the critical path). This doc stays the phase-gated *when / in-what-order / done-when*.
 
 > **Phase-gated, not calendar-gated.** Work proceeds one phase at a time. Each phase has an explicit **Gate** — a checklist of exit criteria. **We stop at every Gate, review, and only then start the next phase.** No phase begins until the prior Gate passes. Dates are deliberately omitted; the gate criteria are the schedule.
+
+> **⚠️ Solo-dev mode (as of 2026-06-04).** The rest of Team ATLAN is temporarily unavailable to develop, so **task ownership is paused** — read every "Owner" cell below as *the single builder* until the team returns. The functional split (§0) and the parallel **Track B** are retained to show *intended* division of labor, but are **not** assumed active: with one developer the tracks are time-sliced and the **critical path (Track A) takes priority** over the mocked frontend. Re-activate owners and parallelism when teammates are back.
 
 ---
 
@@ -15,19 +17,21 @@
 
 - **Phase** = a coherent body of work with one goal.
 - **Gate** = the Definition of Done for that phase. Every box must be checked before the next phase opens. A Gate is a human checkpoint, not an automated one.
-- **Owner** uses Team ATLAN's functional split: **Jerico** + **Yushin** = AI/software build; **Yushin** + **Maria** = UI/UX; **Maria/Rica/Russell** = QA; **Rica/Russell** = research & marketing; **Jerico** = product/lead.
+- **Owner** *(paused — see the solo-dev banner above; the single builder owns every task for now)* would use Team ATLAN's functional split: **Jerico** + **Yushin** = AI/software build; **Yushin** + **Maria** = UI/UX; **Maria/Rica/Russell** = QA; **Rica/Russell** = research & marketing; **Jerico** = product/lead.
 - IDs (`PRD-F#`, `BEH-1`, …) are the real identifiers from [prd-matrix.md](prd-matrix.md) and [methods-matrix.md](methods-matrix.md). "To build X, read Y" lives in [build-matrix.md §1](build-matrix.md).
 
 ### Parallel tracks
-The phases are sequenced by dependency, but two tracks run in parallel once **Gate 1** passes:
-- **Track A (kernel→modules→API):** Phases 2 → 3 → 4. Critical path.
-- **Track B (frontend):** Phase 5 can start against **mocked WebSocket events** as soon as the network base map (Gate 1) exists, and converges with Track A at Phase 6.
+The phases are sequenced by dependency. Two tracks *can* run in parallel once **Gate 1** passes — **but only with more than one developer** (paused in solo-dev mode; do Track A first, then Track B):
+- **Track A (kernel→modules→API):** Phases 2 → 3 → 4. Critical path — **build this first.**
+- **Track B (frontend):** Phase 5 can start against **mocked WebSocket events** as soon as the network base map (Gate 1) exists, and converges with Track A at Phase 6. *(With one developer, treat this as sequential after the critical-path slice, not concurrent.)*
 
 ```
 Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phase 4 ─┐
                                       │                               ├─ Phase 6 ─ Gate 6 ─ Phase 7 ─ Gate 7
                                       └─ Phase 5 (frontend, mocked) ──┘
 ```
+
+**Code state (2026-06-04).** Phase 0 scaffolding is in. The kernel's glass-box **contract** (`packages/kernel/matrix_kernel/results.py`, `DimensionResult`) is implemented and tested (**5 passing**). **Everything downstream is a typed stub** that raises `NotImplementedError` with a phase + methods-matrix pointer — the five `modules/*.py`, plus `runner.py`, `baseline.py`, `bias_auditor.py`, `confidence.py`. So Phases 2–3 are *"fill the stubs to the frozen contract,"* not *"design from scratch."* The file/function-level walk lives in [implementation-plan-critical-path.md](implementation-plan-critical-path.md).
 
 ---
 
@@ -211,6 +215,7 @@ Every module returns the [build-matrix.md](build-matrix.md) golden-path shape: `
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
+| **Solo-dev capacity** — teammates unavailable as of 2026-06-04 | **High** | Collapse to the critical path only: data → baseline → one module → thin API → minimal UI. Defer Track B parallelism, the PWA, and multi-district breadth until the team returns. Protect the end-to-end glass-box slice over feature breadth. |
 | SUMO cold-start on Fly.io consumes the 90 s budget | **High** | Pre-warm container + hot nightly baseline + delta runs; profile first at Gate 2, attack at Gate 6. |
 | BIR zonal-values PDF is scan-only / not machine-readable | Medium | CCHAIN RWI + nighttime lights as spatial proxy; flag `ECON-1` confidence **L** with honest UI label (this is the product's differentiator working as designed). |
 | Gemini 3.1 Flash-Lite rate limits on the 500-persona batch | Medium | Generate once, cache to Redis (`personas:iloilo:v1`); reuse the same pool for all demo runs. |

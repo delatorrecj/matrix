@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **planning and documentation workspace for MATRIX** (Multi-Agent Twin for Routing & Infrastructure eXchange) — a pre-construction infrastructure impact simulator built by **Team ATLAN** (Polytechnic University of the Philippines) for the **ASEAN AI Hackathon 2026**, Smart Cities track, piloting in **Iloilo City**.
 
-**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. Minimal build/test commands exist today: kernel `cd app/packages/kernel; pip install -e ".[dev]"; pytest` (the glass-box contract — 5 passing tests) and API `cd app/apps/api; uvicorn matrix_api.main:app --reload` (health + WS skeleton). The frontend (`app/apps/web`) is intentionally **not** generated yet — see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) (verify-live before scaffolding).
+**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. The code is at the very start of its build: only the kernel's glass-box **contract** is implemented and tested; every impact module and the simulation runner are deliberate stubs. See **["Working in `app/`" below](#working-in-app-the-code)** for the code's actual state, the commands, and the guardrails. The frontend (`app/apps/web`) is intentionally **not** generated yet — see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) (verify-live before scaffolding).
 
 ## Read this first
 
@@ -32,6 +32,40 @@ NL query / map drop → Gemini orchestrator → UNIFIED SIMULATION KERNEL (SUMO 
 
 Every dimension carries an **explicit confidence level (High/Medium/Low)**. Confidence-anchored, honestly-bounded outputs (ranges, not false-precision point estimates) and the **bias auditor** (mode-share anchoring, public audit log) are first-class product features, not optional polish — preserve them in any doc or code you produce.
 
+## Working in `app/` (the code)
+
+`app/` is a **uv (Python) monorepo** (`apps/api`, `apps/web`, `packages/kernel`, `packages/data`). The build's source of truth is the `docs/` suite; [`app/AGENTS.md`](app/AGENTS.md) is the in-repo quick-reference (materialized from [`docs/build-matrix.md`](docs/build-matrix.md)), and [`docs/implementation-plan-matrix.md`](docs/implementation-plan-matrix.md) is the phase-gated *when / done-when*.
+
+**Current state — Phase 0 done; Phase 1 (data) + Phase 2 (kernel) are next and on the critical path.** The *only* implemented, tested code is the **glass-box contract**: `DimensionResult` in [`app/packages/kernel/matrix_kernel/results.py`](app/packages/kernel/matrix_kernel/results.py) — a frozen dataclass that **fails construction** if a number lacks `equation_id` or `input_dataset_ids`, and exposes Low confidence as a `directional` flag. *Everything else is a deliberate stub* that raises `NotImplementedError` with a phase + [methods-matrix.md](docs/methods-matrix.md) pointer: all five `modules/*.py`, plus `runner.py`, `baseline.py`, `bias_auditor.py`, `confidence.py`. The stubs are the contract the real implementation must satisfy — read the docstring of each before filling it in; don't treat them as blank.
+
+**Two guardrails govern any code here** (full text in [`app/AGENTS.md`](app/AGENTS.md)):
+1. **Glass box (PRD-F14).** No number ships without `equation_id` + `input_dataset_ids` + a *computed* confidence (never a guessed label), and it must resolve under the UI's Inspect drawer. The LLM narrates and cites — it **never originates a number**. Equations live in [`docs/methods-matrix.md`](docs/methods-matrix.md) (**Locked**); read it before coding any module. The `glass-box-auditor` agent blocks violations.
+2. **Verify-live-before-coding.** Confirm framework conventions against the **pinned version's** official docs before writing — do **not** emit framework code from training memory. Known traps: `google-genai` (not `google-generativeai`), `motion/react` (not `framer-motion`), Tailwind v4 `@tailwindcss/postcss`, `next/font` (not `<link>`). Never Gemini 1.5/2.0.
+
+**Build agents** live at the repo root [`.claude/agents/`](.claude/agents) so they're discoverable from `D:\PROJECTS\matrix`: `module-kernel-builder`, `glass-box-auditor` (gate), `frontend-3d-builder`, `eval-test-runner` (gate), `data-pipeline-runner`. Both gating agents must PASS before a merge.
+
+### Commands
+
+```bash
+# Kernel tests — the glass-box contract (5 passing). app/.venv is a uv venv with NO
+# pip; use uv, or any global pytest (pyproject sets pythonpath=["."], so it imports
+# matrix_kernel straight from the source tree).
+cd app/packages/kernel
+uv run pytest                 # project-native (syncs the full dep tree on first run)
+python -m pytest -q           # fast path: works with a global pytest, no env sync
+python -m pytest tests/test_results.py::test_low_confidence_is_directional   # single test
+
+# API — FastAPI health + WS skeleton (no kernel wired yet)
+cd app/apps/api && uvicorn matrix_api.main:app --reload      # GET /health -> {"status":"ok",...}
+
+# Local datastores — Postgres+PostGIS :5432, Redis :6379, Chroma :8001
+cd app && docker compose up -d          # `down -v` to wipe volumes
+
+# Frontend — NOT scaffolded by design; generate from live tooling per app/apps/web/SCAFFOLD.md
+```
+
+No Python linter/formatter is wired yet, and `apps/web` brings its own ESLint when scaffolded — don't introduce tooling without asking.
+
 ## Locked technical decisions (do not silently revert)
 
 These were chosen deliberately with documented justification (MATRIX.md §6). Treat them as invariants unless the user explicitly reopens the decision:
@@ -48,7 +82,7 @@ These were chosen deliberately with documented justification (MATRIX.md §6). Tr
 `FMD/` is a **distinct git repository vendored into this folder** (its own remote `github.com/delatorrecj/fmd.git`, its own history; it appears as *untracked* in the parent's `git status` and is **not** a submodule). It is the **Foundational Matrix Documents** system: a suite of documentation templates plus a trigger-phrase routing layer for generating a project's formal doc suite (BRD, PRD, DSD, SDD, RFC, QAD, SAD, BUILD, CLR, GTM, OPS, plus CR/PM/INDEX).
 
 - When the user asks for a formal document ("write a PRD", "architect the system / write an SDD", "compliance review", etc.), **follow [FMD/AGENTS.md](FMD/AGENTS.md)** (its canonical operating guide) and [FMD/CLAUDE.md](FMD/CLAUDE.md) (Claude-Code-specific notes). That guide owns the trigger→template mapping, project-scale rules, sequencing, and living-docs/traceability conventions — do not duplicate them here.
-- Generated documents for MATRIX live in the **`docs/`** folder at this repo root (e.g. `docs/prd-matrix.md`), per FMD's naming convention. The full suite (PRD · SDD · DSD · Methods · QAD · SAD · BUILD · CLR · GTM · OPS · RFC-001) was generated 2026-06-02 and all docs are currently in `Draft` status.
+- Generated documents for MATRIX live in the **`docs/`** folder at this repo root (e.g. `docs/prd-matrix.md`), per FMD's naming convention. The full suite (PRD · SDD · DSD · Methods · QAD · SAD · BUILD · CLR · GTM · OPS · RFC-001) was generated 2026-06-02. **PRD, SDD, and methods-matrix are Locked** (CR-001, 2026-06-03); the rest are Draft. See [`docs/index.md`](docs/index.md) for current status.
 - The `FMD/*_Template.md` files are **canonical sources** — never hand-edit them as part of MATRIX work, and never delete them (FMD's `exit fmd` cleanup only removes generated `docs/` output, never templates).
 - The editor rule files under `FMD/.cursor/` and `FMD/.windsurf/` are thin pointers to FMD/AGENTS.md and apply only when operating inside FMD.
 
