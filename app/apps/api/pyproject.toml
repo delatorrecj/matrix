@@ -12,6 +12,7 @@ dependencies = [
     # before wiring (build-matrix.md §3). Never Gemini 1.5/2.0.
     "google-genai",
     # matrix-kernel is consumed as a path/workspace dependency -- wire at Phase 4.
+    "matrix-kernel",
 ]
 
 [build-system]
@@ -20,3 +21,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["matrix_api"]
+
+[tool.uv.sources]
+matrix-kernel = { path = "../../packages/kernel", editable = true }

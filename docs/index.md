@@ -64,6 +64,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 |-------|------|---------|-------------|--------------|------|
 | CR-001 | 2026-06-03 | Phase 0: scaffolded `app/` (nested in this repo, not a separate monorepo); acquired BIR DO17-2021 + FIES 2023 + ASPBI 2022 economic data; **Locked PRD + SDD + methods-matrix**. | implementation-plan-matrix.md | prd, sdd, methods, build, README, CLAUDE, INVENTORY, READINESS, this index | (logged here) |
 | CR-002 | 2026-06-04 | Refreshed the gated plan for **solo-dev mode** (owners paused, Track B parallelism deferred, code-state + solo-dev capacity risk noted); added the **file-level critical-path plan**; improved root [CLAUDE.md](../CLAUDE.md) (accurate `uv` test commands + a "Working in `app/`" code-orientation section). | implementation-plan-matrix.md | implementation-plan-matrix, implementation-plan-critical-path, CLAUDE, this index | (logged here) |
+| CR-003 | 2026-06-04 | **Progress reconciliation:** synced gated plan + INVENTORY to on-disk reality (BIR ZV `.xls` downloaded + parsed → 5,680 entries; Phase 1 ~70% done; SUMO Stage 1 built). **Proposes `ECON-1` confidence L→M** in [methods-matrix §3.4](methods-matrix.md) now that BIR-ZV is acquired — **Locked-doc edit pending owner sign-off.** | implementation-plan-matrix.md | implementation-plan-matrix, INVENTORY, methods *(proposed)*, this index | (logged here) |
 
 ---
 

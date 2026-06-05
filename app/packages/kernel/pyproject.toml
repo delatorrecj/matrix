@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 # Pin/verify exact versions at install (build-matrix.md §3). SUMO itself runs from
 # its Docker image at runtime; these are the Python-side deps.
 dependencies = [
-    "eclipse-sumo",   # provides sumolib + TraCI. Verify current at install.
+    "eclipse-sumo", # provides sumolib + TraCI. Verify current at install.
     "osmnx",
     "numpy",
     "pandas",
@@ -17,6 +17,7 @@ dependencies = [
     # Persona pool (Gemini 3.1 Flash-Lite). VERIFY call shape + model IDs against
     # ai.google.dev before use -- never Gemini 1.5/2.0 (build-matrix.md §3).
     "google-genai",
+    "psycopg[binary]>=3.3.4",
 ]
 
 [project.optional-dependencies]

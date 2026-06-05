@@ -44,7 +44,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 0.1 | Scaffold the MATRIX application monorepo: `apps/web` (Next.js 14 App Router), `apps/api` (FastAPI), `packages/kernel` (SUMO/TraCI + modules), `packages/data` (processing), `.claude/agents/` (SAD build agents), root `AGENTS.md` (materialized from [build-matrix.md](build-matrix.md)) | Jerico | **Decided: nested at `app/`** inside this repo (one clone, data co-located) — chosen over a separate repo at Gate 0 kickoff. ✅ scaffolded (kernel + API + agents). |
 | 0.2 | Toolchain: Python 3.12 (`uv`), Node 20, SUMO 1.x (Docker image), pinned per [build-matrix.md §3](build-matrix.md) | Jerico | **Verify-live-before-coding** the Gemini `google-genai` SDK, Next.js, Deck.gl, Tailwind v4 versions at scaffold — do not trust training memory. |
 | 0.3 | Local-first datastores: ChromaDB (local), Postgres+PostGIS (local/Supabase), Redis (local/Upstash). Cloud provisioning deferred to Phase 4 unless trivial. | Jerico | `.env` template; never commit secrets ([clr-matrix.md](clr-matrix.md)). |
-| 0.4 | **Manual data downloads** (browser-gated; PSA/BIR return 403 to scripts): BIR ZV RDO 74 → `data/raw/economic/BIR_ZV_RDO74_IloiloCity.pdf`; PSA FIES 2023; PSA ASPBI 2023; DOT visitor arrivals 2024. See [INVENTORY.md](../data/INVENTORY.md) for exact URLs/targets. | Jerico | **Confirmed still pending** as of 2026-06-03. `ECON-1` land-value confidence stays **L** until BIR-ZV lands. Not a hard blocker — substitutes (CCHAIN RWI + nighttime lights) are in hand. |
+| 0.4 | **Manual / browser-gated economic data**: BIR ZV RDO 74 (`.xls`); PSA FIES 2023 + ASPBI 2022 (reachable via OpenStat PX-Web API — **scripted, not manual**); DOT visitor arrivals 2024. See [INVENTORY.md](../data/INVENTORY.md) for exact URLs/targets. | Jerico | **✅ Resolved 2026-06-04.** BIR ZV RDO 74 `.xls` (DO17-2021) downloaded + parsed → `data/processed/economic/bir_zonal_rdo74_2021.csv` (5,680 priced entries); FIES 2023 (incl. City of Iloilo) + ASPBI 2022 fetched via OpenStat. **`ECON-1` moves L→M** (CR-003, pending sign-off). Only DOT *regional* arrivals 2024 still ☐ — national-expenditure substitute in hand, no confidence-tier impact. |
 | 0.5 | Lock the build-blocking docs once their equations/IDs are final: **PRD, SDD, methods-matrix**. Draft → Locked; subsequent changes need a Change Record. | Jerico | Governance decision — owner's call. Locking `methods-matrix` means the equation registry (BEH/ECO/SOC/ECON/SOCI) is frozen as the contract the modules implement. **✅ Done — PRD + SDD + methods Locked 2026-06-03 (CR-001).** |
 
 ### Gate 0 — Foundation checkpoint
@@ -60,6 +60,8 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 ## Phase 1 — Data Processing Layer
 
 **Goal:** Turn the raw acquired data ([INVENTORY.md](../data/INVENTORY.md)) into simulation-ready inputs and the retrieval corpus. After this phase the kernel has a network to drive and the orchestrator has a knowledge base to ground on.
+
+> **Status (2026-06-04) — ~70% in progress (not "not started").** Raw acquisition is largely complete: OSM (14,068 el), Overture (202k feat), the **CCHAIN subset to 180 Iloilo barangays** (`data/processed/cchain_iloilo/`), and the economic set are all fetched. **Task 1.1 Stage 1 done** (`app/packages/kernel/data/iloilo.osm`); Stage 2 (`netconvert`) + Stage 3 (TAZ) are the **S1** step of the critical-path slice now in progress. Tasks 1.2 (PostGIS), 1.4 (GraphRAG), 1.5 (base map) not yet started.
 
 | # | Task | Owner | Produces |
 |---|------|-------|----------|
@@ -110,7 +112,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 1 | `behavioral.py` — Δ trips/corridor, mode-share shift, peak V/C | **BEH-1, BEH-2, BEH-3** | H | Jerico |
 | 2 | `ecological.py` — CO₂e Δ, air-quality Δ, green-cover loss, flood-exposure Δ | **ECO-1, ECO-2, ECO-3, ECO-4** | H | Jerico |
 | 3 | `social.py` — equity access, displacement count, distributional split | **SOC-1, SOC-2, SOC-3** (`PRD-F17`) | M | Jerico |
-| 4 | `economic.py` — land-value Δ, footfall Δ, employment Δ | **ECON-1, ECON-2, ECON-3** | M (L for ECON-1 until BIR-ZV) | Jerico |
+| 4 | `economic.py` — land-value Δ, footfall Δ, employment Δ | **ECON-1, ECON-2, ECON-3** | M (ECON-1 L→M — BIR-ZV acquired; CR-003) | Jerico |
 | 5 | `societal.py` — composite, heritage proximity, health-exposure, walkability | **SOCI-1…4** | M | Jerico |
 | — | Earned-confidence ensemble (`PRD-F15`): Monte-Carlo / sensitivity → the range is **computed**, not labeled | shared utility | — | Jerico |
 
@@ -217,7 +219,7 @@ Every module returns the [build-matrix.md](build-matrix.md) golden-path shape: `
 |------|----------|------------|
 | **Solo-dev capacity** — teammates unavailable as of 2026-06-04 | **High** | Collapse to the critical path only: data → baseline → one module → thin API → minimal UI. Defer Track B parallelism, the PWA, and multi-district breadth until the team returns. Protect the end-to-end glass-box slice over feature breadth. |
 | SUMO cold-start on Fly.io consumes the 90 s budget | **High** | Pre-warm container + hot nightly baseline + delta runs; profile first at Gate 2, attack at Gate 6. |
-| BIR zonal-values PDF is scan-only / not machine-readable | Medium | CCHAIN RWI + nighttime lights as spatial proxy; flag `ECON-1` confidence **L** with honest UI label (this is the product's differentiator working as designed). |
+| BIR zonal-values machine-readability (was: PDF scan-only) | **Resolved 2026-06-04** | Acquired as machine-readable `.xls` (DO17-2021, Sheet 9), parsed to `bir_zonal_rdo74_2021.csv` (5,680 entries) → `ECON-1` L→M (CR-003, pending sign-off). CCHAIN RWI + nighttime lights remain the barangay-level proxy. |
 | Gemini 3.1 Flash-Lite rate limits on the 500-persona batch | Medium | Generate once, cache to Redis (`personas:iloilo:v1`); reuse the same pool for all demo runs. |
 | Phase 2 overruns on SUMO network-import complexity | Medium | Timebox at Gate 2; fallback = NetworkX graph + synthetic trajectory good enough to demo the five modules and the glass-box story. |
 | Mode-share calibration is literature-derived, not a live travel survey | Ongoing | Carry Behavioral behavior at **M**; show the H/M/L label honestly. Bias auditor + confidence layer turn this into a trust feature, not a hidden gap. |
