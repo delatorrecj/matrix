@@ -22,7 +22,13 @@ Nothing in `raw/` is committed — it is regenerated from the manifest + scripts
 ```bash
 # direct-HTTP open data + OSM Overpass extract (Python stdlib, no deps)
 python fetch/fetch_open.py
-# Windows-native equivalent
+# filter CCHAIN → Iloilo barangay subset
+python fetch/subset_iloilo.py
+# PSA OpenStat + World Bank economic APIs (Python stdlib)
+python fetch/fetch_economic.py
+# parse BIR zonal-values XLS → CSV (requires the manually downloaded .xls)
+python fetch/parse_bir_zonal.py
+# Windows-native equivalent of fetch_open
 pwsh fetch/fetch_open.ps1
 # heavy geo (Overture, raster COGs) — needs extra packages, run on demand
 python fetch/fetch_geo.py        # pip install overturemaps (+ rasterio for rasters)

@@ -125,14 +125,14 @@ Every MATRIX simulation produces calibrated impact scores across five dimensions
 | Iloilo OSM Public Transport tagging | Bus, jeepney, modern PUJ routes | Open | High |
 | PSA 2020 Census + 2024 PopCen | Barangay-level demographics | Open | High |
 | PSA APIS | Poverty incidence by barangay | Open | Medium |
-| Iloilo City CLUP 2023–2032 | Zoning, infrastructure, transport vision | LGU request | High |
+| Iloilo City CLUP 2021–2029 | Zoning, infrastructure, transport vision | LGU request | High |
 | LTFRB Region VI routes | Modern PUJ, jeepney operational data | FOI (file Day 1) | Medium (timing) |
 | Sentinel-2 satellite imagery | Land cover, green space, building detection | Open (ESA) | High |
 | PAGASA + Project NOAH | Flood, landslide, storm surge hazards | Open | High |
 | WHO/EMEP emission factors | Per-mode CO₂, NOx, PM2.5 | Open library | High |
 | OpenWeather API | Real-time weather triggers | Free tier | High |
 | TomTom Traffic API | Real-time congestion baseline | Free dev tier | High |
-| Microsoft Building Footprints | AI-detected building polygons | Open | Medium |
+| Microsoft Building Footprints / Overture Maps | AI-detected building polygons (superseded by Overture 2026-05) | Open | Medium |
 | ATLAN Volunteer GPS Traces | Live behavioral mapping | PWA companion (built by us) | Low-Medium |
 
 **B. Processing Core (Five-Dimensional Engine)**

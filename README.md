@@ -17,6 +17,7 @@ cd matrix
 # Get the Iloilo data — open & contact-free. Raw data is gitignored but regenerable.
 python data/fetch/fetch_open.py      # OSM extract + literature + Project CCHAIN (barangay data)
 python data/fetch/subset_iloilo.py   # filter CCHAIN -> data/processed/cchain_iloilo/ (180 barangays)
+python data/fetch/fetch_economic.py  # PSA OpenStat + World Bank APIs (stdlib only)
 python data/fetch/scrape_lptrp.py    # published Iloilo jeepney (LPTRP) routes
 
 # Optional richer geo (one extra package)
@@ -26,7 +27,7 @@ python data/fetch/fetch_geo.py       # Overture buildings / POIs / transport
 
 The Iloilo CCHAIN subset (`data/processed/cchain_iloilo/`, ~7 MB) is **committed**, so you have usable barangay-level data the moment you clone — even before running any fetch.
 
-**API keys (optional, Tier-B live sources):** `cp data/fetch/.env.example data/.env` and fill in what you have (TomTom, OpenWeather, OpenAQ, Gemini, HERE). `data/.env` is gitignored.
+**API keys (optional, Tier-B live sources):** `cp data/fetch/.env.example data/.env` and fill in what you have (TomTom, OpenWeather, OpenAQ, Gemini, HERE). `data/.env` is gitignored. The app code has its own `app/.env.example` (Gemini, Mapbox, datastores).
 
 ---
 

@@ -4,15 +4,47 @@
 # a gitlink. Operate on it with:  git -C FMD ...
 /FMD/
 
-# Python tooling cruft (from data/fetch/*.py)
+# Python tooling cruft (from data/fetch/*.py and any top-level scripts)
 __pycache__/
 *.pyc
+*.pyo
 
-# Secrets — API keys (e.g. data/.env)
+# Virtual environments (any level — app/.gitignore also covers app/.venv)
+.venv/
+venv/
+
+# pytest caches (any level — app/.gitignore also covers app/ subtree)
+.pytest_cache/
+
+# Secrets — API keys (e.g. data/.env, app/.env)
 .env
+.env.local
+*.key
+credentials.json
+token.json
 
 # OS cruft
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*~
+
+# SUMO regenerable outputs (produced by app/packages/data/build_network.py;
+# regenerate with: python packages/data/build_network.py from app/)
+app/packages/kernel/data/iloilo.osm
+app/packages/kernel/data/iloilo.net.xml
+app/packages/kernel/data/iloilo.rou.xml
+app/packages/kernel/data/iloilo.taz.xml
+*.sumocfg.out
+tripinfo*.xml
+fcd-output*.xml
 
 # Note: data/raw and data/interim are ignored by data/.gitignore (nested).
+# Note: app/.gitignore covers .venv, node_modules, .next, dist, etc. for app/.
+
