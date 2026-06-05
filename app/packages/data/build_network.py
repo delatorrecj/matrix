@@ -187,8 +187,10 @@ _KEEP_TYPES = ",".join([
     "highway.tertiary", "highway.tertiary_link",
     "highway.residential", "highway.living_street",
     "highway.unclassified", "highway.service",
-    "highway.pedestrian", "highway.footway",
-    "highway.cycleway", "highway.path",
+    # Vehicle network only. The pedestrian/bike layer (footway/cycleway/path/
+    # pedestrian) is deferred to SOCI-4 walkability (Milestone B); BEH-1/2/3 are
+    # vehicle-corridor metrics, and dropping these keeps the net lean for the
+    # 90 s budget (re-plan U1 — the all-types net was 159 MB / 41k edges).
 ])
 
 
@@ -238,12 +240,13 @@ def stage2_netconvert(osm_path: Path, net_path: Path) -> Path:
         "--roundabouts.guess",    "true",
         "--junctions.join",       "true",
         "--remove-edges.isolated",
-        # ── multi-modal completeness ──
+        # ── vehicle network (pedestrian layer deferred to SOCI-4, Milestone B) ──
         "--keep-edges.by-type",   _KEEP_TYPES,
-        "--sidewalks.guess",      "true",
-        "--crossings.guess",      "true",
         # ── junction / lane detail ──
-        "--no-internal-links",    "false",
+        # Internal-link geometry is the dominant net-size driver. Disable it for the
+        # Milestone A vehicle sim — BEH-1/2/3 are edge-level trip-count / V·C metrics that
+        # don't need intersection micro-dynamics. Re-enable for higher-fidelity junctions.
+        "--no-internal-links",    "true",
         "--osm.turn-lanes",
         # ── output metadata ──
         "--output.original-names",
@@ -281,17 +284,31 @@ def stage2_netconvert(osm_path: Path, net_path: Path) -> Path:
 # ─── stage 3 — barangay TAZ polygons ─────────────────────────────────────────
 
 def _load_sumolib():
-    """Add the venv site-packages to sys.path so sumolib is importable."""
+    """Import sumolib, wiring the eclipse-sumo bundled tools onto sys.path.
+
+    Prefers the eclipse-sumo wheel's bundled tools ($SUMO_HOME/tools) — i.e. the
+    kernel venv, which also carries pyproj (via geopandas) that
+    sumolib.net.convertLonLat2XY needs. Falls back to app/.venv's top-level sumolib.
+    Run stage 3 with the kernel venv python so the projection step has pyproj.
+    """
+    try:
+        import sumo  # eclipse-sumo wheel (kernel venv)
+        tools = os.path.join(
+            getattr(sumo, "SUMO_HOME", os.path.dirname(sumo.__file__)), "tools")
+        if os.path.isdir(tools) and tools not in sys.path:
+            sys.path.insert(0, tools)
+    except ImportError:
+        pass
     sp = str(VENV_SP)
     if sp not in sys.path:
-        sys.path.insert(0, sp)
+        sys.path.append(sp)  # fallback: app/.venv top-level sumolib
     try:
         import sumolib  # type: ignore[import]
         return sumolib
     except ImportError as e:
         raise ImportError(
-            f"sumolib not found in {VENV_SP}. "
-            f"Ensure app/.venv is synced: cd app/packages/kernel && uv sync"
+            "sumolib not importable. In app/packages/kernel run `uv sync` "
+            "(eclipse-sumo ships sumolib under SUMO_HOME/tools)."
         ) from e
 
 
