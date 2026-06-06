@@ -2,30 +2,50 @@
 
 **Multi-Agent Twin for Routing & Infrastructure eXchange** — a pre-construction infrastructure impact simulator for ASEAN cities, piloting in **Iloilo City**. Built by Team **ATLAN** (Polytechnic University of the Philippines) for the **ASEAN AI Hackathon 2026**, Smart Cities track.
 
-> **Repo status:** the **planning, data, and documentation** workspace — now with the build nested in [`app/`](app/) (scaffolded Phase 0; one clone, data co-located). What's here today: the spec, a working Iloilo data pipeline, the `docs/` suite, and the `app/` monorepo (kernel + API skeleton; frontend pending).
+> **Repo status:** The **planning, data, and documentation** workspace — now with the active build nested in [`app/`](app/) (one clone, data co-located).
+> 
+> **Build Progress:** 
+> * **Phase 1 (Data Layer Pipeline)** is implemented (converting OSM/Overture to routable SUMO networks, TAZ generation, and LPTRP route geometry extraction).
+> * **Phase 2 (Simulation Kernel)** is implemented (headless SUMO trajectory generator, Redis-based nightly baseline caching, and TraCI-based scenario delta runner).
+> * **Scoring & Evals:** The glass-box Behavioral module (BEH-1/2/3), confidence rubric, and sensitivity range ensemble are fully operational, verified by **16 passing unit tests** under `packages/kernel`.
+> * **Frontend (Next.js 14 + Deck.gl)** is pending scaffolding/integration (Phase 5).
 
 ---
 
 ## Quick start (developers)
 
-**Prerequisites:** Python 3.12+, Git, ~200 MB free disk for raw data. Windows/macOS/Linux all fine.
+**Prerequisites:** Python 3.12+, Git, Docker (for datastores and headless SUMO), ~200 MB free disk for raw data. Windows/macOS/Linux all supported.
+
+### 1. Acquire Data & Run Pipeline
+Raw data is gitignored but easily generated or processed:
 
 ```bash
 git clone https://github.com/delatorrecj/matrix.git
 cd matrix
 
-# Get the Iloilo data — open & contact-free. Raw data is gitignored but regenerable.
-python data/fetch/fetch_open.py      # OSM extract + literature + Project CCHAIN (barangay data)
-python data/fetch/subset_iloilo.py   # filter CCHAIN -> data/processed/cchain_iloilo/ (180 barangays)
-python data/fetch/fetch_economic.py  # PSA OpenStat + World Bank APIs (stdlib only)
-python data/fetch/scrape_lptrp.py    # published Iloilo jeepney (LPTRP) routes
+# A. Fetch open data & subset Project CCHAIN to 180 Iloilo barangays
+python data/fetch/fetch_open.py
+python data/fetch/subset_iloilo.py
 
-# Optional richer geo (one extra package)
-pip install overturemaps
-python data/fetch/fetch_geo.py       # Overture buildings / POIs / transport
+# B. Programmatically fetch economic data from PSA OpenStat and World Bank APIs
+python data/fetch/fetch_economic.py
+
+# C. Process BIR Zonal Values XLS (manual download required per data/INVENTORY.md)
+# Download BIR_ZV_RDO74_IloiloCity.xls to data/raw/economic/ first, then parse:
+python data/fetch/parse_bir_zonal.py
+
+# D. Scrape jeepney (LPTRP) route indexes
+python data/fetch/scrape_lptrp.py
 ```
 
-The Iloilo CCHAIN subset (`data/processed/cchain_iloilo/`, ~7 MB) is **committed**, so you have usable barangay-level data the moment you clone — even before running any fetch.
+### 2. Run Test Suite (Kernel & Modules)
+The build uses a `uv` virtual environment. Run the tests to verify the simulation kernel and glass-box contracts:
+
+```bash
+cd app/packages/kernel
+uv sync
+uv run pytest
+```
 
 **API keys (optional, Tier-B live sources):** `cp data/fetch/.env.example data/.env` and fill in what you have (TomTom, OpenWeather, OpenAQ, Gemini, HERE). `data/.env` is gitignored. The app code has its own `app/.env.example` (Gemini, Mapbox, datastores).
 

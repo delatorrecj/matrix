@@ -78,7 +78,7 @@ Inputs reference [INVENTORY](../data/INVENTORY.md) IDs. Equations are versioned;
 ### 3.4 Economic
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
-| ECON-1 | Land-value Δ (≤1 km) | `ΔLV = LV_base · uplift(Δaccessibility)` (range) | **BIR-ZV** (☐ manual), CCHAIN RWI | PHP range | M (L until BIR-ZV) |
+| ECON-1 | Land-value Δ (≤1 km) | `ΔLV = LV_base · uplift(Δaccessibility)` (range) | **BIR-ZV** (✅ manual XLS), CCHAIN RWI | PHP range | M |
 | ECON-2 | Footfall Δ per zone | dwell/pass counts from trajectories | persona pool, OVERTURE places | visits/day | M |
 | ECON-3 | Employment Δ | `direct + indirect(multiplier) − displaced` | PSA-ASPBI/OpenStat, ADB/NEDA multiplier | jobs | M |
 

@@ -1,8 +1,8 @@
-"""Economic impact module (stub). Confidence: Medium (Low for ECON-1 until BIR-ZV).
+"""Economic impact module (stub). Confidence: Medium.
 
 Equations (docs/methods-matrix.md §3.4):
-  ECON-1  Land-value Δ (≤1 km)  -- BIR-ZV (☐ manual download), CCHAIN RWI
-                                   carry confidence L until BIR-ZV lands.
+  ECON-1  Land-value Δ (≤1 km)  -- BIR-ZV (✅ manual XLS), CCHAIN RWI
+                                   carry confidence M.
   ECON-2  Footfall Δ per zone   -- persona pool, OVERTURE places
   ECON-3  Employment Δ          -- PSA-ASPBI/OpenStat, ADB/NEDA multiplier
 

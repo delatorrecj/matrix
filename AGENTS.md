@@ -37,13 +37,14 @@ your code → glass-box-auditor PASS → eval-test-runner PASS → merge
 
 ## Before You Scaffold (Sprint 1 setup)
 
-1. **Manually download four economic datasets** (scripts return 403):
-   - BIR zonal values RDO 74 → `data/raw/economic/BIR_ZV_RDO74_IloiloCity.pdf`
-   - PSA FIES 2023 → `data/raw/economic/PSA_FIES2023_RegionVI.xlsx`
-   - PSA ASPBI 2023 → `data/raw/economic/PSA_ASPBI2023_RegionVI.xlsx`
-   - DOT visitor arrivals 2024 → `data/raw/economic/DOT_VisitorArrivals_Region_2024.xlsx`
+1. **Acquire the economic datasets**:
+   - **Manual Download**:
+     - BIR zonal values RDO 74 → `data/raw/economic/BIR_ZV_RDO74_IloiloCity.xls` (Excel format, parsed via `parse_bir_zonal.py` to CSV)
+     - DOT visitor arrivals 2024 (optional) → `data/raw/economic/DOT_VisitorArrivals_Region_2024.xlsx`
+   - **Scripted Fetching (Automated)**:
+     - PSA FIES 2023 + PSA ASPBI 2022 are programmatically fetched via `fetch_economic.py` from the OpenStat API (saving as CSV files in `data/raw/economic/`).
    
-   See [data/INVENTORY.md](data/INVENTORY.md) for exact URLs.
+   See [data/INVENTORY.md](data/INVENTORY.md) for exact URLs and details.
 
 2. **At monorepo scaffold:** the SAD will be materialized to `.claude/agents/*.md` in the build repo. Use those agent definitions in Claude Code.
 
