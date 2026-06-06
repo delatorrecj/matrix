@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+# Install system dependencies, including Eclipse SUMO
+RUN apt-get update && apt-get install -y \
+    sumo \
+    sumo-tools \
+    sumo-doc \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up working directory
+WORKDIR /app
+
+# Copy requirements or install uv
+RUN pip install uv
+COPY pyproject.toml .
+# Assuming we have a requirements.txt or we just use uv to sync
+# For simplicity, installing the kernel and api dependencies
+COPY packages/kernel ./packages/kernel
+COPY apps/api ./apps/api
+
+# Install dependencies via uv
+RUN cd apps/api && uv pip install --system -e .
+RUN cd packages/kernel && uv pip install --system -e .
+
+# Expose port
+EXPOSE 8000
+
+# Run FastAPI via Uvicorn
+CMD ["uvicorn", "matrix_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

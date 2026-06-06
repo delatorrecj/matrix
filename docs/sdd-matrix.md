@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record per [index.md](index.md) §2)
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-07 — reconciled with Fly.io + Vercel deployment configuration.
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
 > Architecture for the PRD's features (`PRD-F#`). Locked technical decisions come from [MATRIX.md](../MATRIX.md) §5–6; data availability/confidence from [../data/READINESS.md](../data/READINESS.md). Treat the locked stack as invariant unless explicitly reopened.
@@ -297,4 +297,4 @@ User scenario text and retrieved third-party content both reach the model, so th
 - [x] §8 filled; §8.1 maps each applicable OWASP-LLM risk to a control + a QAD eval ref; provider data noted (CLR to confirm retention).
 - [x] V1 shortcuts documented as explicit debt in §1 (single-user budget, baseline dependency, confidence floors).
 - [x] This doc answers *how*, not *what* (the PRD owns *what*).
-- [ ] Reconcile with code once the monorepo scaffold exists; create RFCs for the kernel + 90 s streaming pipeline.
+- [x] Reconcile with code once the monorepo scaffold exists; create RFCs for the kernel + 90 s streaming pipeline.

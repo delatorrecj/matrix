@@ -43,19 +43,69 @@ class Persona:
 
 def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
                           seed: int = 42) -> list[Persona]:
-    """Sample `n` personas whose mode mix follows the Iloilo anchor (reproducible by seed)."""
+    """Sample `n` personas via Gemini 3.1 Flash-Lite, following the Iloilo anchor."""
     anchor = anchor or ILOILO_MODE_SHARE
-    rng = random.Random(seed)
-    modes, weights = list(anchor), list(anchor.values())
-    return [
-        Persona(
-            id=f"p{i:04d}",
-            mode=rng.choices(modes, weights=weights)[0],
-            income_decile=rng.randint(1, 10),
-            trip_purpose=rng.choice(_PURPOSES),
+    import os
+    from google import genai
+    from google.genai import types
+    from pydantic import BaseModel
+    
+    class PersonaList(BaseModel):
+        personas: list[dict]
+
+    client = genai.Client()
+    model_name = os.environ.get("GEMINI_MODEL_FLASH_LITE", "gemini-3.1-flash-lite")
+    
+    prompt = (
+        f"Generate {n} diverse commuter personas for Iloilo City. "
+        f"The overall mode share MUST roughly match this distribution: {anchor}. "
+        "Each persona should have:\n"
+        "- id: string (e.g. 'p0001')\n"
+        "- mode: string (one of the keys in the mode share anchor)\n"
+        "- income_decile: integer (1 to 10)\n"
+        "- trip_purpose: string ('work', 'school', 'shop', 'other')\n"
+        "Return the result as a JSON object with a 'personas' list."
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=PersonaList,
+                temperature=0.7,
+            ),
         )
-        for i in range(n)
-    ]
+        data = response.parsed.personas if hasattr(response.parsed, 'personas') else json.loads(response.text).get('personas', [])
+        
+        pool = []
+        for d in data:
+            pool.append(Persona(
+                id=d.get("id", f"p{len(pool):04d}"),
+                mode=d.get("mode", "jeepney"),
+                income_decile=int(d.get("income_decile", 5)),
+                trip_purpose=d.get("trip_purpose", "work")
+            ))
+            
+        # Ensure we have exactly n
+        while len(pool) < n:
+            pool.append(pool[-1])
+        return pool[:n]
+    except Exception as e:
+        print(f"Warning: Gemini persona generation failed ({e}). Falling back to static.")
+        # Fallback to static distribution if API fails
+        rng = random.Random(seed)
+        modes, weights = list(anchor), list(anchor.values())
+        return [
+            Persona(
+                id=f"p{i:04d}",
+                mode=rng.choices(modes, weights=weights)[0],
+                income_decile=rng.randint(1, 10),
+                trip_purpose=rng.choice(_PURPOSES),
+            )
+            for i in range(n)
+        ]
 
 
 def observed_mode_share(pool: list[Persona]) -> dict[str, float]:

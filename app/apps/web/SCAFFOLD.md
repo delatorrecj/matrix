@@ -21,12 +21,12 @@ npm i motion                     # framer-motion's successor; import from "motio
 
 Confirm each against its official docs and record the resolved version in this file:
 
-- [ ] **Next.js** (App Router) — nextjs.org — resolved version: `____`
-- [ ] **Tailwind v4** — uses `@tailwindcss/postcss` (NOT the v3 `tailwindcss` PostCSS plugin) — `____`
-- [ ] **Deck.gl** `TripsLayer` API — deck.gl — `____`
-- [ ] **shadcn/ui** CLI + Radix — ui.shadcn.com — `____`
-- [ ] **Fonts** — Geist + Geist Mono via `next/font` (self-hosted, NOT `<link>`) — DSD requires tabular nums
-- [ ] **Motion** — import from `motion/react` (NOT `framer-motion`)
+- [x] **Next.js** (App Router) — nextjs.org — resolved version: `14.2.35`
+- [x] **Tailwind v4** — uses `@tailwindcss/postcss` (NOT the v3 `tailwindcss` PostCSS plugin) — `4.x`
+- [x] **Deck.gl** `TripsLayer` API — deck.gl — `^9.3.3`
+- [x] **shadcn/ui** CLI + Radix — ui.shadcn.com — `^4.10.0`
+- [x] **Fonts** — Geist + Geist Mono via `next/font` (self-hosted, NOT `<link>`) — DSD requires tabular nums
+- [x] **Motion** — import from `motion/react` (NOT `framer-motion`) - `^12.40.0`
 
 ## 3. Then build to the DSD
 

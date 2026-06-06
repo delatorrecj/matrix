@@ -4,8 +4,8 @@
 **Date:** 2026-06-04
 **Version:** 0.2
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** Draft
-**Companion to:** [build-matrix.md](build-matrix.md) (the *how*: stack, patterns, guardrails) and [implementation-plan-critical-path.md](implementation-plan-critical-path.md) (the *granular, file-level* walk of the critical path). This doc stays the phase-gated *when / in-what-order / done-when*.
+**Status:** Active
+**Last reconciled:** 2026-06-07 — Phase 4, 5, and 6 implementation completed.
 
 > **Phase-gated, not calendar-gated.** Work proceeds one phase at a time. Each phase has an explicit **Gate** — a checklist of exit criteria. **We stop at every Gate, review, and only then start the next phase.** No phase begins until the prior Gate passes. Dates are deliberately omitted; the gate criteria are the schedule.
 
@@ -135,10 +135,10 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 
 ### Gate 4 — API checkpoint
 - [x] API client connects to WS and receives the progressive stream shape (playback frames + 5 module results + templated synthesis).
-- [ ] Orchestrator turns a real NL query ("what if we build a 3,000-seat school at Molo?") into a valid sim plan.
-- [ ] Synthesis narrative cites equation/dataset IDs for every number (citation guard enforced).
-- [ ] PDF export renders with confidence ranges intact.
-- [ ] Deployed instance answers the same scenario the local stack does.
+- [x] Orchestrator turns a real NL query ("what if we build a 3,000-seat school at Molo?") into a valid sim plan.
+- [x] Synthesis narrative cites equation/dataset IDs for every number (citation guard enforced).
+- [x] PDF export renders with confidence ranges intact.
+- [x] Deployed instance answers the same scenario the local stack does.
 
 ---
 
@@ -159,10 +159,10 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 5.9 | DSD compliance pass: palette, motion budget (MOTION 4), density, a11y self-check | Maria + Yushin | [dsd-matrix.md](dsd-matrix.md) |
 
 ### Gate 5 — Frontend checkpoint
-- [ ] Against mocked events, the full surface renders: map → playback → five cards → confidence layer → Inspect.
-- [ ] Every number on screen has a working Inspect drill-down (the team rule).
-- [ ] Confidence is a visibly distinct channel from dimension color.
-- [ ] DSD a11y self-check passes; no stale stack forms (`motion/react`, `next/font`, Tailwind v4 — [build-matrix.md §3](build-matrix.md)).
+- [x] Against mocked events, the full surface renders: map → playback → five cards → confidence layer → Inspect.
+- [x] Every number on screen has a working Inspect drill-down (the team rule).
+- [x] Confidence is a visibly distinct channel from dimension color.
+- [x] DSD a11y self-check passes; no stale stack forms (`motion/react`, `next/font`, Tailwind v4 — [build-matrix.md §3](build-matrix.md)).
 
 ---
 
@@ -179,11 +179,11 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 6.5 | Vercel deploy of `apps/web`; end-to-end on the deployed stack | Yushin | — |
 
 ### Gate 6 — Integration checkpoint
-- [ ] A cold-team-member can run one canonical scenario end-to-end on the deployed app.
-- [ ] **90 s budget met** for a warm single-user delta run; the number is measured and recorded, not asserted.
-- [ ] QAD suite green; both gating agents PASS.
-- [ ] Validation panel shows at least one back-test (Calderon RMSE or 2024 flood).
-- [ ] Bias-audit log is publicly visible in the deployed app.
+- [x] A cold-team-member can run one canonical scenario end-to-end on the deployed app.
+- [x] **90 s budget met** for a warm single-user delta run; the number is measured and recorded, not asserted.
+- [x] QAD suite green; both gating agents PASS.
+- [x] Validation panel shows at least one back-test (Calderon RMSE or 2024 flood).
+- [x] Bias-audit log is publicly visible in the deployed app.
 
 ---
 

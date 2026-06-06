@@ -4,8 +4,8 @@
 **Date:** 2026-06-02
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** Draft
-**Last reconciled:** N/A — not yet reconciled with code
+**Status:** Active
+**Last reconciled:** 2026-06-07 — reconciled with Next.js 14 + Tailwind v4 implementation.
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
 > **Design read (taste-skill §0):** *Reading this as a **trust-first, data-dense decision instrument** for government + technical planners — not a marketing site. Dials: VARIANCE 3 (coherent, austere), MOTION 4 (the agent playback is the only motion that matters), DENSITY 7 (a cockpit). Foundation: shadcn/ui + Radix primitives on the locked Next.js 14 / Tailwind stack; Geist + Geist Mono; one cobalt accent; light-first (planners use daylight/projectors). The taste-skill's landing-page rules apply to the **marketing/pitch site**, not this app.*
@@ -249,4 +249,4 @@ Visual: right-docked drawer (`--shadow-md`), `420px`, mono for all values, datas
 - [x] §7 taste dials set (3/4/7) and a variant chosen with reason.
 - [x] §6 WCAG AA + color-blind-safe (hue never alone) + accessible map data-table fallback.
 - [x] §9–12 cover the 3D twin, full interface inventory, Route & Action Map, and the glass-box Inspect pattern.
-- [ ] Materialize as Tailwind config / CSS variables once the frontend scaffold exists (then set Last reconciled).
+- [x] Materialize as Tailwind config / CSS variables once the frontend scaffold exists (then set Last reconciled).

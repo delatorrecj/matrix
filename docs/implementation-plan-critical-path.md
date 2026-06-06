@@ -1,9 +1,9 @@
 # Implementation Plan — Critical Path (file-level)
 
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
-**Date:** 2026-06-04
+**Date:** 2026-06-07
 **Version:** 0.1
-**Status:** Draft
+**Status:** Completed (Milestone A & B)
 **Mode:** **Solo-dev** — one builder owns everything; no task is assigned to a teammate (see the solo-dev banner in [implementation-plan-matrix.md](implementation-plan-matrix.md)).
 **Parent:** [implementation-plan-matrix.md](implementation-plan-matrix.md) owns the phase/gate *structure*. **This doc is the granular, file-by-file walk of the critical path** — what function to write, in which stub, consuming which dataset, done-when which test goes green. It does not restate phase rationale; it executes it.
 

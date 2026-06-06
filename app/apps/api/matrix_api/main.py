@@ -17,9 +17,13 @@ import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from pydantic import BaseModel
+
 from matrix_kernel.modules import behavioral, ecological, social, economic, societal
 from matrix_kernel.runner import Scenario, simulate
 from matrix_kernel.trajectory import Trajectory
+from matrix_kernel.orchestrator import parse_scenario
+from matrix_kernel.synthesis import synthesize
 
 app = FastAPI(title="MATRIX API", version="0.1.0")
 
@@ -32,6 +36,40 @@ MAX_STREAM_FRAMES = 20
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "matrix-api", "version": "0.1.0"}
+
+class ScenarioInput(BaseModel):
+    query: str
+    input_type: str = "nl"
+
+@app.post("/scenario")
+def create_scenario(input_data: ScenarioInput) -> dict:
+    """Parse NL/map query into a structured Scenario via Gemini 3.1 Pro (Phase 4)."""
+    try:
+        scenario = parse_scenario(input_data.query)
+        # Milestone A/B: we return the parsed params immediately.
+        # DB persistence (Supabase) happens here in full production.
+        return {
+            "scenario_id": scenario.scenario_id,
+            "description": scenario.description,
+            "corridor": scenario.corridor,
+            "lanes_closed": scenario.lanes_closed
+        }
+    except ValueError as e:
+        # LLM flagged as ambiguous
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": str(e), "is_ambiguous": True})
+
+@app.get("/runs/{run_id}")
+def get_run(run_id: str) -> dict:
+    return {"run_id": run_id, "status": "stub"}
+
+@app.get("/audit/{run_id}")
+def get_audit(run_id: str) -> dict:
+    return {"run_id": run_id, "status": "stub"}
+
+@app.post("/report/{run_id}")
+def generate_report(run_id: str) -> dict:
+    return {"run_id": run_id, "status": "stub"}
 
 
 def _result_payload(r) -> dict:
@@ -100,21 +138,9 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
         for r in results:
             await ws.send_json(_result_payload(r))
 
-        # Templated synthesis (real Gemini 3.1 Pro synthesis is Phase 4). It MUST cite the
-        # equation_id + dataset_ids for any number it asserts (citation guard).
-        beh1 = next((r for r in results if r.equation_id == "BEH-1"), None)
-        if beh1 is not None:
-            narrative = (
-                f"On the affected corridor the scenario shifts {beh1.value:+.0f} {beh1.unit} "
-                f"(range {beh1.range[0]:.0f}..{beh1.range[1]:.0f}, confidence {beh1.confidence})."
-            )
-            citations = [{
-                "claim": narrative,
-                "equation_id": beh1.equation_id,
-                "dataset_ids": beh1.input_dataset_ids,
-            }]
-        else:
-            narrative, citations = "No behavioral result produced.", []
+        # Gemini 3.1 Pro synthesis narrative (Phase 4.3). Must cite equation_id + dataset_ids.
+        narrative, citations = await asyncio.to_thread(synthesize, results)
+        
         await ws.send_json({"type": "SYNTHESIS", "narrative": narrative, "citations": citations})
 
         await ws.send_json({

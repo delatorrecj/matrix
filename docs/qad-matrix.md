@@ -4,8 +4,8 @@
 **Date:** 2026-06-02
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** Draft
-**Last reconciled:** 2026-06-06 — verified active unit test execution and results structure.
+**Status:** Active
+**Last reconciled:** 2026-06-07 — verified integration of run_eval.py for the 90s budget and TRACE gates.
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **Methods:** [methods-matrix.md](methods-matrix.md)
 
 > Tests trace to PRD user stories (`US-##`) and features (`PRD-F#`). The **glass-box gate** (§8) and **validation ledger** (§8) are release-blocking — they are what separate MATRIX from a black box and from an unvalidated demo.
@@ -170,4 +170,4 @@ These are the gates that make MATRIX defensible — *the* answer to a judge's "h
 - [x] Automated checks defined for CI; glass-box + validation are release-blocking gates (§6, §8).
 - [x] §7 filled (AI is central); citation-guard + no-fabrication evals added.
 - [x] Release criteria are binary (pass/fail).
-- [ ] Wire `scripts/run_eval.py` + seed script once the scaffold exists; set Last reconciled.
+- [x] Wire `scripts/run_eval.py` + seed script once the scaffold exists; set Last reconciled.
