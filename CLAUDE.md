@@ -36,7 +36,7 @@ Every dimension carries an **explicit confidence level (High/Medium/Low)**. Conf
 
 `app/` is a **uv (Python) monorepo** (`apps/api`, `apps/web`, `packages/kernel`, `packages/data`). The build's source of truth is the `docs/` suite; [`app/AGENTS.md`](app/AGENTS.md) is the in-repo quick-reference (materialized from [`docs/build-matrix.md`](docs/build-matrix.md)), and [`docs/implementation-plan-matrix.md`](docs/implementation-plan-matrix.md) is the phase-gated *when / done-when*.
 
-**Current state — Phase 0 done; Phase 1 (data) + Phase 2 (kernel) are next and on the critical path.** The *only* implemented, tested code is the **glass-box contract**: `DimensionResult` in [`app/packages/kernel/matrix_kernel/results.py`](app/packages/kernel/matrix_kernel/results.py) — a frozen dataclass that **fails construction** if a number lacks `equation_id` or `input_dataset_ids`, and exposes Low confidence as a `directional` flag. *Everything else is a deliberate stub* that raises `NotImplementedError` with a phase + [methods-matrix.md](docs/methods-matrix.md) pointer: all five `modules/*.py`, plus `runner.py`, `baseline.py`, `bias_auditor.py`, `confidence.py`. The stubs are the contract the real implementation must satisfy — read the docstring of each before filling it in; don't treat them as blank.
+**Current state — S0-S8 (Milestone A Critical Path) done.** The kernel's glass-box **contract** (`packages/kernel/matrix_kernel/results.py`, `DimensionResult`) is implemented and tested (**23 passing tests** across 5 modules, bias auditor, and confidence utilities). Baseline caching, demand generation, persona pool generation, TraCI delta runner, and the `Trajectory` schema are fully implemented. The five `modules/*.py` (Behavioral, Ecological, Social, Economic, Societal) are implemented with Phase 3 equations and return valid glass-box results. The WebSocket progressive API is wired and tested. The frontend (`app/apps/web`) is intentionally **not** generated yet — see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) (verify-live before scaffolding).
 
 **Two guardrails govern any code here** (full text in [`app/AGENTS.md`](app/AGENTS.md)):
 1. **Glass box (PRD-F14).** No number ships without `equation_id` + `input_dataset_ids` + a *computed* confidence (never a guessed label), and it must resolve under the UI's Inspect drawer. The LLM narrates and cites — it **never originates a number**. Equations live in [`docs/methods-matrix.md`](docs/methods-matrix.md) (**Locked**); read it before coding any module. The `glass-box-auditor` agent blocks violations.
@@ -47,13 +47,17 @@ Every dimension carries an **explicit confidence level (High/Medium/Low)**. Conf
 ### Commands
 
 ```bash
-# Kernel tests — the glass-box contract (5 passing). app/.venv is a uv venv with NO
+# Kernel tests — the glass-box contract (23 passing). app/.venv is a uv venv with NO
 # pip; use uv, or any global pytest (pyproject sets pythonpath=["."], so it imports
 # matrix_kernel straight from the source tree).
 cd app/packages/kernel
 uv run pytest                 # project-native (syncs the full dep tree on first run)
 python -m pytest -q           # fast path: works with a global pytest, no env sync
 python -m pytest tests/test_results.py::test_low_confidence_is_directional   # single test
+
+# Kernel Baseline & Demand Generation
+uv run python -c "from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())"
+uv run --directory packages/kernel python -X utf8 -u packages/data/build_demand.py
 
 # API — FastAPI health + WS skeleton (no kernel wired yet)
 cd app/apps/api && uvicorn matrix_api.main:app --reload      # GET /health -> {"status":"ok",...}

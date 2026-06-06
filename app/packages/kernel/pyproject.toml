@@ -18,6 +18,7 @@ dependencies = [
     # ai.google.dev before use -- never Gemini 1.5/2.0 (build-matrix.md §3).
     "google-genai",
     "psycopg[binary]>=3.3.4",
+    "scikit-learn>=1.9.0",
 ]
 
 [project.optional-dependencies]

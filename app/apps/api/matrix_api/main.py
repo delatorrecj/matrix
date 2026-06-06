@@ -17,7 +17,7 @@ import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from matrix_kernel.modules import behavioral
+from matrix_kernel.modules import behavioral, ecological, social, economic, societal
 from matrix_kernel.runner import Scenario, simulate
 from matrix_kernel.trajectory import Trajectory
 
@@ -76,9 +76,27 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
         for fr in traj.frames[:MAX_STREAM_FRAMES]:
             await ws.send_json({"type": "PLAYBACK_FRAME", "tick": fr.tick, "agents": fr.agents})
 
-        # Score modules in parallel (one for the slice; gather makes the shape real from day one).
-        results_lists = await asyncio.gather(asyncio.to_thread(behavioral.score, traj))
+        # Score modules in parallel for the first four, then run societal which needs ecological output.
+        # This matches the implementation plan.
+        coros = [
+            asyncio.to_thread(behavioral.score, traj),
+            asyncio.to_thread(ecological.score, traj),
+            asyncio.to_thread(social.score, traj),
+            asyncio.to_thread(economic.score, traj),
+        ]
+        results_lists = await asyncio.gather(*coros)
+        
+        # Flatten the results from the first four modules
         results = [r for lst in results_lists for r in lst]
+        
+        # Find ECO-2 result to pass to societal module
+        eco2_res = next((r for r in results if r.equation_id == "ECO-2"), None)
+        eco2_val = eco2_res.value if eco2_res else 0.0
+        
+        # Run societal module
+        societal_results = await asyncio.to_thread(societal.score, traj, eco2_val=eco2_val)
+        results.extend(societal_results)
+
         for r in results:
             await ws.send_json(_result_payload(r))
 

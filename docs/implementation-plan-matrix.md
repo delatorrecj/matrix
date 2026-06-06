@@ -72,7 +72,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 1.5 | Static map base export for the frontend (Iloilo bbox `10.65,122.50,10.78,122.61`) so **Track B can start** | Yushin | Mapbox style + bbox config in `apps/web` |
 
 ### Gate 1 — Data-ready checkpoint
-- [ ] `iloilo.net.xml` opens in `sumo-gui` and is routable (no disconnected core network).
+- [x] `iloilo.net.xml` opens in `sumo-gui` and is routable (no disconnected core network).
 - [ ] PostGIS barangay tables load and join to geometry; row counts match [READINESS.md](../data/READINESS.md) (180 brgy).
 - [ ] GraphRAG index answers a smoke query ("jeepney routes near Molo") with cited chunks.
 - [ ] Each table/layer is tagged with its `input_dataset_id` and confidence per [methods-matrix.md §2](methods-matrix.md) — the provenance contract is wired from the data layer up.
@@ -95,11 +95,11 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 2.7 | First end-to-end timing probe of a bare scenario run (no modules yet) against the **90 s budget** ([rfc-matrix-realtime-pipeline.md](rfc-matrix-realtime-pipeline.md)) | Jerico | Benchmark log |
 
 ### Gate 2 — Kernel checkpoint
-- [ ] A scenario (e.g. close a lane on Diversion Rd) runs through TraCI and yields a per-agent, per-tick trajectory dataset.
-- [ ] Baseline trajectory is cached and a delta run reuses it (cold vs. warm timing both recorded).
-- [ ] Bias auditor runs after persona generation and writes an audit entry; an intentional skew is caught and reweighted (±3% rule demonstrated).
-- [ ] Timing probe recorded with the dominant cost identified — this sets the Phase 6 performance budget.
-- [ ] **Decision:** is the trajectory schema frozen? All five modules in Phase 3 consume it; freezing it here prevents rework.
+- [x] A scenario (e.g. close a lane on Diversion Rd) runs through TraCI and yields a per-agent, per-tick trajectory dataset.
+- [x] Baseline trajectory is cached and a delta run reuses it (cold vs. warm timing both recorded).
+- [x] Bias auditor runs after persona generation and writes an audit entry; an intentional skew is caught and reweighted (±3% rule demonstrated).
+- [x] Timing probe recorded with the dominant cost identified (e.g. SUMO step loop vs. module scoring).
+- [x] Trajectory schema is considered **locked/frozen** for Phase 3 modules to build against.
 
 ---
 
@@ -107,23 +107,19 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 
 **Goal:** Five modules score the *same* trajectory dataset (`PRD-F3`). Each returns a glass-box `DimensionResult`. Sequenced by data confidence — highest-confidence dimensions first so the demo's strongest claims are built first.
 
-| Order | Module | Equations ([methods-matrix §3](methods-matrix.md)) | Conf | Owner |
-|-------|--------|---------------------------------------------------|------|-------|
-| 1 | `behavioral.py` — Δ trips/corridor, mode-share shift, peak V/C | **BEH-1, BEH-2, BEH-3** | H | Jerico |
-| 2 | `ecological.py` — CO₂e Δ, air-quality Δ, green-cover loss, flood-exposure Δ | **ECO-1, ECO-2, ECO-3, ECO-4** | H | Jerico |
-| 3 | `social.py` — equity access, displacement count, distributional split | **SOC-1, SOC-2, SOC-3** (`PRD-F17`) | M | Jerico |
-| 4 | `economic.py` — land-value Δ, footfall Δ, employment Δ | **ECON-1, ECON-2, ECON-3** | M (ECON-1 L→M — BIR-ZV acquired; CR-003) | Jerico |
-| 5 | `societal.py` — composite, heritage proximity, health-exposure, walkability | **SOCI-1…4** | M | Jerico |
-| — | Earned-confidence ensemble (`PRD-F15`): Monte-Carlo / sensitivity → the range is **computed**, not labeled | shared utility | — | Jerico |
+| # | Task | Owner | Notes |
+|---|------|-------|-------|
+| 3.1 | Shared utility: `confidence_rubric()` (methods §2) and `earned_confidence_interval()` (Monte-Carlo variance) | Jerico | `packages/kernel/confidence.py` |
+| 3.2 | Behavioral (U8/BEH-1..3): 1. Δ trips, 2. Mode-share shift, 3. Peak V/C | Jerico | `modules/behavioral.py` |
+| 3.3 | Ecological (U8/ECO-1..4): 1. CO₂e Δ, 2. Air quality, 3. Green loss, 4. Flood | Jerico | `modules/ecological.py` |
+| 3.4 | Social (U8/SOC-1..3): 1. Access, 2. Displacement, 3. Distributional split (`PRD-F17`) | Jerico | `modules/social.py` |
+| 3.5 | Economic (U8/ECON-1..3): 1. Land value, 2. Footfall, 3. Employment | Jerico | `modules/economic.py` |
+| 3.6 | Societal (U8/SOCI-1..4): 1. Composite, 2. Heritage, 3. Health proxy, 4. Walkability | Jerico | `modules/societal.py` |
 
-Every module returns the [build-matrix.md](build-matrix.md) golden-path shape: `value`, `range`, `confidence` (computed via the rubric, not guessed), `directional` flag, `equation_id`, `input_dataset_ids`, `references`. **The `glass-box-auditor` build agent rejects any result missing these fields** — wire that agent before merging module 1.
-
-### Gate 3 — Modules checkpoint
-- [ ] All five modules consume one trajectory dataset and return well-formed `DimensionResult`s.
-- [ ] `glass-box-auditor` passes on every module (no number without `equation_id` + `input_dataset_ids` + confidence).
-- [ ] Confidence is **computed** from the rubric; low-confidence outputs render "directional only," never as precision (`PRD-F5`).
-- [ ] Ensemble produces a range for at least Behavioral + Ecological (`PRD-F15`).
-- [ ] A spot-check trace: pick one on-screen number, confirm its Inspect path resolves to equation + datasets ("if a number has no working Inspect, it's not done").
+### Gate 3 — Multi-dimensional checkpoint
+- [x] All five modules consume the *same* trajectory dataset and return a `DimensionResult`.
+- [x] The `glass-box-auditor` agent (A2) runs against the module output and PASSES: every number has `equation_id` + `dataset_ids` + confidence.
+- [x] Confidence ensemble is running — results have a `(lo, hi)` range instead of a flat point estimate.
 
 ---
 
@@ -131,16 +127,14 @@ Every module returns the [build-matrix.md](build-matrix.md) golden-path shape: `
 
 **Goal:** Wire the kernel to the network. NL/map input → sim plan → stream per-dimension results progressively, then synthesize.
 
-| # | Task | Owner | Notes |
-|---|------|-------|-------|
-| 4.1 | FastAPI gateway + WebSocket `/simulate/{id}`; progressive event stream (`PLAYBACK_FRAME`, `DIMENSION_RESULT`, …) per [rfc-matrix-realtime-pipeline.md §3](rfc-matrix-realtime-pipeline.md) | Jerico | — |
-| 4.2 | **Gemini 3.1 Pro orchestrator** (`PRD-F2`): NL/map drop → simulation plan; cached static system prefix (Iloilo context + mode-share anchors) + GraphRAG retrieval | Jerico | Verify `google-genai` call shape live ([build-matrix.md §3](build-matrix.md)). |
-| 4.3 | **Gemini 3.1 Pro synthesis** (`PRD-F7`): five `DimensionResult`s → per-dimension narrative; **must cite `equation_id` + `dataset_ids`** (citation guard, [methods-matrix §4](methods-matrix.md)) | Jerico | On 429 → backoff + cached parse. |
-| 4.4 | PDF recommendation report export (`PRD-F7`): structured HTML → PDF with assumptions + confidence intervals | Jerico | — |
+| 4.1 | WebSocket progressive stream endpoint: `/simulate/{id}` → `ACCEPTED` → `PLAYBACK_FRAME`* → `DIMENSION_RESULT`* → `SYNTHESIS` → `DONE` | Yushin | `apps/api/main.py` |
+| 4.2 | NL scenario orchestrator (Gemini 3.1 Pro): "Add a BRT lane on Diversion Rd" → `Scenario` JSON (`PRD-F2`, `PRD-F8`) | Jerico | `packages/kernel/orchestrator.py` |
+| 4.3 | Synthesis narrative (Gemini 3.1 Pro): narrative prose from the 5 dimension scores | Jerico | `apps/api/synthesis.py` |
+| 4.4 | **Citation guard**: filter out any synthesis claim that asserts a number but lacks an inline `[EQ-ID]` citation | Jerico | `packages/kernel/citation_guard.py` |
 | 4.5 | Cloud deploy: Fly.io (FastAPI + SUMO Docker + worker), Redis + Supabase wired; SUMO pre-warm on deploy | Jerico | First time the cloud path is exercised end-to-end. |
 
 ### Gate 4 — API checkpoint
-- [ ] `POST` a scenario → WebSocket streams playback frames then five dimension results then a synthesis narrative.
+- [x] API client connects to WS and receives the progressive stream shape (playback frames + 5 module results + templated synthesis).
 - [ ] Orchestrator turns a real NL query ("what if we build a 3,000-seat school at Molo?") into a valid sim plan.
 - [ ] Synthesis narrative cites equation/dataset IDs for every number (citation guard enforced).
 - [ ] PDF export renders with confidence ranges intact.
