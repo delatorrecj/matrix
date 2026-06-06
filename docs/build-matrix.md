@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Jerico (Team ATLAN)
 **Status:** Draft
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-06 — reconciled with the Phase 1 & 2 build configuration and active Python dependencies.
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **SAD:** [sad-matrix.md](sad-matrix.md)
 
 > The spec→code bridge. Materialized to the app monorepo's root **[`../app/AGENTS.md`](../app/AGENTS.md)** at scaffold — the app is **nested at `app/`** in this repo (one clone), not a separate repo. Owners per [PRD §10](prd-matrix.md).

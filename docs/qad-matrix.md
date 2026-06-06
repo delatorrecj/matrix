@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Draft
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-06 — verified active unit test execution and results structure.
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **Methods:** [methods-matrix.md](methods-matrix.md)
 
 > Tests trace to PRD user stories (`US-##`) and features (`PRD-F#`). The **glass-box gate** (§8) and **validation ledger** (§8) are release-blocking — they are what separate MATRIX from a black box and from an unvalidated demo.

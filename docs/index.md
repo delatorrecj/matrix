@@ -41,9 +41,9 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | DSD — Design System | [dsd-matrix.md](dsd-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
 | SDD — System Design | [sdd-matrix.md](sdd-matrix.md) | 0.1 | **Locked** | 2026-06-03 | N/A — not yet reconciled with code |
 | Methods & Traceability (glass-box ledger) | [methods-matrix.md](methods-matrix.md) | 0.1 | **Locked** | 2026-06-03 | N/A — equation/provenance registry; backs PRD-F14 |
-| QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — not yet reconciled with code |
+| QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-02 | 2026-06-06 (verified tests) |
 | SAD — Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — 5-agent build roster |
-| BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — materializes to monorepo AGENTS.md at scaffold |
+| BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-02 | 2026-06-06 (synced with dependencies) |
 | Implementation Plan — phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.2 | Draft | 2026-06-04 | N/A — execution sequence + gates; companion to BUILD |
 | Implementation Plan — critical path (file-level) | [implementation-plan-critical-path.md](implementation-plan-critical-path.md) | 0.1 | Draft | 2026-06-04 | N/A — granular vertical-slice walk; companion to the gated plan |
 | CLR — Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — banner set: PWA needs PIA + counsel |
