@@ -14,7 +14,7 @@ These agents help enforce the two non-negotiable guardrails during build (Sprint
 |-------|-----------|-------|-----------|
 | **module-kernel-builder** | Building/debugging the SUMO kernel or any of the 5 impact modules | Jerico / Yushin | Module returns scored output with provenance fields + unit tests pass |
 | **glass-box-auditor** ⚠️ *guardrail* | Before any result or narrative ships | Jerico | Every number traces to `equation_id` + `input_dataset_ids` + `confidence`, or is flagged |
-| **frontend-3d-builder** | Building/fixing a UI surface (3D twin, Inspect drawer, control panels) | Yushin (+ Maria, UX) | Component matches DSD tokens + all states (empty/loading/streaming/error/success) complete |
+| **frontend-3d-builder** | Building/fixing a UI surface (3D simulator, Inspect drawer, control panels) | Yushin (+ Maria, UX) | Component matches DSD tokens + all states (empty/loading/streaming/error/success) complete |
 | **eval-test-runner** ⚠️ *guardrail* | After code changes, before merge | QA (Maria/Rica/Russell) | Clear PASS on pytest/Vitest/Playwright/`run_eval.py`, or actionable FAIL |
 | **data-pipeline-runner** | Data refresh or new source integration | Rica / Russell | Files land in `data/raw|processed`, INVENTORY.md status updated, never commit raw data |
 
@@ -67,7 +67,7 @@ your code → glass-box-auditor PASS → eval-test-runner PASS → merge
 | [docs/prd-matrix.md](docs/prd-matrix.md) | What features you're building (PRD-F#) |
 | [docs/sdd-matrix.md](docs/sdd-matrix.md) | How the system is architected (schema, APIs, AI safety) |
 | [docs/rfc-matrix-realtime-pipeline.md](docs/rfc-matrix-realtime-pipeline.md) | The 90 s pipeline implementation |
-| [docs/dsd-matrix.md](docs/dsd-matrix.md) | UI design system, 3D twin, routes & actions |
+| [docs/dsd-matrix.md](docs/dsd-matrix.md) | UI design system, 3D simulator, routes & actions |
 | [docs/methods-matrix.md](docs/methods-matrix.md) | Every module equation + provenance. **Read before coding any module.** |
 | [docs/qad-matrix.md](docs/qad-matrix.md) | Test scenarios (US-##), eval gates, validation rules |
 | [MATRIX.md](MATRIX.md) | Vision, why it wins, locked decisions |

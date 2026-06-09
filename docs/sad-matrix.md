@@ -66,7 +66,7 @@ Five agents — within the 3–6 norm.
 - **Capabilities:** read, grep, run checks. **Guardrails (never):** never "fix" by inventing provenance — only flag. **Done when:** every number traces or is flagged. **Model:** balanced.
 
 #### SAD-A3 — frontend-3d-builder
-- **Purpose:** repeated build of UI surfaces incl. the 3D twin + Inspect drawer (criterion 1).
+- **Purpose:** repeated build of UI surfaces incl. the 3D simulator + Inspect drawer (criterion 1).
 - **Derived from:** [dsd-matrix](dsd-matrix.md) §4/§9–12, PRD-F4/F8/F16.
 - **Responsibilities:** build Next.js/shadcn + Deck.gl components to the DSD tokens; implement all states (empty/loading/streaming/error/success); wire the WS event stream (RFC §3).
 - **Inputs:** a surface from the DSD interface inventory. **Outputs:** component + states.

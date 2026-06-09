@@ -82,7 +82,7 @@
 
 **Base unit:** `4px`. Scale: `--space-1..12` = 4/8/12/16/24/32/48px.
 
-**App shell:** **map-dominant.** The 3D twin fills the viewport; a left **scenario rail**, a right **impact panel** (dockable/collapsible), and a bottom **timeline/playback** bar overlay it. Chrome is ≤ 72px nav. Panels use `--shadow-md` over the map.
+**App shell:** **map-dominant.** The 3D simulator fills the viewport; a left **scenario rail**, a right **impact panel** (dockable/collapsible), and a bottom **timeline/playback** bar overlay it. Chrome is ≤ 72px nav. Panels use `--shadow-md` over the map.
 
 **Grid (panels/forms):** 12-col, 24px gutters, content `max-w-[1400px]`. **Breakpoints:** `sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536`. **Desktop-first** (planning workstations); fully responsive; the **PWA companion is a separate mobile-first surface**. Full-height uses `min-h-[100dvh]` (never `h-screen`).
 
@@ -154,7 +154,7 @@ VISUAL_DENSITY:     7   (cockpit — five dimensions + map + controls)
 
 ---
 
-## 9. 3D Twin & Map Visualization *(the digital-twin surface)*
+## 9. 3D Simulator & Map Visualization *(the simulator surface)*
 
 **Stack:** Mapbox GL JS basemap (muted "planner" style) + **Deck.gl** overlay (locked in MATRIX.md §5). Layers, bottom→top:
 
@@ -177,7 +177,7 @@ VISUAL_DENSITY:     7   (cockpit — five dimensions + map + controls)
 | Surface | Key components | States |
 |---|---|---|
 | **Scenario Query** | NL input, map-draw (point/polygon), reference-scenario picker | empty / typing / parsing / error |
-| **Map Stage** (§9) | 3D twin, layer legend+toggles, timeline scrubber, playback controls, camera toggle | loading / streaming / playing / error |
+| **Map Stage** (§9) | 3D simulator, layer legend+toggles, timeline scrubber, playback controls, camera toggle | loading / streaming / playing / error |
 | **Impact Panel** | 5 Dimension Cards (score · range · confidence · sparkline · Inspect) | per-dimension streaming / complete / directional-only |
 | **Inspect Drawer** (§12) | equation, inputs→datasets, assumptions, confidence basis, references, sensitivity mini-chart | loading / loaded |
 | **Comparison / Ranking** | baseline↔scenario slider; A/B/C alternatives rank table (`PRD-F16`) | one / compare / ranked |
@@ -252,5 +252,5 @@ Visual: right-docked drawer (`--shadow-md`), `420px`, mono for all values, datas
 - [x] §4 components define Disabled + Focus + the full state cycle.
 - [x] §7 taste dials set (3/4/7) and a variant chosen with reason.
 - [x] §6 WCAG AA + color-blind-safe (hue never alone) + accessible map data-table fallback.
-- [x] §9–12 cover the 3D twin, full interface inventory, Route & Action Map, and the glass-box Inspect pattern.
+- [x] §9–12 cover the 3D simulator, full interface inventory, Route & Action Map, and the glass-box Inspect pattern.
 - [x] Materialize as Tailwind config / CSS variables once the frontend scaffold exists (then set Last reconciled).

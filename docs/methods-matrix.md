@@ -135,7 +135,7 @@ A run is reproducible: `simulation_runs` records the scenario params, **random s
 ## 8. Why MATRIX is structurally less of a black box
 
 - **The numbers are not the LLM's.** They are computed by §3 equations on §INVENTORY data. The LLM plans and narrates, and even its narration must cite (§4).
-- **vs live-IoT twins:** their sensor coverage gaps are invisible and unstated; MATRIX makes every gap an explicit confidence tier (§2).
+- **vs live-IoT simulators:** their sensor coverage gaps are invisible and unstated; MATRIX makes every gap an explicit confidence tier (§2).
 - **vs pure-LLM tools:** those generate the answer; MATRIX generates only *behavioral inputs* (personas, audited against ground truth) and computes outputs deterministically.
 
 > Glass-box rule of thumb for the team: *if you put a number on screen, you must be able to click it and see its equation, its data, and its confidence.* If you can't, it isn't ready.

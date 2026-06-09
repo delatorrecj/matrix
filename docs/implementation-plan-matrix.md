@@ -195,7 +195,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 |---|------|-------|-------|
 | 7.1 | Canonical demo scenario locked (e.g. "3,000-seat school at Molo" or a real Iloilo proposal), scripted beat-by-beat | Jerico | Must showcase Inspect + confidence + cross-dimension consistency. |
 | 7.2 | **One Iloilo CPDO planner** walks the demo; capture their reaction | Jerico | Highest-leverage non-technical move — external validation. |
-| 7.3 | Pitch deck (from [gtm-matrix.md](gtm-matrix.md)); Hormozi-warm voice, every claim backed by an on-screen number | Jerico + Rica + Russell | Lead with the counterfactual framing: *"what would happen if we built X"*, not a worse live-IoT twin. |
+| 7.3 | Pitch deck (from [gtm-matrix.md](gtm-matrix.md)); Hormozi-warm voice, every claim backed by an on-screen number | Jerico + Rica + Russell | Lead with the counterfactual framing: *"what would happen if we built X"*, not a worse live-IoT simulator. |
 | 7.4 | Demo video (OBS, ≤ 5 min) showing the full end-to-end incl. an Inspect drill-down | Yushin | — |
 | 7.5 | Final QA sweep: confidence labels on all outputs, no Gemini 1.5/2.0 references anywhere, license/attribution (ODbL) + RA 10173 banner present ([clr-matrix.md](clr-matrix.md)) | Maria/Rica/Russell | — |
 
