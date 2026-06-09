@@ -4,16 +4,19 @@ Embeds OSM context, CCHAIN summaries, and literature into ChromaDB
 using bge-small-en for use by the orchestrator and synthesis agents.
 """
 import sys
+import os
 from pathlib import Path
 
-# Add app to path to import matrix_kernel
-app_path = Path(__file__).parent.parent.parent / "app"
-sys.path.append(str(app_path))
+# Add packages/kernel to path to import matrix_kernel
+kernel_path = Path(__file__).parent.parent / "kernel"
+sys.path.append(str(kernel_path))
 
 try:
-    from matrix_kernel.graphrag import get_collection
-except ImportError:
+    from matrix_kernel.graphrag import get_collection  # type: ignore
+except ImportError as e:
+    print(f"Failed to import graphrag: {e}")
     get_collection = None
+
 
 def build_index():
     """Build the ChromaDB vector index."""
@@ -24,30 +27,60 @@ def build_index():
     print("Building GraphRAG index...")
     collection = get_collection()
     
-    # In a full implementation, we'd read the OSM context, CCHAIN summaries,
-    # Calderon 2014, and TSSP-2019 bike text and insert them.
+    # Read actual documentation and inventory files
+    root_dir = Path(__file__).parent.parent.parent.parent
+    docs_dir = root_dir / "docs"
+    inventory_file = root_dir / "data" / "INVENTORY.md"
     
-    docs = [
-        "Iloilo City's primary public transport mode is the traditional jeepney, capturing over 55% of the mode share according to Calderon (2014).",
-        "The Diversion Road (Sen. Benigno Aquino Jr. Avenue) is a major arterial corridor connecting the city proper to Mandurriao.",
-        "Molo is a key district with high trip generation due to schools and commercial areas."
-    ]
+    files_to_index = list(docs_dir.glob("*.md"))
+    if inventory_file.exists():
+        files_to_index.append(inventory_file)
+        
+    docs = []
+    metadatas = []
+    ids = []
     
-    metadatas = [
-        {"source": "Calderon2014", "confidence": "M"},
-        {"source": "OSM-ILO", "confidence": "H"},
-        {"source": "OSM-ILO", "confidence": "H"}
-    ]
+    print(f"Found {len(files_to_index)} files to index.")
     
-    ids = [f"doc_{i}" for i in range(len(docs))]
+    for filepath in files_to_index:
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Basic chunking: split by double newlines (paragraphs/sections)
+            chunks = [c.strip() for c in content.split("\n\n") if len(c.strip()) > 50]
+            
+            for i, chunk in enumerate(chunks):
+                # To avoid hitting DB batch limits in one go or excessive memory,
+                # we just append them all here (Chroma Python client handles chunking under the hood or we can batch it)
+                docs.append(chunk)
+                metadatas.append({"source": filepath.name, "confidence": "H"})
+                ids.append(f"{filepath.name}_chunk_{i}")
+                
+        except Exception as e:
+            print(f"Error reading {filepath.name}: {e}")
+            
+    if not docs:
+        print("No documents found to index.")
+        return
+        
+    # ChromaDB has a maximum batch size for additions (often 5461 or 166 or 41666 depending on SQLite limits)
+    # We batch insert by 500
+    batch_size = 500
+    for i in range(0, len(docs), batch_size):
+        batch_docs = docs[i:i+batch_size]
+        batch_metas = metadatas[i:i+batch_size]
+        batch_ids = ids[i:i+batch_size]
+        
+        collection.add(
+            documents=batch_docs,
+            metadatas=batch_metas,
+            ids=batch_ids
+        )
+        print(f"Added batch of {len(batch_docs)} documents.")
     
-    collection.add(
-        documents=docs,
-        metadatas=metadatas,
-        ids=ids
-    )
-    
-    print(f"✅ Added {len(docs)} documents to the index.")
+    print(f"✅ Added a total of {len(docs)} document chunks to the index.")
 
 if __name__ == "__main__":
     build_index()
+

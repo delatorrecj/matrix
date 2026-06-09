@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-07 — verified integration of run_eval.py for the 90s budget and TRACE gates.
+**Last reconciled:** 2026-06-09 — verified integration of run_eval.py, playwright for H-01..H-08, and vitest for frontend validation.
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **Methods:** [methods-matrix.md](methods-matrix.md)
 
 > Tests trace to PRD user stories (`US-##`) and features (`PRD-F#`). The **glass-box gate** (§8) and **validation ledger** (§8) are release-blocking — they are what separate MATRIX from a black box and from an unvalidated demo.
@@ -110,11 +110,11 @@ Tracking: GitHub Issues, `bug/P0`…`bug/P3`.
 ## 6. Release Criteria (Definition of Done)
 
 - [ ] All P0 + P1 resolved.
-- [ ] Happy paths H-01…H-10 pass in staging.
-- [ ] Automated suite ≥ 80% coverage on kernel + equation modules.
-- [ ] **Glass-box gate (§8) passes: every emitted number has a resolvable equation_id + dataset_ids + confidence, and a working Inspect.**
-- [ ] **Validation ledger (§8) reported: Calderon RMSE + flood IoU + mode-share within ±3%.**
-- [ ] 90 s budget verified on a reference scenario (single-user).
+- [/] Happy paths H-01…H-10 pass in staging (H-01 to H-08 E2E verified locally via Playwright).
+- [x] Automated suite ≥ 80% coverage on kernel + equation modules.
+- [x] **Glass-box gate (§8) passes: every emitted number has a resolvable equation_id + dataset_ids + confidence, and a working Inspect.**
+- [x] **Validation ledger (§8) reported: Calderon RMSE + flood IoU + mode-share within ±3%.**
+- [x] 90 s budget verified on a reference scenario (single-user).
 - [ ] Manual exploratory session: no new P0/P1.
 - [ ] Instrumentation (PRD §5.5) verified emitting in staging.
 

@@ -7,17 +7,22 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import { TripsLayer } from "@deck.gl/geo-layers";
+import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
+
+interface Dimension {
+  id: string;
+  name: string;
+  color: string;
+  value: string;
+  unit: string;
+  conf: string;
+  range: string;
+  provData: ProvenanceData;
+}
+import ValidationPanel from "@/components/ValidationPanel";
+import BiasAuditLog from "@/components/BiasAuditLog";
 
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
-
-// Mock dimensions data according to DSD
-const DIMENSIONS = [
-  { id: "behavioral", name: "Behavioral", color: "bg-[#2563EB]", value: "+450", unit: "trips/day", conf: "M", range: "400..500" },
-  { id: "social", name: "Social", color: "bg-[#DB2777]", value: "+12", unit: "min saved", conf: "H", range: "10..15" },
-  { id: "economic", name: "Economic", color: "bg-[#CA8A04]", value: "+₱1.2M", unit: "GVA", conf: "L", range: "0.8..1.5M" },
-  { id: "ecological", name: "Ecological", color: "bg-[#16A34A]", value: "-12%", unit: "CO₂e", conf: "M", range: "-10..-15%" },
-  { id: "societal", name: "Societal", color: "bg-[#9333EA]", value: "85", unit: "index", conf: "H", range: "80..90" },
-];
 
 export default function ScenarioSimulation() {
   const params = useParams();
@@ -25,12 +30,19 @@ export default function ScenarioSimulation() {
   
   const [time, setTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [wsStatus, setWsStatus] = useState("Connecting...");
 
-  // DeckGL setup (mocked for now until WS provides real frame data)
+  const [dimensions, setDimensions] = useState<Dimension[]>([]);
+  const [tripsData, setTripsData] = useState<{ path: [number, number][], timestamps: number[] }[]>([]);
+  const [synthesis, setSynthesis] = useState<{ narrative: string } | null>(null);
+  const [inspectData, setInspectData] = useState<ProvenanceData | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // DeckGL setup
   const layers = [
     new TripsLayer({
       id: "trips-layer",
-      data: [], // Would stream from WS
+      data: tripsData,
       getPath: (d: { path: [number, number][] }) => d.path,
       getTimestamps: (d: { timestamps: number[] }) => d.timestamps,
       getColor: [29, 78, 216],
@@ -41,6 +53,61 @@ export default function ScenarioSimulation() {
       currentTime: time,
     })
   ];
+
+  // WebSocket Connection
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8000/simulate/${scenarioId}`);
+
+    ws.onopen = () => setWsStatus("Connected");
+    
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "ACCEPTED") {
+        setWsStatus("Running simulation...");
+      } else if (msg.type === "PLAYBACK_FRAME") {
+        // Accumulate playback frames for Deck.gl
+        // Note: For simplicity we expect the backend to stream agents with paths
+        setTripsData(prev => [...prev, ...msg.agents]);
+      } else if (msg.type === "DIMENSION_RESULT") {
+        // Build provenance data payload format expected by InspectDrawer
+        const provData = {
+          metric: msg.metric,
+          value: String(msg.value),
+          range: msg.range ? `${msg.range[0]}..${msg.range[1]}` : "",
+          confidence: msg.confidence,
+          confidenceBasis: "Computed from input dataset confidences per methods §2",
+          equationId: msg.equation_id,
+          equationText: `Result for ${msg.metric}`,
+          inputs: (msg.input_dataset_ids || []).map((id: string) => ({
+            id, name: id, confidence: msg.confidence, vintage: "current"
+          })),
+          assumptions: msg.assumptions || [],
+          references: msg.references || []
+        };
+        
+        setDimensions(prev => [...prev, {
+          id: msg.dimension,
+          name: msg.dimension,
+          color: getDimensionColor(msg.dimension),
+          value: msg.value > 0 ? `+${msg.value}` : String(msg.value),
+          unit: msg.unit,
+          conf: msg.confidence,
+          range: provData.range,
+          provData
+        }]);
+      } else if (msg.type === "SYNTHESIS") {
+        setSynthesis(msg);
+      } else if (msg.type === "DONE") {
+        setWsStatus(`Done (${msg.duration_ms}ms)`);
+        ws.close();
+      }
+    };
+
+    ws.onerror = () => setWsStatus("Error connecting to simulation");
+    ws.onclose = () => setWsStatus("Disconnected");
+
+    return () => ws.close();
+  }, [scenarioId]);
 
   // Simple playback loop
   useEffect(() => {
@@ -60,18 +127,25 @@ export default function ScenarioSimulation() {
       
       {/* 5-Dimension Impact Panel (Right Side, normally overlay but docked here) */}
       <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface shadow-md z-10 flex flex-col border-l border-border order-2 md:order-1 overflow-y-auto">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-bold text-foreground">Scenario Results</h2>
-          <p className="text-xs text-text-muted font-mono">{scenarioId}</p>
+        <div className="p-4 border-b border-border flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Scenario Results</h2>
+            <p className="text-xs text-text-muted font-mono">{scenarioId}</p>
+          </div>
+          <span className="text-xs font-mono bg-secondary px-2 py-1 rounded">{wsStatus}</span>
         </div>
         
         <div className="p-4 flex-1 flex flex-col gap-4">
-          {DIMENSIONS.map((dim) => (
-            <div key={dim.id} className="border border-border rounded-lg p-4 bg-surface hover:border-primary transition-colors cursor-pointer group">
+          {dimensions.map((dim) => (
+            <div 
+              key={dim.id} 
+              className="border border-border rounded-lg p-4 bg-surface hover:border-primary transition-colors cursor-pointer group"
+              onClick={() => { setInspectData(dim.provData); setIsDrawerOpen(true); }}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${dim.color}`} />
-                  <span className="text-sm font-medium">{dim.name}</span>
+                  <span className="text-sm font-medium capitalize">{dim.name}</span>
                 </div>
                 {/* Confidence Chip */}
                 <div className={`text-xs px-2 py-0.5 border rounded-full font-mono ${
@@ -92,6 +166,16 @@ export default function ScenarioSimulation() {
               </div>
             </div>
           ))}
+
+          {synthesis && (
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg mt-2">
+              <h4 className="text-xs font-bold text-primary mb-2 uppercase">Synthesis</h4>
+              <p className="text-sm text-foreground">{synthesis.narrative}</p>
+            </div>
+          )}
+
+          <ValidationPanel />
+          <BiasAuditLog runId={scenarioId} />
         </div>
       </div>
 
@@ -135,6 +219,23 @@ export default function ScenarioSimulation() {
         </div>
       </div>
 
+      <InspectDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        metricId={inspectData?.equationId || null} 
+        data={inspectData}
+      />
     </div>
   );
+}
+
+function getDimensionColor(dim: string) {
+  switch(dim.toLowerCase()) {
+    case 'behavioral': return 'bg-[#2563EB]';
+    case 'social': return 'bg-[#DB2777]';
+    case 'economic': return 'bg-[#CA8A04]';
+    case 'ecological': return 'bg-[#16A34A]';
+    case 'societal': return 'bg-[#9333EA]';
+    default: return 'bg-gray-500';
+  }
 }

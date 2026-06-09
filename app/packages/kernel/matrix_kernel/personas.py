@@ -53,21 +53,21 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
     class PersonaList(BaseModel):
         personas: list[dict]
 
-    client = genai.Client()
-    model_name = os.environ.get("GEMINI_MODEL_FLASH_LITE", "gemini-3.1-flash-lite")
-    
-    prompt = (
-        f"Generate {n} diverse commuter personas for Iloilo City. "
-        f"The overall mode share MUST roughly match this distribution: {anchor}. "
-        "Each persona should have:\n"
-        "- id: string (e.g. 'p0001')\n"
-        "- mode: string (one of the keys in the mode share anchor)\n"
-        "- income_decile: integer (1 to 10)\n"
-        "- trip_purpose: string ('work', 'school', 'shop', 'other')\n"
-        "Return the result as a JSON object with a 'personas' list."
-    )
-
     try:
+        client = genai.Client()
+        model_name = os.environ.get("GEMINI_MODEL_FLASH_LITE", "gemini-3.1-flash-lite")
+        
+        prompt = (
+            f"Generate {n} diverse commuter personas for Iloilo City. "
+            f"The overall mode share MUST roughly match this distribution: {anchor}. "
+            "Each persona should have:\n"
+            "- id: string (e.g. 'p0001')\n"
+            "- mode: string (one of the keys in the mode share anchor)\n"
+            "- income_decile: integer (1 to 10)\n"
+            "- trip_purpose: string ('work', 'school', 'shop', 'other')\n"
+            "Return the result as a JSON object with a 'personas' list."
+        )
+
         response = client.models.generate_content(
             model=model_name,
             contents=prompt,

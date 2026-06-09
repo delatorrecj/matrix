@@ -42,3 +42,6 @@ def test_timing_probe():
     
     assert warm_delta_ms > 0
     assert traj.meta["edges_with_traffic"] > 0
+    
+    # QAD PERF-01: End-to-end simulation budget must be under 90s
+    assert warm_delta_ms < 90000, f"PERF-01 Budget Exceeded: Delta run took {warm_delta_ms} ms (limit 90000)"

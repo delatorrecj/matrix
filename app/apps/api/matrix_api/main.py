@@ -65,7 +65,16 @@ def get_run(run_id: str) -> dict:
 
 @app.get("/audit/{run_id}")
 def get_audit(run_id: str) -> dict:
-    return {"run_id": run_id, "status": "stub"}
+    # In a full implementation, this reads from Postgres `bias_audit_log`.
+    # Returning a mock entry for Phase 6 frontend integration.
+    return {
+        "run_id": run_id,
+        "batch_id": "b-12345",
+        "target_mode_share": {"jeepney": 0.55, "private": 0.25, "walk": 0.20},
+        "observed_mode_share": {"jeepney": 0.54, "private": 0.27, "walk": 0.19},
+        "reweighted": False,
+        "timestamp": "2026-06-09T12:00:00Z"
+    }
 
 @app.post("/report/{run_id}")
 def generate_report(run_id: str) -> dict:

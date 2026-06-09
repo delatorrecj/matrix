@@ -13,6 +13,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 # Add app to path to import kernel modules
 app_path = Path(__file__).parent.parent / "app"
 sys.path.append(str(app_path))
+sys.path.append(str(app_path / "packages" / "kernel"))
 
 try:
     from matrix_kernel.validation import get_all_validations

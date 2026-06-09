@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Jerico (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-07 — reconciled with the Phase 4/5/6 integrations (Vercel/Fly.io, Next.js frontend).
+**Last reconciled:** 2026-06-09 — reconciled with Phase 4/5/6 integrations (Vercel/Fly.io, Next.js frontend, Playwright & Vitest testing suites).
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **SAD:** [sad-matrix.md](sad-matrix.md)
 
 > The spec→code bridge. Materialized to the app monorepo's root **[`../app/AGENTS.md`](../app/AGENTS.md)** at scaffold — the app is **nested at `app/`** in this repo (one clone), not a separate repo. Owners per [PRD §10](prd-matrix.md).
@@ -60,6 +60,7 @@ Specialist build agents are in the [SAD](sad-matrix.md), materialized to `.claud
 | Backend | FastAPI + uvicorn + websockets | current | fastapi.tiangolo.com |
 | Data | Supabase (Postgres + PostGIS) · ChromaDB · Redis | current | — |
 | ML | XGBoost · sentence-transformers (`bge-small-en`) | current | — |
+| Testing | Vitest + Playwright | current | vitest.dev, playwright.dev |
 
 ### Deprecations — DO NOT use the stale form (overrides memory)
 | ❌ Stale | ✅ Current | Why |

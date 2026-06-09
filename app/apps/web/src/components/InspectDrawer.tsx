@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Imports
 
 interface InspectDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   metricId: string | null;
+  data: ProvenanceData | null;
 }
 
 interface InputDataset {
@@ -15,7 +16,7 @@ interface InputDataset {
   vintage: string;
 }
 
-interface ProvenanceData {
+export interface ProvenanceData {
   metric: string;
   value: string;
   range: string;
@@ -28,35 +29,7 @@ interface ProvenanceData {
   references: string[];
 }
 
-export default function InspectDrawer({ isOpen, onClose, metricId }: InspectDrawerProps) {
-  const [data, setData] = useState<ProvenanceData | null>(null);
-
-  useEffect(() => {
-    if (isOpen && metricId) {
-      // Mock fetch provenance data
-      // In reality: GET /runs/[id]?inspect=metricId
-      setData({
-        metric: "Δ trips/day",
-        value: "+450",
-        range: "400..500",
-        confidence: "M",
-        confidenceBasis: "Calderon 2014 survey data is robust but over 10 years old.",
-        equationId: "BEH-1",
-        equationText: "Δ trips = Σ (population_i * mode_share_m * elasticity_c)",
-        inputs: [
-          { id: "OSM-ILO", name: "OpenStreetMap Iloilo Extract", confidence: "H", vintage: "2026" },
-          { id: "PSA-FIES", name: "Family Income and Expenditure Survey", confidence: "H", vintage: "2023" }
-        ],
-        assumptions: [
-          "Mode share anchor remains consistent with pre-pandemic distributions.",
-          "Walking speed assumed to be 1.2 m/s."
-        ],
-        references: [
-          "Calderon, J. (2014). Travel behavior in Iloilo City."
-        ]
-      });
-    }
-  }, [isOpen, metricId]);
+export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerProps) {
 
   if (!isOpen) return null;
 
