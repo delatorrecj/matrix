@@ -14,11 +14,11 @@
 
 ## 1. Product Summary (GTM View)
 
-**What it does:** drops a proposed project onto a digital twin of a city and returns scored, confidence-anchored impact across five dimensions in ~90 seconds — with every number traceable.
+**What it does:** drops a proposed project onto a simulator of a city and returns scored, confidence-anchored impact across five dimensions in ~90 seconds — with every number traceable.
 
-**Who it's for:** LGU planners, developers/master-planners, and civic/academic stakeholders in ASEAN cities that can't afford sensor-based digital twins.
+**Who it's for:** LGU planners, developers/master-planners, and civic/academic stakeholders in ASEAN cities that can't afford sensor-based simulators.
 
-**Core value proposition:** **answers "what *would* happen if we build this?"** — the pre-construction, counterfactual question no live-IoT twin can answer — across five dimensions, honestly bounded, **with no hardware and no black box.**
+**Core value proposition:** **answers "what *would* happen if we build this?"** — the pre-construction, counterfactual question no live-IoT simulator can answer — across five dimensions, honestly bounded, **with no hardware and no black box.**
 
 **Category:** urban-planning decision-support / civic AI (pre-construction impact simulation).
 
@@ -74,7 +74,7 @@ as a blanket "no one does this."*
 
 ## 4. Positioning & Messaging
 
-**Tagline:** *Real-time twins tell a city what is happening. MATRIX tells it what will happen if it builds.*
+**Tagline:** *Real-time simulators tell a city what is happening. MATRIX tells it what will happen if it builds.*
 
 **Primary message:** "Multi-billion-peso infrastructure is decided on static studies that age the day they're filed. MATRIX simulates the community impact of a project **before a single peso is spent** — five dimensions, explicit confidence, in 90 seconds, every number traceable to its data and equation. No sensors, no black box, deployable to any ASEAN city."
 
@@ -82,13 +82,13 @@ as a blanket "no one does this."*
 - Five dimensions from **one simulation kernel** — internally consistent, not five contradicting tools.
 - **Glass-box:** every output traces to an equation + named open data + confidence ([methods-matrix](methods-matrix.md)).
 - **Validation on the roadmap:** back-test against the Calderon 2014 BRT model + the 2024 Iloilo flood ([QAD §8](qad-matrix.md)) — *planned for semi-final, not yet shipped.* (Don't claim "validated" until the gates pass.)
-- **No hardware** — pure cloud + open data; runs where IoT twins can't afford to.
+- **No hardware** — pure cloud + open data; runs where IoT simulators can't afford to.
 - Anchored to **Iloilo — 2026 ASEAN Clean Tourist City** (its 2nd; awarded Jan 30 2026 at the ASEAN Tourism Forum, Cebu — [MATRIX.md References](../MATRIX.md)).
 
 **Objection handling:**
 | Objection | Response |
 |-----------|----------|
-| "Deployed IoT digital twins already exist." | They monitor the *present*; MATRIX simulates the *unbuilt future* — a different, harder question. And it needs zero sensors. |
+| "Deployed IoT simulators already exist." | They monitor the *present*; MATRIX simulates the *unbuilt future* — a different, harder question. And it needs zero sensors. |
 | "Your data is fixed, not real-time." | Fixed open data is what makes it deployable everywhere; the confidence layer states exactly where it's sure vs estimating — more honest than hidden sensor gaps. |
 | "How do we know the numbers are right?" | Every number is clickable to its equation + sources + confidence (glass-box). Empirical back-testing (RMSE vs Calderon; IoU vs the 2024 flood) is the next validation milestone — *planned, not yet run* — and the confidence layer flags low-data dimensions as "directional only" rather than overstating. |
 | "Tools like this need specialists." | Plain-language input; a planner gets a calibrated five-dimension answer with no modeling background. |

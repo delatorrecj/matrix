@@ -22,7 +22,7 @@
 - **Debunk:** the absolute "no ASEAN platform does this" is unfalsifiable. Replace with a **feature survey** (PTV Vissim, Aimsun, ESRI CityEngine, Replica, UrbanFootprint, AnyLogic) showing the *combination* gap: NL input **+** 5 dimensions in one run **+** per-dimension confidence. Honest caveat on the slide: "based on our feature survey." (Mirrors [GTM §2.1](../docs/gtm-matrix.md).)
 
 ### 4. Solution
-- **Keep, tighten:** drop a project on a city's digital twin → 90 s → 5 scored dimensions with confidence intervals + animated playback + cited Gemini narrative + exportable report.
+- **Keep, tighten:** drop a project on a city's simulator → 90 s → 5 scored dimensions with confidence intervals + animated playback + cited Gemini narrative + exportable report.
 
 ### 5. Three Features = UVP (exactly three, all verified built)
 1. **One unified kernel → five dimensions in one run.** All five score the *same* simulated reality, so they never contradict each other.
