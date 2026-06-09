@@ -102,10 +102,6 @@ data/
 - **Data honesty:** every dataset carries a confidence tier (H/M/L). Don't launder estimates as precision — confidence-bounded output is the product's core differentiator (see [READINESS](data/READINESS.md)).
 - **Prefer the newest vintage** (e.g. 2024 POPCEN-CBMS, not 2020).
 
-## Two git repos in one folder
-
-[`FMD/`](FMD/) (the documentation-generation framework) is a **separate git repository** vendored here, with its own remote. It's gitignored by this repo — operate on it with `git -C FMD …`, and never `git add FMD`. Details in [CLAUDE.md](CLAUDE.md).
-
 ---
 
 ## Team — ATLAN
