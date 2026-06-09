@@ -7,6 +7,11 @@ import os
 
 import pytest
 
+# Import chain (modules.behavioral -> baseline -> sumo_env) needs the eclipse-sumo wheel
+# at import time. Skip cleanly on a bare venv instead of erroring at collection; `uv sync`
+# in app/packages/kernel (or the Docker image) provides SUMO and runs the full suite.
+pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in app/packages/kernel")
+
 from matrix_kernel.modules.behavioral import score
 from matrix_kernel.trajectory import Trajectory
 

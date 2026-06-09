@@ -36,6 +36,28 @@
 
 ---
 
+## 2.1 Competitive Landscape (feature survey)
+
+We avoid the unfalsifiable absolute "no platform does this." Based on a **feature survey of the
+tools planners actually evaluate**, the gap is the *combination*: natural-language input **and**
+five impact dimensions scored against **one** simulated reality **and** per-dimension confidence.
+Each tool below is excellent at what it does; none combines all three.
+
+| Tool | What it's strong at | NL input? | 5 dims, one run? | Per-dim confidence? | Needs a specialist? |
+|---|---|---|---|---|---|
+| PTV Vissim / Aimsun | microscopic traffic simulation | No | No (mobility only) | No | Yes (transport engineer) |
+| ESRI CityEngine | 3D urban/GIS modeling | No | No (spatial only) | No | Yes (GIS) |
+| Replica | data-driven mobility/activity models | Partial | No (mobility/econ) | No | Yes (analyst) |
+| UrbanFootprint | land-use + environmental scenario planning | No | Partial (land/enviro) | No | Yes (planner-analyst) |
+| AnyLogic | general multi-method simulation | No | Build-your-own | No | Yes (modeler) |
+| **MATRIX** | pre-construction 5-dim impact, glass-box | **Yes** | **Yes (unified kernel)** | **Yes (computed H/M/L)** | **No** |
+
+*Honest caveat: this is a public-feature survey, not an exhaustive procurement audit; phrase the
+claim as "based on our survey, none combines NL + 5D-in-one-run + per-dimension confidence," never
+as a blanket "no one does this."*
+
+---
+
 ## 3. Pricing Model
 
 **Model:** `Free / Open` for the hackathon (MIT-licensed, public demo URL).
@@ -59,16 +81,16 @@
 **Proof points:**
 - Five dimensions from **one simulation kernel** — internally consistent, not five contradicting tools.
 - **Glass-box:** every output traces to an equation + named open data + confidence ([methods-matrix](methods-matrix.md)).
-- **Validated** against the Calderon 2014 BRT model + the 2024 Iloilo flood ([QAD §8](qad-matrix.md)).
+- **Validation on the roadmap:** back-test against the Calderon 2014 BRT model + the 2024 Iloilo flood ([QAD §8](qad-matrix.md)) — *planned for semi-final, not yet shipped.* (Don't claim "validated" until the gates pass.)
 - **No hardware** — pure cloud + open data; runs where IoT twins can't afford to.
-- Anchored to **Iloilo, ASEAN Clean Tourist City 2026.**
+- Anchored to **Iloilo — 2026 ASEAN Clean Tourist City** (its 2nd; awarded Jan 30 2026 at the ASEAN Tourism Forum, Cebu — [MATRIX.md References](../MATRIX.md)).
 
 **Objection handling:**
 | Objection | Response |
 |-----------|----------|
 | "Deployed IoT digital twins already exist." | They monitor the *present*; MATRIX simulates the *unbuilt future* — a different, harder question. And it needs zero sensors. |
 | "Your data is fixed, not real-time." | Fixed open data is what makes it deployable everywhere; the confidence layer states exactly where it's sure vs estimating — more honest than hidden sensor gaps. |
-| "How do we know the numbers are right?" | Every number is clickable to its equation + sources + confidence (glass-box), and the model is back-tested (RMSE vs Calderon; IoU vs the 2024 flood). |
+| "How do we know the numbers are right?" | Every number is clickable to its equation + sources + confidence (glass-box). Empirical back-testing (RMSE vs Calderon; IoU vs the 2024 flood) is the next validation milestone — *planned, not yet run* — and the confidence layer flags low-data dimensions as "directional only" rather than overstating. |
 | "Tools like this need specialists." | Plain-language input; a planner gets a calibrated five-dimension answer with no modeling background. |
 
 ---

@@ -65,7 +65,7 @@ Specialist build agents are in the [SAD](sad-matrix.md), materialized to `.claud
 ### Deprecations — DO NOT use the stale form (overrides memory)
 | ❌ Stale | ✅ Current | Why |
 |---------|-----------|-----|
-| Gemini **1.5 / 2.0** | **Gemini 3.1** (Pro + Flash-Lite) | 1.5 shut down; 2.0 shuts down 2026-06-01 — before submission (MATRIX.md §6) |
+| Gemini **1.5 / 2.0** | **Gemini 3.1** (Pro + Flash-Lite) | 1.5 shut down; 2.0 shut down 2026-06-01 — before submission (MATRIX.md §6) |
 | `google-generativeai` SDK | **`google-genai`** (unified SDK) | verify import shape against current docs |
 | **OASIS / MiroFish** as the simulator | **SUMO** | OASIS/MiroFish simulate social media, not urban agents (MATRIX.md §6) |
 | Tailwind v3 PostCSS plugin (`tailwindcss`) | **`@tailwindcss/postcss`** (v4) | taste-skill §3.A |
@@ -110,7 +110,7 @@ Follow [`data/fetch/fetch_open.py`](../data/fetch/fetch_open.py): stdlib, idempo
 
 ## 5. Conventions & Guardrails
 
-**Repo layout (nested monorepo at `app/`, as built):** `apps/web` (Next.js, Phase 5) · `apps/api` (FastAPI+WS, health + WS skeleton) · `packages/kernel` (SUMO/TraCI + 5 glass-box modules) · `packages/data` (processing pipeline → `build_network.py`) · `data/` (this repo's raw data + fetch scripts) · `docs/` (this suite).
+**Repo layout (nested monorepo at `app/`, as built):** `apps/web` (Next.js 14 + Deck.gl, built — InspectDrawer, TripsLayer, e2e) · `apps/api` (FastAPI + WS: health + `/scenario` + streaming `/simulate` + Gemini orchestrator/synthesis) · `packages/kernel` (SUMO/TraCI + 5 glass-box modules) · `packages/data` (processing pipeline → `build_network.py`) · `data/` (this repo's raw data + fetch scripts) · `docs/` (this suite).
 
 **Always:** validate external input at the boundary (Pydantic/Zod); **every emitted number carries `equation_id` + `input_dataset_ids` + confidence**; tag confidence on every dimension; cite sources in narratives.
 

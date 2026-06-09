@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MATRIX — Pre-construction infrastructure impact simulator · AAIH 2026</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <div class="tag-honest">glass box · confidence-anchored</div>
+
+  <main class="deck" id="deck">
+
+    <!-- 1 · TITLE + HOOK -->
+    <section class="slide title-slide active">
+      <div class="brand-row">
+        <span class="logo">MATRIX</span>
+        <span class="kicker" style="margin:0">ASEAN AI Hackathon 2026 · Smart Cities · Team ATLAN — PUP</span>
+      </div>
+      <h1>See the impact<br />before you pour<br />the concrete.</h1>
+      <p class="lead lead-wide" style="margin-top:24px">
+        A pre-construction <strong>infrastructure impact simulator</strong> for ASEAN cities.
+        Ask in plain language — get a calibrated, five-dimension answer in 90 seconds, every number traceable.
+      </p>
+      <div class="row" style="margin-top:28px">
+        <span class="pill">📍 Pilot: Iloilo City</span>
+        <span class="pill">🏆 Iloilo — 2026 ASEAN Clean Tourist City</span>
+        <span class="pill">🧭 Built for Smart Cities</span>
+      </div>
+      <div class="source">
+        Iloilo won the 2026 ASEAN Clean Tourist City Award (its 2nd; accepted Jan 30 2026, ASEAN Tourism Forum, Cebu). Sources: PIA; Panay News, 2026.
+      </div>
+    </section>
+
+    <!-- 2 · PROBLEM -->
+    <section class="slide">
+      <span class="kicker">The Problem</span>
+      <h2>ASEAN cities build infrastructure blind.</h2>
+      <div class="grow">
+        <ul class="clean">
+          <li><span><b>Static feasibility studies age the day they're filed.</b> A 2022 traffic count can't predict how a 2026 mall reshapes every household within 3&nbsp;km — or which jeepney route, vendor corner, or flood corridor it disrupts.</span></li>
+          <li><span><b>Cross-domain impacts are judged in silos.</b> Environmental, transport, economic, and social reviews live in different offices — and reach the same desk only after the project is approved.</span></li>
+          <li><span><b>The tools that could help need specialists.</b> Vissim, Aimsun, CityEngine, Replica — none take "what happens if we build a 3,000-seat school here?" from a planner with no modeling background.</span></li>
+        </ul>
+      </div>
+      <div class="source">Documented planning-failure pattern across ASEAN suburban cities (illustrative: Montalbo / UP&nbsp;SURP; JICA; TRID; ICLEI Iloilo Roadmap).</div>
+    </section>
+
+    <!-- 3 · TARGET MARKET -->
+    <section class="slide">
+      <span class="kicker">Who It's For</span>
+      <h2>Beachhead Iloilo → the region.</h2>
+      <div class="grow">
+        <div class="cols-3">
+          <div class="card" style="border-top:4px solid var(--d-behavioral)">
+            <h3>① LGU planners</h3>
+            <p>Iloilo CPDO, NEDA VI, DOTr / LTFRB VI — pre-evaluate proposals, prioritize capital projects, back EIAs with simulation. <b>Map-literate, not modelers.</b></p>
+          </div>
+          <div class="card" style="border-top:4px solid var(--d-economic)">
+            <h3>② Developers</h3>
+            <p>Megaworld Iloilo Business Park, Ayala Land — site selection, entrance &amp; parking, anticipate community pushback <b>before public consultation.</b></p>
+          </div>
+          <div class="card" style="border-top:4px solid var(--d-societal)">
+            <h3>③ Civic &amp; academic</h3>
+            <p>UP Visayas SURP, Clean Air Asia, ICLEI — independent, simulation-backed verification and policy advocacy.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="pill">Then: PH cities</span><span class="arrow" style="color:var(--cobalt)">→</span>
+          <span class="pill">Jakarta</span><span class="pill">Bangkok</span><span class="pill">Ho Chi Minh City</span><span class="pill">Kuala Lumpur</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · CURRENT SOLUTIONS & GAPS -->
+    <section class="slide">
+      <span class="kicker">The Landscape</span>
+      <h2>Great tools. None do the <em>combination</em>.</h2>
+      <div class="grow">
+        <table>
+          <thead>
+            <tr><th>Tool</th><th>Strong at</th><th>Plain-language?</th><th>5 dims, one run?</th><th>Per-dim confidence?</th><th>Specialist?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>PTV Vissim / Aimsun</td><td>microscopic traffic</td><td class="mark-no">No</td><td class="mark-no">No</td><td class="mark-no">No</td><td>Yes</td></tr>
+            <tr><td>ESRI CityEngine</td><td>3D urban / GIS</td><td class="mark-no">No</td><td class="mark-no">No</td><td class="mark-no">No</td><td>Yes</td></tr>
+            <tr><td>Replica</td><td>data-driven mobility</td><td class="mark-no">Partial</td><td class="mark-no">No</td><td class="mark-no">No</td><td>Yes</td></tr>
+            <tr><td>UrbanFootprint</td><td>land-use / enviro</td><td class="mark-no">No</td><td class="mark-no">Partial</td><td class="mark-no">No</td><td>Yes</td></tr>
+            <tr><td>AnyLogic</td><td>general simulation</td><td class="mark-no">No</td><td class="mark-no">DIY</td><td class="mark-no">No</td><td>Yes</td></tr>
+            <tr class="us"><td>MATRIX</td><td>pre-construction 5-dim impact</td><td class="mark-yes">Yes</td><td class="mark-yes">Yes</td><td class="mark-yes">Yes</td><td class="mark-yes">No</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="source note">Based on our public feature survey — not an exhaustive procurement audit. The gap is the combination, not any single capability.</div>
+    </section>
+
+    <!-- 5 · SOLUTION -->
+    <section class="slide">
+      <span class="kicker">The Solution</span>
+      <h2>Drop a project on your city's twin.<br />Get a calibrated 5-dimension answer in 90 seconds.</h2>
+      <div class="grow">
+        <div class="cols">
+          <ul class="clean">
+            <li><span><b>Natural language or a map drop</b> — "add a 3-storey school in Mandurriao."</span></li>
+            <li><span><b>Thousands of agent simulations</b> run against a digital twin of the city.</span></li>
+            <li><span><b>Five scored impact dimensions</b>, each with an explicit confidence interval.</span></li>
+            <li><span><b>Watch it play out</b> on the map; read a cited narrative; export a report.</span></li>
+          </ul>
+          <div class="card">
+            <h3>The honest difference</h3>
+            <p>MATRIX reports <span class="mono">−₱8M to −₱14M over 5&nbsp;yrs (Medium confidence)</span> — a calibrated <b>range</b>, not a false-precise "−₱11.3M." It says where it's sure and where it's estimating.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · FIVE DIMENSIONS -->
+    <section class="slide">
+      <span class="kicker">Core Product</span>
+      <h2>Five dimensions. One simulated reality. Explicit confidence.</h2>
+      <div class="grow">
+        <div class="dims">
+          <div class="dim behavioral"><span class="name">Behavioral</span><span class="conf">typ. High</span><span class="what">Trips, mode-share, peak saturation</span></div>
+          <div class="dim social"><span class="name">Social</span><span class="conf">typ. Medium</span><span class="what">Equity access, informal-worker displacement</span></div>
+          <div class="dim economic"><span class="name">Economic</span><span class="conf">typ. Medium</span><span class="what">Land value, footfall, jobs, tax base</span></div>
+          <div class="dim ecological"><span class="name">Ecological</span><span class="conf">typ. High</span><span class="what">CO₂e, air quality, green cover, flood</span></div>
+          <div class="dim societal"><span class="name">Societal</span><span class="conf">typ. Low–Med</span><span class="what">Heritage, health, walkability, noise</span></div>
+        </div>
+        <p style="font-size:1.05rem">One kernel scores all five — so Behavioral and Ecological never contradict each other, because they ran the <b>same physics</b>. Confidence is its own visual channel, never hidden.</p>
+      </div>
+      <div class="source">Equations + provenance: methods-matrix.md. Confidence tiers are <em>computed</em> from a fixed rubric (data vintage × coverage × method × validation), never guessed.</div>
+    </section>
+
+    <!-- 7 · 3 FEATURES = UVP -->
+    <section class="slide">
+      <span class="kicker">Unique Value Proposition</span>
+      <h2>Three things only MATRIX does together.</h2>
+      <div class="grow">
+        <div class="cols-3">
+          <div class="card" style="border-top:4px solid var(--cobalt)">
+            <div class="big">01</div><h3>One kernel → five dimensions</h3>
+            <p>A single SUMO + LLM-persona run produces one trajectory dataset. All five modules score it — internally consistent by construction.</p>
+          </div>
+          <div class="card" style="border-top:4px solid var(--d-ecological)">
+            <div class="big">02</div><h3>Glass box, confidence-anchored</h3>
+            <p>Every number → equation + named open data + a computed H/M/L, resolvable in an Inspect drawer. Bias auditor anchors mode-share. Ranges, not false precision.</p>
+          </div>
+          <div class="card" style="border-top:4px solid var(--d-social)">
+            <div class="big">03</div><h3>Plain language → 90 s</h3>
+            <p>Ask in words or drop a pin; real-time animated playback. No transport engineer, no GIS analyst, no modeling background.</p>
+          </div>
+        </div>
+      </div>
+      <div class="source">All three are <em>built and running</em> today (see next: Proof).</div>
+    </section>
+
+    <!-- 8 · HOW IT WORKS -->
+    <section class="slide">
+      <span class="kicker">How It Works</span>
+      <h2>One pipeline, a 90-second target budget.</h2>
+      <div class="grow">
+        <div class="pipe">
+          <div class="node"><span class="t">NL / map drop</span><span class="s">planner input</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="t">Gemini 3.1 Pro</span><span class="s">parse → sim plan</span></div>
+          <span class="arrow">→</span>
+          <div class="node kernel"><span class="t">Unified kernel</span><span class="s">SUMO + personas + bias auditor → 1 trajectory dataset</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="t">5 modules ∥</span><span class="s">score in parallel</span></div>
+          <span class="arrow">→</span>
+          <div class="node"><span class="t">Synthesis + Deck.gl</span><span class="s">cited narrative + playback</span></div>
+        </div>
+        <div class="timeline">
+          <div class="bar">
+            <div class="seg" style="width:5.6%;background:var(--d-behavioral)">5s</div>
+            <div class="seg" style="width:11.1%;background:var(--d-societal)">GraphRAG</div>
+            <div class="seg" style="width:50%;background:var(--d-ecological)">SUMO simulation 45s</div>
+            <div class="seg" style="width:22.2%;background:var(--d-economic)">5 modules 20s</div>
+            <div class="seg" style="width:11.1%;background:var(--d-social)">synth 10s</div>
+          </div>
+          <p style="font-size:0.82rem">Hit via a <b>pre-warmed persona pool</b>, <b>delta sims</b> vs a nightly baseline, <b>parallel modules</b>, and <b>streaming UI</b>.</p>
+        </div>
+      </div>
+      <div class="source note">90 s is the engineered target (warm baseline, single user). Current warm-run probe ~123 s → Phase-6 optimization (libsumo / headless) is the named next step. We show the architecture that earns the budget.</div>
+    </section>
+
+    <!-- 9 · PROOF / WHAT'S BUILT -->
+    <section class="slide">
+      <span class="kicker">Proof — It Runs Today</span>
+      <h2>Not a mockup. A working system.</h2>
+      <div class="grow">
+        <div class="cols">
+          <ul class="clean">
+            <li><span><b>Glass-box kernel + all 5 modules</b> — real Phase-3 equations returning traceable results.</span></li>
+            <li><span><b>WebSocket streaming API</b> — ACCEPTED → playback → 5 dimension results → cited synthesis → done.</span></li>
+            <li><span><b>Next.js 14 + Deck.gl frontend</b> — animated TripsLayer, the glass-box Inspect drawer, bias-audit log.</span></li>
+            <li><span><b>Data foundation</b> — 180 Iloilo barangays; 148k buildings; 5,680 priced land parcels; CCHAIN climate/health/wealth.</span></li>
+            <li><span><b>Test contract</b> — 23 tests green with the simulation engine installed; glass-box invariants enforced at construction time.</span></li>
+          </ul>
+          <div class="shot" id="shot-app" data-shot="scenario-playback.png">
+            [ live app screenshot — Deck.gl playback + Inspect drawer ]<br /><br />
+            <span style="font-size:0.72rem">Drop <code>scenario-playback.png</code> into <code>presentation/assets/</code> (see capture-shots.mjs)</span>
+          </div>
+        </div>
+      </div>
+      <div class="source">Roadmap, stated honestly: empirical validation gates (Calderon-2014 RMSE, 2024 flood back-test) are <em>planned for semi-final, not yet shipped</em>; mode-share calibration is ongoing.</div>
+    </section>
+
+    <!-- 10 · VALUE -->
+    <section class="slide">
+      <span class="kicker">Value of the Solution</span>
+      <h2>De-risk the decision that's hardest to reverse.</h2>
+      <div class="grow">
+        <div class="cols-3">
+          <div class="card"><h3>For the LGU</h3><p>Stop approving infrastructure that fails on opening day. Simulation-backed evidence for capital prioritization and EIAs — across five dimensions at once.</p></div>
+          <div class="card"><h3>For the developer</h3><p>Pressure-test site, entrance, and parking before consultation. See the displacement and footfall story before the community does.</p></div>
+          <div class="card"><h3>For the public</h3><p>An auditable, confidence-honest second opinion — the informal economy (vendors, jeepney/tricycle drivers) is modeled, not erased.</p></div>
+        </div>
+        <p style="font-size:1.05rem"><b>ASEAN value:</b> no sensors, no hardware. A new city = a new OSM bounding box + reweighted personas. Deployment cost is <b>API tokens, not procurement</b> — so it runs where IoT twins can't afford to.</p>
+      </div>
+    </section>
+
+    <!-- 11 · BUSINESS MODEL CANVAS -->
+    <section class="slide">
+      <span class="kicker">Business Model Canvas</span>
+      <h2>Public-good first, revenue path honest.</h2>
+      <div class="bmc">
+        <div class="b span2"><h4>Key Partners</h4><ul><li>Iloilo CPDO / NEDA VI</li><li>Clean Air Asia (open data)</li><li>UP Visayas SURP, ICLEI</li><li>Google (Gemini), OSM/Overture</li></ul></div>
+        <div class="b"><h4>Key Activities</h4><ul><li>Simulation + scoring</li><li>Data pipeline + calibration</li><li>Model validation</li></ul></div>
+        <div class="b span2"><h4>Value Propositions</h4><ul><li>5-dim pre-construction impact</li><li>Glass box + confidence</li><li>90 s, plain language</li><li>No hardware → any ASEAN city</li></ul></div>
+        <div class="b"><h4>Customer Relationships</h4><ul><li>LGU pilots + training</li><li>Open methodology / repo</li></ul></div>
+        <div class="b span2"><h4>Customer Segments</h4><ul><li>LGU planners (beachhead)</li><li>Developers / master-planners</li><li>Civic + academic</li></ul></div>
+        <div class="b"><h4>Key Resources</h4><ul><li>Unified kernel + equations</li><li>Open data + persona pool</li><li>Team ATLAN</li></ul></div>
+        <div class="b"><h4>Channels</h4><ul><li>AAIH + workshops</li><li>LGU / academic networks</li><li>Public demo URL + GitHub</li></ul></div>
+        <div class="b" style="grid-column:1 / 4"><h4>Cost Structure</h4><ul><li>Gemini API tokens (Flash-Lite for volume) · cloud (Vercel + Fly.io) · no hardware, no sensors</li></ul></div>
+        <div class="b" style="grid-column:4 / 6"><h4>Revenue Streams</h4><ul><li>Free / public-good for LGU + academic · paid private-developer / SaaS tier — <b>TBD, post-hackathon</b></li></ul></div>
+      </div>
+      <div class="source">Not monetized at hackathon stage — goal is adoption + credibility. Revenue tier deliberately marked TBD; no false-precise TAM claimed.</div>
+    </section>
+
+    <!-- 12 · GO TO MARKET -->
+    <section class="slide">
+      <span class="kicker">Go-To-Market</span>
+      <h2>Land Iloilo. Prove it. Scale by prompt swap.</h2>
+      <div class="grow">
+        <div class="cols">
+          <ul class="clean">
+            <li><span><b>Beachhead:</b> Clean Air Asia is <em>already building</em> the open mobility-data infrastructure MATRIX consumes — and Iloilo is the 2026 ASEAN Clean Tourist City. The narrative is pre-aligned.</span></li>
+            <li><span><b>Wedge:</b> get one real Iloilo CPDO planner to validate the demo — our highest-leverage proof point.</span></li>
+            <li><span><b>Expand:</b> PH cities → ASEAN. New city = new OSM bbox + persona reweight (Jakarta ojek/angkot, Bangkok songthaew/tuk-tuk, HCMC xe-om, KL Rapid).</span></li>
+          </ul>
+          <div class="card">
+            <h3>Directional market (assumptions stated)</h3>
+            <p>ASEAN has <b>1,000+</b> cities; the Philippines alone ~149 cities. Each major infrastructure project carries feasibility/EIA spend on the order of ₱millions. <span class="note">Order-of-magnitude framing, not a precise TAM.</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 · WHY US -->
+    <section class="slide">
+      <span class="kicker">Why Us</span>
+      <h2>An ASEAN team that ships the hard part.</h2>
+      <div class="grow">
+        <div class="cols">
+          <ul class="clean">
+            <li><span><b>We built the glass box, not just slides.</b> The kernel, five modules, streaming API, and Deck.gl frontend already run — discipline you can inspect.</span></li>
+            <li><span><b>Local knowledge.</b> A Filipino team (PUP) building for Iloilo and ASEAN cities — informal transit, flood, and the informal economy are home turf, with multilingual personas (Filipino, Hiligaynon).</span></li>
+            <li><span><b>Honesty as a moat.</b> We'd rather show a confidence range than a confident lie — the trait planners and judges reward.</span></li>
+          </ul>
+          <div class="card">
+            <h3>Team ATLAN — PUP</h3>
+            <p><b>Carlos Jerico Dela Torre</b> — lead, AI/software, product<br /><b>Yushin Bjorn Matsuda</b> — AI/software, UI/UX<br /><b>Maria Espina</b> — QA, UI/UX<br /><b>Rica Mae Mago</b> — QA, research &amp; marketing<br /><b>Russell Jay Fajardo</b> — QA, research &amp; marketing</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 · CLOSE / ASK -->
+    <section class="slide center">
+      <span class="kicker">The Ask</span>
+      <h1>Let ASEAN cities see the future<br />before they build it.</h1>
+      <p class="lead lead-wide" style="margin-top:24px">MATRIX turns a plain-language question into a calibrated, confidence-honest, five-dimension answer in 90 seconds — with no hardware, deployable across the region. We're asking to advance, and for a pathway to a real Iloilo pilot.</p>
+      <div class="row" style="margin-top:28px">
+        <span class="pill">github.com/delatorrecj/matrix</span>
+        <span class="pill">Team ATLAN · PUP</span>
+        <span class="pill">carlosjericodelatorre@gmail.com</span>
+      </div>
+    </section>
+
+    <!-- 15 · APPENDIX -->
+    <section class="slide">
+      <span class="kicker">Appendix — Q&amp;A Defense</span>
+      <h2>How we know it's right, and where it isn't (yet).</h2>
+      <div class="grow">
+        <div class="cols">
+          <div class="card">
+            <h3>Glass-box methodology</h3>
+            <p>Every number carries <span class="mono">equation_id</span> + <span class="mono">input_dataset_ids</span> + a computed confidence, and must resolve in the Inspect drawer. The LLM narrates and cites — it never originates a number. Rule: <em>no working Inspect → not done.</em></p>
+          </div>
+          <div class="card">
+            <h3>Confidence rubric</h3>
+            <p>H/M/L computed from data vintage × spatial coverage × method maturity × validation status; the worst factor caps the tier. Low-data dimensions render "directional only," never a precise number.</p>
+          </div>
+          <div class="card">
+            <h3>Validation roadmap <span class="note">(planned, not shipped)</span></h3>
+            <p>RMSE vs the Calderon 2014 Iloilo BRT model; IoU back-test vs the 2024 Iloilo flood (Sentinel-1 GFM); mode-share within ±3% of ground truth (enforced today by the bias auditor).</p>
+          </div>
+          <div class="card">
+            <h3>Honest constraints</h3>
+            <p>90 s holds warm/single-user (cold + multi-user need queueing); mode-share is literature-derived (Medium) pending a live survey; FOI data (LTFRB VI) may lag submission — open substitutes cover the build.</p>
+          </div>
+        </div>
+      </div>
+      <div class="source">Canonical: docs/methods-matrix.md (equations + provenance) · docs/qad-matrix.md (gates) · data/READINESS.md (confidence backing).</div>
+    </section>
+
+  </main>
+
+  <div class="nav" id="nav">
+    <button id="prev" aria-label="Previous">‹</button>
+    <span id="counter">1 / 15</span>
+    <button id="next" aria-label="Next">›</button>
+  </div>
+  <div class="help">← → navigate · F fullscreen · Ctrl/Cmd+P → PDF</div>
+
+  <script>
+    (function () {
+      var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+      var i = 0;
+      var counter = document.getElementById('counter');
+      var progress = document.getElementById('progress');
+
+      function show(n) {
+        i = Math.max(0, Math.min(slides.length - 1, n));
+        slides.forEach(function (s, idx) { s.classList.toggle('active', idx === i); });
+        counter.textContent = (i + 1) + ' / ' + slides.length;
+        progress.style.width = ((i + 1) / slides.length * 100) + '%';
+        location.hash = i + 1;
+      }
+      function next() { show(i + 1); }
+      function prev() { show(i - 1); }
+
+      document.getElementById('next').addEventListener('click', next);
+      document.getElementById('prev').addEventListener('click', prev);
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+        else if (e.key === 'Home') { show(0); }
+        else if (e.key === 'End') { show(slides.length - 1); }
+        else if (e.key.toLowerCase() === 'f') {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+          else document.exitFullscreen();
+        }
+      });
+
+      // click anywhere advances, except on links/buttons
+      document.getElementById('deck').addEventListener('click', function (e) {
+        if (e.target.closest('a, button')) return;
+        next();
+      });
+
+      // swap in real screenshots if present
+      document.querySelectorAll('.shot[data-shot]').forEach(function (el) {
+        var src = '../assets/' + el.getAttribute('data-shot');
+        var img = new Image();
+        img.onload = function () { el.innerHTML = ''; el.appendChild(img); };
+        img.src = src;
+      });
+
+      // scale the 1280x720 stage to fit the viewport (preview, projector, PDF all consistent)
+      function fit() {
+        var k = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+        document.documentElement.style.setProperty('--scale', k);
+      }
+      window.addEventListener('resize', fit);
+      fit();
+
+      var start = parseInt((location.hash || '#1').slice(1), 10);
+      show(isNaN(start) ? 0 : start - 1);
+    })();
+  </script>
+</body>
+</html>

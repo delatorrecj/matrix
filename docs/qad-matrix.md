@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-09 — verified integration of run_eval.py, playwright for H-01..H-08, and vitest for frontend validation.
+**Last reconciled:** 2026-06-09 (CR-005) — verified run_eval.py + Playwright (H-01..H-08) + vitest. **Test reality:** 23 pass with `eclipse-sumo` + Redis up (`uv run pytest`; the project `.venv` bundles SUMO). The 6 SUMO-dependent modules guard their import with `pytest.importorskip("sumo")`, so a bare `python -m pytest` with no SUMO **skips them cleanly** → **15 passed, 7 skipped** (no collection errors); with SUMO but Redis down, the integration tests skip (≈20 passed, 3 skipped). **VAL-01/VAL-02 are planned, not yet run; PERF-01 currently ~123 s (over the 90 s budget).**
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **Methods:** [methods-matrix.md](methods-matrix.md)
 
 > Tests trace to PRD user stories (`US-##`) and features (`PRD-F#`). The **glass-box gate** (§8) and **validation ledger** (§8) are release-blocking — they are what separate MATRIX from a black box and from an unvalidated demo.
@@ -113,8 +113,8 @@ Tracking: GitHub Issues, `bug/P0`…`bug/P3`.
 - [/] Happy paths H-01…H-10 pass in staging (H-01 to H-08 E2E verified locally via Playwright).
 - [x] Automated suite ≥ 80% coverage on kernel + equation modules.
 - [x] **Glass-box gate (§8) passes: every emitted number has a resolvable equation_id + dataset_ids + confidence, and a working Inspect.**
-- [x] **Validation ledger (§8) reported: Calderon RMSE + flood IoU + mode-share within ±3%.**
-- [x] 90 s budget verified on a reference scenario (single-user).
+- [ ] **Validation ledger (§8) reported: Calderon RMSE + flood IoU + mode-share within ±3%.** *(VAL-03 mode-share anchor is enforced in code today; VAL-01 Calderon RMSE + VAL-02 flood IoU are **planned for semi-final, not yet run** — see [methods §6](methods-matrix.md). Do not check until the numbers are published.)*
+- [/] 90 s budget verified on a reference scenario (single-user). *(Warm-run probe currently **~123 s** on a 900 s horizon — **over budget**; Phase-6 optimization (libsumo / headless / lighter reroute) pending — see PERF-01.)*
 - [ ] Manual exploratory session: no new P0/P1.
 - [ ] Instrumentation (PRD §5.5) verified emitting in staging.
 

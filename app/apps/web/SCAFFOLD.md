@@ -1,10 +1,16 @@
 # Frontend scaffold — `apps/web`
 
-> **Deliberately not pre-generated.** Next.js, Tailwind, and Deck.gl move fast, and
+> **STATUS (CR-004, 2026-06-07): the frontend is now generated and implemented.** The app
+> exists alongside this file — `src/app/` (App Router), `InspectDrawer.tsx`, the Deck.gl
+> scenario page (`TripsLayer` + WS client), `BiasAuditLog.tsx`, `ValidationPanel.tsx`, and
+> Playwright e2e. The procedure below is retained as the **provenance record** of *how* it
+> was scaffolded (live generators, not training memory) and the **resolved pinned versions**
+> verified at Gate 0. Re-run the verify-live checklist before any major dependency bump.
+
+> **Why this procedure (kept for the record).** Next.js, Tailwind, and Deck.gl move fast, and
 > [build-matrix.md §3](../../../docs/build-matrix.md) forbids emitting framework code from
-> training memory. Scaffold from the live generators (which pull current config), then
-> verify against the pinned-version checklist below. This file is the Gate 0 procedure for
-> the web app.
+> training memory. The app was scaffolded from the live generators (which pull current config),
+> then verified against the pinned-version checklist below.
 
 ## 1. Generate (run from `app/apps/`)
 

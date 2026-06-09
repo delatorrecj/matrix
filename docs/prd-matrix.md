@@ -192,7 +192,7 @@ flowchart TD
 ## 7. AI / Agent Feature Specifications
 
 **AI Components:** (1) Orchestrator/Synthesis, (2) Persona generator, (3) Bias auditor, (4) Baseline forecaster.
-**Models considered:** Gemini 3.1 Pro / Flash-Lite; (rejected) Gemini 1.5 (shut down) and 2.0 (shuts down 2026-06-01, before final submission).
+**Models considered:** Gemini 3.1 Pro / Flash-Lite; (rejected) Gemini 1.5 (shut down) and 2.0 (shut down 2026-06-01, before final submission).
 **Selected models:**
 - **Gemini 3.1 Pro** — NL scenario parsing, orchestration, synthesis/report narratives. *Reason: current-generation reasoning; needed for reliable NL→plan and grounded narrative.*
 - **Gemini 3.1 Flash-Lite** — high-volume persona generation. *Reason: free-tier covers prototype-scale persona batches.*

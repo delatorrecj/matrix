@@ -1,0 +1,210 @@
+/* MATRIX pitch deck — self-contained design system.
+   Dark "instrument" theme for projector legibility; DSD 5-dimension palette kept brand-true.
+   Screen: one slide shown at a time. Print: one slide per page (16:9 landscape). */
+
+:root {
+  /* base — dark ink */
+  --bg: #0b0e14;
+  --bg-2: #0e1320;
+  --surface: #151b28;
+  --surface-2: #1b2333;
+  --border: rgba(231, 236, 243, 0.12);
+  --border-strong: rgba(231, 236, 243, 0.22);
+  --text: #e7ecf3;
+  --muted: #9aa7bd;
+  --faint: #6b7890;
+
+  /* accent — cobalt (DSD --color-primary family, lifted for dark bg) */
+  --cobalt: #3b82f6;
+  --cobalt-deep: #1d4ed8;
+
+  /* DSD five-dimension categorical palette */
+  --d-behavioral: #4f8cff; /* blue   (DSD #2563EB) */
+  --d-social: #f0589e;     /* rose   (DSD #DB2777) */
+  --d-economic: #e0a92b;   /* amber  (DSD #CA8A04) */
+  --d-ecological: #2bbf63; /* green  (DSD #16A34A) */
+  --d-societal: #b06bf2;   /* violet (DSD #9333EA) */
+
+  --ok: #2bbf63;
+  --warn: #e0a92b;
+
+  /* type */
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+
+  /* spacing (4px base) */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px; --s12: 48px; --s16: 64px;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg); }
+
+/* numbers use tabular figures everywhere */
+.num, .mono, table td, .stat-value { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- slide frame ---------- */
+/* Each slide is a fixed 1280x720 stage, scaled to fit the viewport (set via --scale in JS).
+   This keeps layout pixel-identical on a small preview, a projector, and in the PDF. */
+.slide {
+  position: absolute; top: 50%; left: 50%;
+  width: 1280px; height: 720px;
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transform-origin: center center;
+  display: flex; flex-direction: column;
+  padding: 52px 84px;
+  background: radial-gradient(120% 100% at 12% 0%, var(--bg-2) 0%, var(--bg) 60%);
+  overflow: hidden;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.35s ease;
+}
+.slide.active { opacity: 1; visibility: visible; }
+.slide::before { /* left accent rail */
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+  background: linear-gradient(var(--cobalt), var(--d-societal));
+}
+
+.kicker {
+  font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--cobalt); font-weight: 700; margin-bottom: var(--s4);
+}
+h1 { font-size: 3.4rem; line-height: 1.05; letter-spacing: -0.02em; font-weight: 800; }
+h2 { font-size: 2.2rem; line-height: 1.1; letter-spacing: -0.015em; font-weight: 750; margin-bottom: var(--s6); }
+h3 { font-size: 1.15rem; font-weight: 700; }
+.lead { font-size: 1.45rem; color: var(--text); max-width: 24ch; }
+.lead-wide { max-width: 40ch; }
+p { color: var(--muted); }
+strong { color: var(--text); font-weight: 700; }
+em { color: var(--text); font-style: italic; }
+
+.grow { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: var(--s6); }
+.center { justify-content: center; }
+
+.source { margin-top: auto; padding-top: var(--s6); font-size: 0.74rem; color: var(--faint); }
+.source a { color: var(--faint); }
+.note { font-size: 0.82rem; color: var(--warn); font-style: italic; }
+
+/* ---------- layout helpers ---------- */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s8); align-items: start; }
+.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s6); }
+.row { display: flex; gap: var(--s4); flex-wrap: wrap; align-items: center; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--s6); display: flex; flex-direction: column; gap: var(--s3);
+}
+.card h3 { font-size: 1.05rem; }
+.card p { font-size: 0.92rem; }
+.card .big { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 2rem; font-weight: 800; color: var(--text); }
+
+ul.clean { list-style: none; display: flex; flex-direction: column; gap: var(--s4); }
+ul.clean li { display: flex; gap: var(--s3); align-items: flex-start; font-size: 1.05rem; color: var(--muted); }
+ul.clean li b { color: var(--text); }
+ul.clean li::before { content: ""; flex: 0 0 auto; width: 10px; height: 10px; margin-top: 9px; border-radius: 3px; background: var(--cobalt); }
+
+.pill { display: inline-flex; align-items: center; gap: var(--s2); padding: 6px 12px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); }
+
+/* dimension chips */
+.dims { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s4); }
+.dim { border-radius: var(--radius); padding: var(--s4); background: var(--surface);
+  border: 1px solid var(--border); border-top: 4px solid var(--dc); display: flex; flex-direction: column; gap: var(--s2); }
+.dim .name { font-weight: 700; color: var(--text); }
+.dim .conf { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.dim .what { font-size: 0.82rem; color: var(--muted); }
+.dim.behavioral { --dc: var(--d-behavioral); }
+.dim.social { --dc: var(--d-social); }
+.dim.economic { --dc: var(--d-economic); }
+.dim.ecological { --dc: var(--d-ecological); }
+.dim.societal { --dc: var(--d-societal); }
+
+/* big hero stat */
+.stat { display: flex; flex-direction: column; gap: var(--s1); }
+.stat-value { font-size: 3rem; font-weight: 800; color: var(--text); }
+.stat-label { font-size: 0.9rem; color: var(--muted); }
+
+/* tables */
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); }
+th { color: var(--faint); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
+td.mark-yes { color: var(--ok); font-weight: 700; }
+td.mark-no { color: var(--faint); }
+tr.us td { color: var(--text); background: rgba(59, 130, 246, 0.10); }
+tr.us td:first-child { font-weight: 800; }
+
+/* pipeline diagram */
+.pipe { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; }
+.pipe .node { flex: 1 1 0; min-width: 120px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: var(--s4); font-size: 0.82rem; color: var(--text); display: flex; flex-direction: column; gap: 4px; }
+.pipe .node .t { font-weight: 700; }
+.pipe .node .s { color: var(--muted); font-size: 0.74rem; }
+.pipe .arrow { align-self: center; color: var(--cobalt); font-size: 1.4rem; }
+.pipe .kernel { border-color: var(--cobalt); box-shadow: 0 0 0 1px var(--cobalt) inset; }
+
+/* timeline (90s budget) */
+.timeline { display: flex; flex-direction: column; gap: var(--s2); }
+.timeline .bar { display: flex; height: 30px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.timeline .seg { display: flex; align-items: center; justify-content: center; font-size: 0.66rem; color: #0b0e14; font-weight: 700; }
+
+/* BMC */
+.bmc { display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 1fr; gap: 10px; flex: 1 1 auto; }
+.bmc .b { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.bmc .b h4 { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cobalt); font-weight: 700; }
+.bmc .b ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.bmc .b li { font-size: 0.74rem; color: var(--muted); }
+.bmc .span2 { grid-row: span 2; }
+
+/* screenshot / placeholder */
+.shot { background: var(--surface-2); border: 1px dashed var(--border-strong); border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center; text-align: center; color: var(--faint);
+  font-size: 0.82rem; padding: var(--s8); min-height: 240px; }
+.shot img { max-width: 100%; max-height: 46vh; border-radius: var(--radius); border: 1px solid var(--border); display: block; }
+
+/* title slide */
+.title-slide { justify-content: center; }
+.title-slide h1 { font-size: 4.1rem; }
+.brand-row { display: flex; align-items: center; gap: var(--s4); margin-bottom: var(--s8); }
+.logo { font-family: var(--mono); font-weight: 800; letter-spacing: 0.2em; font-size: 1.1rem;
+  border: 1.5px solid var(--cobalt); color: var(--cobalt); padding: 6px 12px; border-radius: 8px; }
+
+/* footer chrome (screen only) */
+.nav { position: fixed; bottom: 18px; right: 22px; z-index: 20; display: flex; gap: 8px; align-items: center;
+  font-family: var(--mono); font-size: 0.8rem; color: var(--faint); }
+.nav button { background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 1rem; }
+.nav button:hover { border-color: var(--cobalt); }
+.progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--cobalt); z-index: 20; transition: width 0.3s ease; }
+.help { position: fixed; bottom: 18px; left: 22px; z-index: 20; font-size: 0.72rem; color: var(--faint); }
+.tag-honest { position: fixed; top: 12px; right: 22px; z-index: 20; font-size: 0.66rem; color: var(--faint);
+  font-family: var(--mono); letter-spacing: 0.08em; }
+
+/* ---------- print: one slide per page ---------- */
+@page { size: 1280px 720px; margin: 0; }
+@media print {
+  html, body { height: auto; }
+  .deck { position: static; width: auto; height: auto; overflow: visible; }
+  .slide {
+    position: relative; top: auto; left: auto; inset: auto; margin: 0 auto;
+    transform: none !important; width: 1280px; height: 720px;
+    opacity: 1 !important; visibility: visible !important;
+    page-break-after: always; break-after: page; overflow: hidden;
+  }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .nav, .progress, .help, .tag-honest { display: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) { .slide, .progress { transition: none; } }

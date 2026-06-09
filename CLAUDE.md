@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **planning and documentation workspace for MATRIX** (Multi-Agent Twin for Routing & Infrastructure eXchange) — a pre-construction infrastructure impact simulator built by **Team ATLAN** (Polytechnic University of the Philippines) for the **ASEAN AI Hackathon 2026**, Smart Cities track, piloting in **Iloilo City**.
 
-**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. The code is at the very start of its build: only the kernel's glass-box **contract** is implemented and tested; every impact module and the simulation runner are deliberate stubs. See **["Working in `app/`" below](#working-in-app-the-code)** for the code's actual state, the commands, and the guardrails. The frontend (`app/apps/web`) is intentionally **not** generated yet — see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) (verify-live before scaffolding).
+**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. The code is **substantially built through Milestone B** (CR-004, 2026-06-07): the glass-box kernel, all five impact modules, the WebSocket API, the Gemini orchestrator + synthesis, and the Next.js + Deck.gl frontend are implemented end-to-end. See **["Working in `app/`" below](#working-in-app-the-code)** for the code's actual state, the commands, and the guardrails.
 
 ## Read this first
 
@@ -36,7 +36,9 @@ Every dimension carries an **explicit confidence level (High/Medium/Low)**. Conf
 
 `app/` is a **uv (Python) monorepo** (`apps/api`, `apps/web`, `packages/kernel`, `packages/data`). The build's source of truth is the `docs/` suite; [`app/AGENTS.md`](app/AGENTS.md) is the in-repo quick-reference (materialized from [`docs/build-matrix.md`](docs/build-matrix.md)), and [`docs/implementation-plan-matrix.md`](docs/implementation-plan-matrix.md) is the phase-gated *when / done-when*.
 
-**Current state — S0-S8 (Milestone A Critical Path) done.** The kernel's glass-box **contract** (`packages/kernel/matrix_kernel/results.py`, `DimensionResult`) is implemented and tested (**23 passing tests** across 5 modules, bias auditor, and confidence utilities). Baseline caching, demand generation, persona pool generation, TraCI delta runner, and the `Trajectory` schema are fully implemented. The five `modules/*.py` (Behavioral, Ecological, Social, Economic, Societal) are implemented with Phase 3 equations and return valid glass-box results. The WebSocket progressive API is wired and tested. The frontend (`app/apps/web`) is intentionally **not** generated yet — see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) (verify-live before scaffolding).
+**Current state — Milestone A + B done (CR-004, 2026-06-07).** The kernel's glass-box **contract** (`packages/kernel/matrix_kernel/results.py`, `DimensionResult`) is implemented and tested. Baseline caching, demand generation, persona pool generation, the TraCI delta runner, and the `Trajectory` schema are fully implemented. The five `modules/*.py` (Behavioral, Ecological, Social, Economic, Societal) are implemented with Phase 3 equations and return valid glass-box results. The WebSocket progressive API is wired (`apps/api`: `/health`, `/scenario`, `/simulate/{id}` streaming `ACCEPTED→PLAYBACK_FRAME→DIMENSION_RESULT×5→SYNTHESIS→DONE`), with the Gemini 3.1 Pro orchestrator + synthesis (`google-genai`) and citation guard. The frontend (`app/apps/web`) **is scaffolded and implemented** — Next.js 14 + Deck.gl `TripsLayer` + a real glass-box `InspectDrawer`, bias-audit log, validation panel, and Playwright e2e (see [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md) for its generation provenance). Remaining roadmap work: mode-share calibration and the `qad-matrix` validation gates (Calderon-2014 RMSE, 2024 flood back-test) — both *planned, not yet shipped*.
+
+**Tests: 23 pass with `eclipse-sumo` + Redis up** (the project `.venv` bundles SUMO; `uv run pytest` syncs it). The 6 SUMO-dependent test modules guard their import with `pytest.importorskip("sumo")`, so a **bare** `python -m pytest` with no SUMO **skips them cleanly** → **15 passed, 7 skipped** (no collection errors). With SUMO but Docker/Redis down, the integration tests skip (≈20 passed, 3 skipped). See [`docs/qad-matrix.md`](docs/qad-matrix.md).
 
 **Two guardrails govern any code here** (full text in [`app/AGENTS.md`](app/AGENTS.md)):
 1. **Glass box (PRD-F14).** No number ships without `equation_id` + `input_dataset_ids` + a *computed* confidence (never a guessed label), and it must resolve under the UI's Inspect drawer. The LLM narrates and cites — it **never originates a number**. Equations live in [`docs/methods-matrix.md`](docs/methods-matrix.md) (**Locked**); read it before coding any module. The `glass-box-auditor` agent blocks violations.
@@ -47,35 +49,35 @@ Every dimension carries an **explicit confidence level (High/Medium/Low)**. Conf
 ### Commands
 
 ```bash
-# Kernel tests — the glass-box contract (23 passing). app/.venv is a uv venv with NO
-# pip; use uv, or any global pytest (pyproject sets pythonpath=["."], so it imports
-# matrix_kernel straight from the source tree).
+# Kernel tests. app/.venv is a uv venv with NO pip; use uv, or any global pytest
+# (pyproject sets pythonpath=["."], so it imports matrix_kernel from the source tree).
 cd app/packages/kernel
-uv run pytest                 # project-native (syncs the full dep tree on first run)
-python -m pytest -q           # fast path: works with a global pytest, no env sync
+uv run pytest                 # full suite — syncs eclipse-sumo; 23 pass with Redis up
+python -m pytest -q           # bare/no-SUMO: SUMO tests skip cleanly → 15 passed, 7 skipped
 python -m pytest tests/test_results.py::test_low_confidence_is_directional   # single test
 
 # Kernel Baseline & Demand Generation
 uv run python -c "from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())"
 uv run --directory packages/kernel python -X utf8 -u packages/data/build_demand.py
 
-# API — FastAPI health + WS skeleton (no kernel wired yet)
+# API — FastAPI + WS, kernel + Gemini wired
 cd app/apps/api && uvicorn matrix_api.main:app --reload      # GET /health -> {"status":"ok",...}
 
 # Local datastores — Postgres+PostGIS :5432, Redis :6379, Chroma :8001
 cd app && docker compose up -d          # `down -v` to wipe volumes
 
-# Frontend — NOT scaffolded by design; generate from live tooling per app/apps/web/SCAFFOLD.md
+# Frontend — Next.js 14 + Deck.gl (scaffolded)
+cd app/apps/web && npm install && npm run dev   # http://localhost:3000 ; npm run test:e2e for Playwright
 ```
 
-No Python linter/formatter is wired yet, and `apps/web` brings its own ESLint when scaffolded — don't introduce tooling without asking.
+No Python linter/formatter is wired yet, and `apps/web` brings its own ESLint — don't introduce tooling without asking.
 
 ## Locked technical decisions (do not silently revert)
 
 These were chosen deliberately with documented justification (MATRIX.md §6). Treat them as invariants unless the user explicitly reopens the decision:
 
 - **Simulation engine: Eclipse SUMO** (via TraCI Python API) — *not* OASIS or MiroFish (those simulate social-media dynamics, not physical urban agents).
-- **LLMs: Gemini 3.1 Pro** (orchestration/synthesis) + **Gemini 3.1 Flash-Lite** (high-volume persona generation). **Never** Gemini 1.5 (shut down) or 2.0 (shuts down June 1, 2026). The PUP-ATLAN roadmap's "Gemini 1.5 Pro" is stale.
+- **LLMs: Gemini 3.1 Pro** (orchestration/synthesis) + **Gemini 3.1 Flash-Lite** (high-volume persona generation). **Never** Gemini 1.5 (shut down) or 2.0 (shut down June 1, 2026). The PUP-ATLAN roadmap's "Gemini 1.5 Pro" is stale.
 - **Unified kernel → five modules**, not five independent simulators (avoids cross-dimension contradictions).
 - **Real-time interactive visualization** with a hard **90-second end-to-end latency budget** (Option C). Hit it via pre-warmed persona pool, delta simulations against a nightly baseline, parallel modules, and streaming/progressive UI.
 - **Planned stack:** Next.js 14 (App Router) + Tailwind + shadcn/ui frontend; Mapbox GL JS + Deck.gl (TripsLayer) for animated playback; FastAPI + WebSocket backend; Supabase Postgres + ChromaDB (GraphRAG/LightRAG) + Redis; XGBoost baseline forecaster. Deploy targets: Vercel + Fly.io.

@@ -13,8 +13,8 @@ Nested inside the planning repo so the docs and the Iloilo data sit one clone aw
 ```
 app/
 ├── apps/
-│   ├── web/      Next.js 14 + Deck.gl frontend   (scaffold via SCAFFOLD.md — Phase 5)
-│   └── api/      FastAPI + WebSocket gateway      (health + WS skeleton — Phase 4)
+│   ├── web/      Next.js 14 + Deck.gl frontend   (built — InspectDrawer, TripsLayer, e2e)
+│   └── api/      FastAPI + WebSocket gateway      (health + /scenario + /simulate stream + Gemini)
 ├── packages/
 │   ├── kernel/   SUMO/TraCI kernel + 5 glass-box impact modules (Phase 2–3)
 │   │   └── data/ iloilo.net.xml + iloilo.taz.xml (produced by Phase 1 pipeline)
@@ -29,16 +29,17 @@ Code discovers them when you run from `D:\PROJECTS\matrix`.
 ## Quickstart
 
 ```bash
-# Kernel — the glass-box contract + module stubs (5 passing tests).
-# app/.venv is a uv venv (no pip). Use uv run or a global pytest:
+# Kernel — glass-box contract + 5 impact modules. 23 tests pass with eclipse-sumo + Redis.
+# app/.venv is a uv venv (no pip). Use uv run, which syncs the SUMO wheel:
 cd packages/kernel
-uv run pytest           # project-native (syncs dep tree on first run)
-python -m pytest -q     # fast path if pytest is installed globally
+uv run pytest           # full suite — 23 pass with Redis up (syncs eclipse-sumo on first run)
+# Bare pytest w/o SUMO is safe: the 6 SUMO-dependent modules skip cleanly.
+python -m pytest -q     # → 15 passed, 7 skipped (no collection errors)
 
 # One test:
 python -m pytest tests/test_results.py::test_low_confidence_is_directional
 
-# API — health + WS skeleton
+# API — health + /scenario + streaming /simulate (Gemini orchestrator/synthesis wired)
 cd apps/api && uvicorn matrix_api.main:app --reload
 #   GET http://localhost:8000/health  ->  {"status":"ok",...}
 
@@ -52,8 +53,8 @@ python packages/data/build_network.py             # all three stages + validatio
 # Local datastores — Postgres+PostGIS :5432, Redis :6379, Chroma :8001
 docker compose up -d    # from app/  (down -v to wipe volumes)
 
-# Frontend — NOT scaffolded yet; generate from live tooling:
-#   see apps/web/SCAFFOLD.md
+# Frontend — Next.js 14 + Deck.gl (built; see apps/web/SCAFFOLD.md for provenance)
+cd apps/web && npm install && npm run dev   # http://localhost:3000 ; npm run test:e2e
 ```
 
 ## Non-negotiables (full text in [AGENTS.md](AGENTS.md))

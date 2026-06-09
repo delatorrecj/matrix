@@ -1,4 +1,10 @@
 """Tests for Economic module."""
+import pytest
+
+# modules.economic -> baseline -> sumo_env needs the eclipse-sumo wheel at import;
+# skip cleanly on a bare venv instead of erroring at collection (`uv sync` runs it).
+pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in app/packages/kernel")
+
 from matrix_kernel.modules.economic import score
 from matrix_kernel.trajectory import Trajectory
 

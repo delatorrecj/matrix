@@ -2,6 +2,9 @@ import os
 import time
 import pytest
 
+# Needs the eclipse-sumo wheel (runner -> sumo_env) at import; skip cleanly without it.
+pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in app/packages/kernel")
+
 from matrix_kernel.runner import Scenario, simulate
 from matrix_kernel.trajectory import Trajectory
 from matrix_kernel.baseline import load_baseline

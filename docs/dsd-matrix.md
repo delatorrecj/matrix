@@ -142,11 +142,15 @@ VISUAL_DENSITY:     7   (cockpit — five dimensions + map + controls)
 
 ## 8. Impeccable Anti-Pattern Register
 
-*Empty until first `impeccable detect src/` run (post-scaffold). Becomes a running log.*
+*Seeded 2026-06-09 (CR-005) with **watch-items** to verify on the first `impeccable detect src/` run against the now-built `apps/web`. Status `to-check` = a candidate pattern derived from a DSD/PRD rule, **not yet a confirmed detection** — do not report as found until the scan or a manual review confirms it. Becomes a running log.*
 
 | Pattern | Status | Location | Fix |
 |---|---|---|---|
-| — | — | — | — |
+| Confidence rendered with the same visual weight/channel as the 5-dimension palette (must be a **separate** channel — opacity/pattern, PRD-F5) | to-check | scenario results panel; map overlays | give confidence its own non-color channel; never let it read as a 6th category |
+| A rendered number with **no working Inspect** affordance (PRD-F14 / TRACE-02) | to-check | dimension result cards, synthesis narrative | every metric opens `InspectDrawer` to equation + datasets + confidence |
+| Metric values not using `next/font` **tabular-nums** (numbers jitter on update) | to-check | dimension cards, timeline scrubber | apply tabular-nums to all numeric displays |
+| Motion without a `prefers-reduced-motion` guard | to-check | TripsLayer playback, result enter animations | gate all non-essential motion on the reduced-motion query |
+| **False-precision point estimates** shown instead of confidence-anchored ranges | to-check | economic / societal result cards | render ranges (e.g. "−₱8M to −₱14M"), never a single false-precise number |
 
 ---
 
