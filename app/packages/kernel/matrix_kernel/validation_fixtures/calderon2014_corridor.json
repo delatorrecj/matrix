@@ -1,0 +1,121 @@
+{
+  "fixture_id": "calderon2014_corridor",
+  "gate_id": "VAL-01",
+  "title": "Calderon et al. (2014) Ungka–Iloilo corridor transit-model values (JICA STRADA 3)",
+  "provisional": false,
+  "provenance": "SOURCED — Calderon J.L., Grio M.E.D.A., Delatina R.D., Dela Cruz S.R.G., Lacson R.M.D. (2014), 'Introduction of Bus and BRT Systems along a Major Road Corridor in Iloilo City, Philippines', Proceedings of the 22nd Annual Conference of the Transportation Science Society of the Philippines (TSSP), Iloilo City, 12 Sept 2014. Local copy: data/raw/literature/Calderon2014_Iloilo_BRT.pdf (INVENTORY id LIT-CALDERON, status ✅). Values transcribed 2026-06-10 from the §4.3 transit-model figure captions ('Maximum Volume', Figures 7–18); JICA STRADA 3 models calibrated to 2014 field volume counts and onboard surveys (23 jeepney routes).",
+  "source_dataset_id": "LIT-CALDERON",
+  "unit": "pax (peak-hour maximum segment volume, as published)",
+  "transcribed": "2026-06-10",
+  "corridors": {
+    "lopez_jaena": {
+      "name": "Lopez-Jaena St → Fort San Pedro",
+      "length_km": 8.2,
+      "peak_hour": "16:00–17:00 (paper §4.1)"
+    },
+    "diversion": {
+      "name": "Diversion Road → CBD",
+      "length_km": 10.5,
+      "peak_hour": "10:00–11:00 (paper §4.1)"
+    }
+  },
+  "observations": [
+    {
+      "id": "s1_lopez_jaena_flow_max",
+      "scenario": "scenario1_current",
+      "corridor": "lopez_jaena",
+      "quantity": "passenger_flow_max",
+      "value": 90,
+      "provenance": "Figure 7 caption ('Maximum Volume=90'); scenario assumptions f=22 veh/h, v=10 km/h"
+    },
+    {
+      "id": "s1_lopez_jaena_transfer_max",
+      "scenario": "scenario1_current",
+      "corridor": "lopez_jaena",
+      "quantity": "passenger_transfer_max",
+      "value": 55,
+      "provenance": "Figure 8 caption ('Maximum Volume=55'); scenario assumptions f=22 veh/h, v=10 km/h"
+    },
+    {
+      "id": "s1_diversion_flow_max",
+      "scenario": "scenario1_current",
+      "corridor": "diversion",
+      "quantity": "passenger_flow_max",
+      "value": 275,
+      "provenance": "Figure 9 caption ('Maximum Volume=275'); scenario assumptions f=60 veh/h, v=14.5 km/h"
+    },
+    {
+      "id": "s1_diversion_transfer_max",
+      "scenario": "scenario1_current",
+      "corridor": "diversion",
+      "quantity": "passenger_transfer_max",
+      "value": 155,
+      "provenance": "Figure 10 caption ('Maximum Volume=155'); scenario assumptions f=60 veh/h, v=14.5 km/h"
+    },
+    {
+      "id": "s2_lopez_jaena_flow_max",
+      "scenario": "scenario2_bus",
+      "corridor": "lopez_jaena",
+      "quantity": "passenger_flow_max",
+      "value": 247,
+      "provenance": "Figure 11 caption ('Maximum Volume=247'); scenario assumptions f=20 veh/h, v=15 km/h"
+    },
+    {
+      "id": "s2_lopez_jaena_transfer_max",
+      "scenario": "scenario2_bus",
+      "corridor": "lopez_jaena",
+      "quantity": "passenger_transfer_max",
+      "value": 220,
+      "provenance": "Figure 12 caption ('Maximum Volume=220'); scenario assumptions f=20 veh/h, v=15 km/h"
+    },
+    {
+      "id": "s2_diversion_flow_max",
+      "scenario": "scenario2_bus",
+      "corridor": "diversion",
+      "quantity": "passenger_flow_max",
+      "value": 274,
+      "provenance": "Figure 13 caption ('Maximum Volume=274'); scenario assumptions f=20 veh/h, v=15 km/h"
+    },
+    {
+      "id": "s2_diversion_transfer_max",
+      "scenario": "scenario2_bus",
+      "corridor": "diversion",
+      "quantity": "passenger_transfer_max",
+      "value": 154,
+      "provenance": "Figure 14 caption ('Maximum Volume=154'); scenario assumptions f=20 veh/h, v=15 km/h"
+    },
+    {
+      "id": "s3_lopez_jaena_flow_max",
+      "scenario": "scenario3_brt",
+      "corridor": "lopez_jaena",
+      "quantity": "passenger_flow_max",
+      "value": 458,
+      "provenance": "Figure 15 caption ('Maximum Volume=458'); scenario assumptions f=20 veh/h, v=30 km/h"
+    },
+    {
+      "id": "s3_lopez_jaena_transfer_max",
+      "scenario": "scenario3_brt",
+      "corridor": "lopez_jaena",
+      "quantity": "passenger_transfer_max",
+      "value": 429,
+      "provenance": "Figure 16 caption ('Maximum Volume=429'); scenario assumptions f=20 veh/h, v=30 km/h"
+    },
+    {
+      "id": "s3_diversion_flow_max",
+      "scenario": "scenario3_brt",
+      "corridor": "diversion",
+      "quantity": "passenger_flow_max",
+      "value": 279,
+      "provenance": "Figure 17 caption ('Maximum Volume=279'); scenario assumptions f=20 veh/h, v=30 km/h"
+    },
+    {
+      "id": "s3_diversion_transfer_max",
+      "scenario": "scenario3_brt",
+      "corridor": "diversion",
+      "quantity": "passenger_transfer_max",
+      "value": 180,
+      "provenance": "Figure 18 caption ('Maximum Volume=180'); scenario assumptions f=20 veh/h, v=30 km/h"
+    }
+  ],
+  "notes": "scenario1_current is the paper's calibrated current (jeepney-only) system — the back-test target for the MATRIX baseline (default for VAL-01). scenario2_bus / scenario3_brt are the paper's proposed bus and BRT systems, usable once MATRIX models a matching intervention scenario. The paper publishes these as figure-caption maxima, not full link tables; n=4 points per scenario is the densest ground truth the source provides."
+}
