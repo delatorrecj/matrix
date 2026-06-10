@@ -1,8 +1,9 @@
 """XGBoost baseline forecaster + nightly baseline run (U4; Phase 2, Gate 2).
 
 run_nightly_baseline() -- runs the current-state SUMO sim once and caches the resulting
-                          per-edge volume Trajectory to Redis (`baseline:iloilo:latest`) so
-                          scenario runs are cheap deltas (the 90 s budget depends on this being
+                          per-edge volume Trajectory to Redis (`baseline:{slug}:latest` --
+                          `baseline:iloilo:latest` by default, see config.py) so scenario
+                          runs are cheap deltas (the 90 s budget depends on this being
                           hot -- RFC matrix-rfc-001). Records the cold-run time (budget probe).
 train_baseline()       -- a light XGBoost prior mapping edge attributes (length, speed, lanes)
                           to baseline volume; a per-corridor sanity/gap-fill forecaster.
@@ -21,13 +22,18 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from matrix_kernel import sumo_env  # wires SUMO_HOME + tools
+from matrix_kernel.config import KERNEL_DATA, get_city_config
 from matrix_kernel.trajectory import Trajectory
 
-KERNEL_DATA = Path(__file__).resolve().parent.parent / "data"
-NET = KERNEL_DATA / "iloilo.net.xml"
-ROU = KERNEL_DATA / "iloilo.rou.xml"
+# City facts come from the active CityConfig (matrix_kernel/config.py; Iloilo default).
+# The module-level names are kept importable for back-compat -- runner.py, geometry.py
+# and the tests import NET/ROU/BASELINE_KEY directly, and KERNEL_DATA (re-exported from
+# config) used to be defined here.
+_CITY = get_city_config()
+NET = _CITY.net_path
+ROU = _CITY.rou_path
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
-BASELINE_KEY = "baseline:iloilo:latest"
+BASELINE_KEY = _CITY.baseline_key
 # Shared sim horizon (an AM-peak slice). Baseline + scenario MUST use the same window for a
 # fair BEH-1 delta. ~15 min keeps the slice tractable; the full-day expansion is an assumption
 # carried on BEH-1. Longer horizons raise fidelity at a (Phase-6) latency cost.
@@ -70,7 +76,7 @@ def run_sumo_edge_counts(net: Path, rou: Path, end: float) -> dict[str, int]:
 
 
 def run_nightly_baseline(end: float = SIM_END, redis_url: str = REDIS_URL) -> dict:
-    """Materialize `baseline:iloilo:latest` in Redis; return a summary incl. the cold-run time."""
+    """Materialize the baseline (`BASELINE_KEY`) in Redis; return a summary incl. the cold-run time."""
     t0 = time.perf_counter()
     edge_counts = run_sumo_edge_counts(NET, ROU, end)
     cold_ms = (time.perf_counter() - t0) * 1000.0
@@ -80,8 +86,8 @@ def run_nightly_baseline(end: float = SIM_END, redis_url: str = REDIS_URL) -> di
         meta={
             "kind": "baseline",
             "sim_end_s": end,
-            "net": "iloilo.net.xml",
-            "demand": "iloilo.rou.xml",
+            "net": NET.name,
+            "demand": ROU.name,
             "edges_with_traffic": len(edge_counts),
             "total_entries": sum(edge_counts.values()),
             "cold_ms": round(cold_ms, 1),

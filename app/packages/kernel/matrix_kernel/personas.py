@@ -3,8 +3,9 @@
 Milestone A seeds the pool from a *static* Iloilo mode-share anchor (literature-calibrated
 from Calderon 2014 + LPTRP context -> Medium confidence; the documented "soft spot" in
 READINESS.md — not a 2026 travel survey). The Gemini 3.1 Flash-Lite generator (RFC
-matrix-rfc-001) is a Milestone-B upgrade. The pool is cached in Redis (personas:iloilo:v1)
-and *reweighted, not regenerated* per scenario.
+matrix-rfc-001) is a Milestone-B upgrade. The pool is cached in Redis
+(`personas:{slug}:v1` — `personas:iloilo:v1` by default, see config.py) and
+*reweighted, not regenerated* per scenario.
 
 The bias auditor ([bias_auditor.py]) enforces this anchor to +/-3% on every batch.
 """
@@ -15,18 +16,19 @@ import os
 import random
 from dataclasses import asdict, dataclass
 
-# Iloilo mode-share ANCHOR — the ground truth the bias auditor enforces to +/-3%.
-# Literature-derived (Calderon 2014 BRT study + Enhanced LPTRP jeepney-dominant context);
-# best-available estimate, NOT a live survey -> Behavioral *behavior* confidence = M.
-ILOILO_MODE_SHARE: dict[str, float] = {
-    "jeepney": 0.55,
-    "private_car": 0.15,
-    "motorcycle": 0.15,
-    "walk": 0.10,
-    "bicycle": 0.05,
-}
+from matrix_kernel.config import get_city_config
 
-PERSONA_POOL_KEY = "personas:iloilo:v1"
+_CITY = get_city_config()
+
+# Mode-share ANCHOR — the ground truth the bias auditor enforces to +/-3%. The
+# canonical per-city values (and the Iloilo source note: Calderon 2014 BRT study +
+# Enhanced LPTRP jeepney-dominant context -> confidence M) now live in
+# matrix_kernel/config.py. The ILOILO_MODE_SHARE name is kept importable for
+# back-compat (runner.py, demand_delta.py, modules/behavioral.py, tests) but holds
+# the *active* city's anchor — Iloilo by default, with the exact historical values.
+ILOILO_MODE_SHARE: dict[str, float] = dict(_CITY.mode_share)
+
+PERSONA_POOL_KEY = _CITY.persona_pool_key
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
 _PURPOSES = ("work", "school", "shop", "other")
 
