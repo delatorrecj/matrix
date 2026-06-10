@@ -13,6 +13,9 @@ dependencies = [
     "google-genai",
     # matrix-kernel is consumed as a path/workspace dependency -- wire at Phase 4.
     "matrix-kernel",
+    # Persistence (matrix_api/db.py): psycopg3. Lazy-imported -- the in-memory
+    # fallback keeps the API running without it. Pin matches packages/kernel.
+    "psycopg[binary]>=3.3.4",
 ]
 
 [build-system]
@@ -24,3 +27,10 @@ packages = ["matrix_api"]
 
 [tool.uv.sources]
 matrix-kernel = { path = "../../packages/kernel", editable = true }
+
+[tool.pytest.ini_options]
+# "." -> matrix_api importable from source; kernel path -> pure kernel modules (results,
+# bias_auditor, validation) importable in a bare env. SUMO-dependent tests still guard
+# with pytest.importorskip("sumo"), mirroring packages/kernel (qad-matrix).
+pythonpath = [".", "../../packages/kernel"]
+testpaths = ["tests"]

@@ -1,4 +1,9 @@
 import pytest
+
+# The WS pipeline runs the kernel (SUMO + Redis). Skip cleanly in a bare env, mirroring
+# the packages/kernel convention (qad-matrix): bare `python -m pytest` stays green.
+pytest.importorskip("sumo")
+
 from fastapi.testclient import TestClient
 from matrix_api.main import app
 

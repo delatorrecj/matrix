@@ -12,20 +12,49 @@ Run locally:  uvicorn matrix_api.main:app
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 
 from pydantic import BaseModel
 
-from matrix_kernel.modules import behavioral, ecological, social, economic, societal
-from matrix_kernel.runner import Scenario, simulate
-from matrix_kernel.trajectory import Trajectory
-from matrix_kernel.orchestrator import parse_scenario
-from matrix_kernel.synthesis import synthesize
+from matrix_api import db
+
+# Kernel imports are guarded so the REST persistence surface (/scenario, /runs/{id},
+# /audit/{id}, /validation) stays importable without eclipse-sumo/redis (bare test env,
+# QAD). The WS pipeline still requires the kernel at runtime — unchanged when installed.
+try:
+    from matrix_kernel.modules import behavioral, ecological, social, economic, societal
+    from matrix_kernel.runner import Scenario, simulate
+    from matrix_kernel.trajectory import Trajectory
+    from matrix_kernel.orchestrator import parse_scenario
+    from matrix_kernel.synthesis import synthesize
+
+    _KERNEL_IMPORT_ERROR: str | None = None
+except ImportError as _exc:  # pragma: no cover - only without the kernel env
+    behavioral = ecological = social = economic = societal = None  # type: ignore[assignment]
+    Scenario = simulate = Trajectory = synthesize = None  # type: ignore[assignment]
+    parse_scenario = None  # type: ignore[assignment]
+    _KERNEL_IMPORT_ERROR = str(_exc)
+    logging.getLogger("matrix_api").warning(
+        "matrix_kernel unavailable (%s) — REST persistence endpoints only", _exc
+    )
 
 app = FastAPI(title="MATRIX API", version="0.1.0")
+
+# app/ repo root (main.py -> matrix_api -> api -> apps -> app) for the validation report.
+_APP_ROOT = Path(__file__).resolve().parents[3]
+
+
+@app.on_event("startup")
+def _init_persistence() -> None:
+    """Choose + announce the persistence backend once (Postgres, else in-memory fallback)."""
+    db.init_db()
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
 EVENT_TYPES = ("ACCEPTED", "PLAYBACK_FRAME", "DIMENSION_RESULT", "SYNTHESIS", "DONE")
@@ -43,42 +72,101 @@ class ScenarioInput(BaseModel):
 
 @app.post("/scenario")
 def create_scenario(input_data: ScenarioInput) -> dict:
-    """Parse NL/map query into a structured Scenario via Gemini 3.1 Pro (Phase 4)."""
+    """Parse NL/map query into a structured Scenario via Gemini 3.1 Pro (Phase 4),
+    persist it (Postgres, or the in-memory fallback), and return the parsed params."""
+    if parse_scenario is None:  # kernel not installed (bare env) — REST surface stays up
+        return JSONResponse(
+            status_code=503,
+            content={"error": f"scenario parser unavailable: {_KERNEL_IMPORT_ERROR}"},
+        )
     try:
         scenario = parse_scenario(input_data.query)
-        # Milestone A/B: we return the parsed params immediately.
-        # DB persistence (Supabase) happens here in full production.
-        return {
-            "scenario_id": scenario.scenario_id,
-            "description": scenario.description,
-            "corridor": scenario.corridor,
-            "lanes_closed": scenario.lanes_closed
-        }
     except ValueError as e:
         # LLM flagged as ambiguous
-        from fastapi.responses import JSONResponse
         return JSONResponse(status_code=400, content={"error": str(e), "is_ambiguous": True})
+    db.save_scenario(scenario, raw_input=input_data.query, input_type=input_data.input_type)
+    # v1 fields stay top-level for the existing frontend; Scenario-v2 fields are read
+    # defensively (they appear once the orchestrator upgrade lands) and ride along.
+    return {
+        "scenario_id": scenario.scenario_id,
+        "description": scenario.description,
+        "corridor": getattr(scenario, "corridor", None),
+        "lanes_closed": getattr(scenario, "lanes_closed", None),
+        "intervention_type": getattr(scenario, "intervention_type", None),
+        "location": getattr(scenario, "location", None),
+    }
 
 @app.get("/runs/{run_id}")
 def get_run(run_id: str) -> dict:
-    return {"run_id": run_id, "status": "stub"}
+    """A stored run: status/timings + every DimensionResult with full glass-box
+    provenance (PRD-F14) — a reloaded run is as inspectable as a live one."""
+    run = db.get_run(run_id)
+    if run is None:
+        return JSONResponse(status_code=404, content={"error": "run not found", "run_id": run_id})
+    return run
 
 @app.get("/audit/{run_id}")
 def get_audit(run_id: str) -> dict:
-    # In a full implementation, this reads from Postgres `bias_audit_log`.
-    # Returning a mock entry for Phase 6 frontend integration.
-    return {
+    """Public bias-audit log for a run (PRD-F6), from Postgres `bias_audit_log` or the
+    in-memory fallback. The latest entry is flattened top-level (the BiasAuditLog panel's
+    shape); `entries` carries the full append-only history. Never fabricates an entry."""
+    entries = db.get_audit(run_id)
+    latest = entries[-1] if entries else {}
+    payload = {
         "run_id": run_id,
-        "batch_id": "b-12345",
-        "target_mode_share": {"jeepney": 0.55, "private": 0.25, "walk": 0.20},
-        "observed_mode_share": {"jeepney": 0.54, "private": 0.27, "walk": 0.19},
-        "reweighted": False,
-        "timestamp": "2026-06-09T12:00:00Z"
+        "batch_id": latest.get("batch_id", ""),
+        "target_mode_share": latest.get("target_mode_share", {}),
+        "observed_mode_share": latest.get("observed_mode_share", {}),
+        "max_delta": latest.get("max_delta"),
+        "reweighted": latest.get("reweighted", False),
+        "timestamp": latest.get("timestamp"),
+        "entries": entries,
+    }
+    if not entries:
+        payload["note"] = "no audit entries recorded for this run"
+    return payload
+
+@app.get("/validation")
+def get_validation() -> dict:
+    """Validation gates (PRD-F18, QAD VAL-01/02). Order of truth: the generated
+    validation_report.json if present, else the kernel's validation module, else an
+    honest empty list — a gate is never fabricated."""
+    override = os.environ.get("MATRIX_VALIDATION_REPORT")
+    candidates = [Path(override)] if override else [
+        _APP_ROOT / "validation_report.json",
+        _APP_ROOT / "packages" / "kernel" / "validation_report.json",
+    ]
+    for path in candidates:
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                logging.getLogger("matrix_api").warning(
+                    "unreadable validation report %s (%s); falling back", path, exc
+                )
+    try:
+        from matrix_kernel.validation import get_all_validations
+    except ImportError:
+        return {"gates": [], "note": "validation module not available"}
+    return {
+        "gates": get_all_validations(),
+        "source": "matrix_kernel.validation",
+        "note": "live module results (no validation_report.json found)",
     }
 
 @app.post("/report/{run_id}")
 def generate_report(run_id: str) -> dict:
     return {"run_id": run_id, "status": "stub"}
+
+
+# ─── persistence seam for the WS pipeline (wired post-merge by the WS-handler owner) ────
+# Inside simulate_ws, persistence is three calls (all fallback-safe, never raise):
+#   run_id = db.save_run(scenario_id, status="running")              # after ACCEPTED
+#   db.save_dimension_results(run_id, results)                       # after modules score
+#   db.save_run(scenario_id, run_id=run_id, status="done",           # alongside DONE
+#               duration_ms=round((time.perf_counter() - t0) * 1000))
+# Bias-audit entries from persona generation go through db.save_audit_entry(entry, run_id).
+# GET /runs/{run_id} and GET /audit/{run_id} then serve the stored run on both backends.
 
 
 def _result_payload(r) -> dict:
