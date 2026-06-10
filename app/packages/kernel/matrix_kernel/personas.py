@@ -11,9 +11,12 @@ The bias auditor ([bias_auditor.py]) enforces this anchor to +/-3% on every batc
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 from dataclasses import asdict, dataclass
+
+logger = logging.getLogger(__name__)
 
 # Iloilo mode-share ANCHOR — the ground truth the bias auditor enforces to +/-3%.
 # Literature-derived (Calderon 2014 BRT study + Enhanced LPTRP jeepney-dominant context);
@@ -45,18 +48,18 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
                           seed: int = 42) -> list[Persona]:
     """Sample `n` personas via Gemini 3.1 Flash-Lite, following the Iloilo anchor."""
     anchor = anchor or ILOILO_MODE_SHARE
-    import os
-    from google import genai
     from google.genai import types
     from pydantic import BaseModel
-    
+
+    from matrix_kernel.llm import LLMUnavailable, generate_content, make_client
+
     class PersonaList(BaseModel):
         personas: list[dict]
 
     try:
-        client = genai.Client()
+        client = make_client()
         model_name = os.environ.get("GEMINI_MODEL_FLASH_LITE", "gemini-3.1-flash-lite")
-        
+
         prompt = (
             f"Generate {n} diverse commuter personas for Iloilo City. "
             f"The overall mode share MUST roughly match this distribution: {anchor}. "
@@ -68,7 +71,8 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
             "Return the result as a JSON object with a 'personas' list."
         )
 
-        response = client.models.generate_content(
+        response = generate_content(
+            client,
             model=model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -77,8 +81,15 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
                 temperature=0.7,
             ),
         )
+    except LLMUnavailable as e:
+        logger.warning(
+            "personas: Gemini unavailable after %d attempt(s) — falling back to "
+            "the static seeded pool. (%s)", e.attempts, e)
+        return _static_seeded_pool(n, anchor, seed)
+
+    try:
         data = response.parsed.personas if hasattr(response.parsed, 'personas') else json.loads(response.text).get('personas', [])
-        
+
         pool = []
         for d in data:
             pool.append(Persona(
@@ -87,25 +98,32 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
                 income_decile=int(d.get("income_decile", 5)),
                 trip_purpose=d.get("trip_purpose", "work")
             ))
-            
+
         # Ensure we have exactly n
         while len(pool) < n:
             pool.append(pool[-1])
         return pool[:n]
     except Exception as e:
-        print(f"Warning: Gemini persona generation failed ({e}). Falling back to static.")
-        # Fallback to static distribution if API fails
-        rng = random.Random(seed)
-        modes, weights = list(anchor), list(anchor.values())
-        return [
-            Persona(
-                id=f"p{i:04d}",
-                mode=rng.choices(modes, weights=weights)[0],
-                income_decile=rng.randint(1, 10),
-                trip_purpose=rng.choice(_PURPOSES),
-            )
-            for i in range(n)
-        ]
+        logger.warning(
+            "personas: unusable Gemini response (%s) — falling back to the "
+            "static seeded pool.", e)
+        return _static_seeded_pool(n, anchor, seed)
+
+
+def _static_seeded_pool(n: int, anchor: dict[str, float], seed: int) -> list[Persona]:
+    """The static literature-anchored fallback pool (the Milestone-A seeding) —
+    runs when Gemini is unavailable or returns an unusable payload."""
+    rng = random.Random(seed)
+    modes, weights = list(anchor), list(anchor.values())
+    return [
+        Persona(
+            id=f"p{i:04d}",
+            mode=rng.choices(modes, weights=weights)[0],
+            income_decile=rng.randint(1, 10),
+            trip_purpose=rng.choice(_PURPOSES),
+        )
+        for i in range(n)
+    ]
 
 
 def observed_mode_share(pool: list[Persona]) -> dict[str, float]:
