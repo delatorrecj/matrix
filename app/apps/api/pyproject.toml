@@ -24,3 +24,9 @@ packages = ["matrix_api"]
 
 [tool.uv.sources]
 matrix-kernel = { path = "../../packages/kernel", editable = true }
+
+[tool.pytest.ini_options]
+# Mirrors packages/kernel: lets a bare `python -m pytest` import matrix_api and
+# matrix_kernel straight from the source tree (no venv / editable install needed).
+pythonpath = [".", "../../packages/kernel"]
+testpaths = ["tests"]

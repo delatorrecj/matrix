@@ -1,8 +1,13 @@
 """MATRIX API gateway. FastAPI + WebSocket. SDD §2, RFC §3.
 
 `/simulate/{id}` streams the real progressive pipeline:
-  ACCEPTED -> PLAYBACK_FRAME* -> DIMENSION_RESULT (per module, provenance intact)
+  ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> DIMENSION_RESULT (per module, provenance intact)
   -> SYNTHESIS (templated; Gemini 3.1 Pro synthesis is Phase 4) -> DONE
+Any stage failure emits a typed ERROR event before closing -- never a silent drop.
+DONE carries per-stage timings {sumo_ms, modules_ms, gemini_ms, total_ms} (RFC-001
+latency budget visibility). Stage budgets, the concurrency gate, and the dependency
+health checks live in matrix_api.runtime so the handler stays thin.
+
 For Milestone A it serves the cached demo scenario for a snappy stream, else runs the kernel
 live. Numbers come from the kernel + equations, NEVER the LLM (glass box, PRD-F14); the
 synthesis narrative cites equation_id + dataset_ids (citation guard, methods §4).
@@ -13,12 +18,12 @@ from __future__ import annotations
 
 import asyncio
 import os
-import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from pydantic import BaseModel
 
+from matrix_api import runtime
 from matrix_kernel.modules import behavioral, ecological, social, economic, societal
 from matrix_kernel.runner import Scenario, simulate
 from matrix_kernel.trajectory import Trajectory
@@ -28,14 +33,26 @@ from matrix_kernel.synthesis import synthesize
 app = FastAPI(title="MATRIX API", version="0.1.0")
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
-EVENT_TYPES = ("ACCEPTED", "PLAYBACK_FRAME", "DIMENSION_RESULT", "SYNTHESIS", "DONE")
+# QUEUED and ERROR extend the original sequence (additive only -- never reordered).
+EVENT_TYPES = ("ACCEPTED", "QUEUED", "PLAYBACK_FRAME", "DIMENSION_RESULT", "SYNTHESIS", "DONE", "ERROR")
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
 MAX_STREAM_FRAMES = 20
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "service": "matrix-api", "version": "0.1.0"}
+def health() -> dict:
+    """Dependency-aware health: per-dependency status + overall ok|degraded.
+
+    Sync def -> FastAPI threadpool; every check is timeout-bounded in runtime.py,
+    so the endpoint never blocks > ~2 s even with all dependencies down.
+    """
+    report = runtime.health_report(REDIS_URL)
+    return {
+        "status": report["status"],
+        "service": "matrix-api",
+        "version": "0.1.0",
+        "dependencies": report["dependencies"],
+    }
 
 class ScenarioInput(BaseModel):
     query: str
@@ -110,52 +127,133 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
     return simulate(Scenario(scenario_id, "live scenario", corridor=""))
 
 
+async def _score_all_modules(traj: Trajectory) -> list:
+    """Score modules in parallel for the first four, then societal which needs
+    ecological output. This matches the implementation plan."""
+    coros = [
+        asyncio.to_thread(behavioral.score, traj),
+        asyncio.to_thread(ecological.score, traj),
+        asyncio.to_thread(social.score, traj),
+        asyncio.to_thread(economic.score, traj),
+    ]
+    results_lists = await asyncio.gather(*coros)
+
+    # Flatten the results from the first four modules
+    results = [r for lst in results_lists for r in lst]
+
+    # Find ECO-2 result to pass to societal module
+    eco2_res = next((r for r in results if r.equation_id == "ECO-2"), None)
+    eco2_val = eco2_res.value if eco2_res else 0.0
+
+    # Run societal module
+    results.extend(await asyncio.to_thread(societal.score, traj, eco2_val=eco2_val))
+    return results
+
+
+async def _send_error(
+    ws: WebSocket, scenario_id: str, stage: str, message: str, recoverable: bool
+) -> None:
+    """ERROR before close -- never a silent drop. Best-effort: the socket may be gone."""
+    try:
+        await ws.send_json(runtime.error_event(scenario_id, stage, message, recoverable))
+        await ws.close(code=1011)
+    except Exception:
+        pass
+
+
 @app.websocket("/simulate/{scenario_id}")
 async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
     await ws.accept()
-    t0 = time.perf_counter()
+    timer = runtime.StageTimer()
+    stage = "accept"  # tracks where a generic failure happened, for the ERROR event
+    admitted, ticket, position = runtime.GATE.admit()
+    holds_slot = admitted
+    run_id = None
     try:
         await ws.send_json({"type": "ACCEPTED", "scenario_id": scenario_id})
 
-        # Kernel work is blocking -> off the event loop.
-        traj = await asyncio.to_thread(_get_trajectory, scenario_id)
+        if not admitted:
+            # At capacity (MATRIX_MAX_CONCURRENT_SIMS): queue FIFO instead of rejecting,
+            # so the client keeps its socket and can render a waiting state. The wait
+            # watches the socket: a disconnect while queued abandons the ticket
+            # immediately instead of later burning a slot against a dead client.
+            stage = "queue"
+            await ws.send_json(
+                {"type": "QUEUED", "scenario_id": scenario_id, "position": position}
+            )
+            await runtime.wait_for_slot_or_disconnect(
+                ws, runtime.GATE, ticket, timeout_s=runtime.queue_timeout_s()
+            )
+            holds_slot = True
+
+        # Persistence seam (matrix_api.db, feat/api-persistence) -- best-effort, never raises.
+        run_id = runtime.persist_run_started(scenario_id)
+
+        # Kernel work is blocking -> off the event loop; budgeted so a hung SUMO/Redis
+        # read can't wedge the socket (RFC-001: SUMO sits in the 15-60 s band).
+        stage = "sumo"
+        with timer.stage("sumo"):
+            traj = await runtime.run_stage(
+                asyncio.to_thread(_get_trajectory, scenario_id),
+                stage="sumo",
+                timeout_s=runtime.stage_timeout_s("sumo"),
+            )
 
         for fr in traj.frames[:MAX_STREAM_FRAMES]:
             await ws.send_json({"type": "PLAYBACK_FRAME", "tick": fr.tick, "agents": fr.agents})
 
-        # Score modules in parallel for the first four, then run societal which needs ecological output.
-        # This matches the implementation plan.
-        coros = [
-            asyncio.to_thread(behavioral.score, traj),
-            asyncio.to_thread(ecological.score, traj),
-            asyncio.to_thread(social.score, traj),
-            asyncio.to_thread(economic.score, traj),
-        ]
-        results_lists = await asyncio.gather(*coros)
-        
-        # Flatten the results from the first four modules
-        results = [r for lst in results_lists for r in lst]
-        
-        # Find ECO-2 result to pass to societal module
-        eco2_res = next((r for r in results if r.equation_id == "ECO-2"), None)
-        eco2_val = eco2_res.value if eco2_res else 0.0
-        
-        # Run societal module
-        societal_results = await asyncio.to_thread(societal.score, traj, eco2_val=eco2_val)
-        results.extend(societal_results)
+        stage = "modules"
+        with timer.stage("modules"):
+            results = await runtime.run_stage(
+                _score_all_modules(traj),
+                stage="modules",
+                timeout_s=runtime.stage_timeout_s("modules"),
+            )
 
         for r in results:
             await ws.send_json(_result_payload(r))
 
+        runtime.persist_dimension_results(run_id, results)
+
         # Gemini 3.1 Pro synthesis narrative (Phase 4.3). Must cite equation_id + dataset_ids.
-        narrative, citations = await asyncio.to_thread(synthesize, results)
-        
+        stage = "synthesis"
+        with timer.stage("gemini"):
+            narrative, citations = await runtime.run_stage(
+                asyncio.to_thread(synthesize, results),
+                stage="synthesis",
+                timeout_s=runtime.stage_timeout_s("gemini"),
+            )
+
         await ws.send_json({"type": "SYNTHESIS", "narrative": narrative, "citations": citations})
 
+        timings = timer.timings()
+        runtime.persist_run_done(scenario_id, run_id, timings)
         await ws.send_json({
             "type": "DONE",
             "scenario_id": scenario_id,
-            "duration_ms": round((time.perf_counter() - t0) * 1000),
+            "duration_ms": timings["total_ms"],
+            "timings": timings,
         })
     except WebSocketDisconnect:
         return
+    except runtime.StageTimeout as e:
+        await _send_error(ws, scenario_id, e.stage, str(e), recoverable=True)
+    except runtime.LLMUnavailable as e:
+        # feat/llm-resilience: Gemini transiently down -- the run can be retried.
+        await _send_error(ws, scenario_id, "synthesis", str(e), recoverable=True)
+    except Exception as e:
+        # Synthesis failures are recoverable (the narrative can be re-run); a failure
+        # in any earlier stage means the run itself failed.
+        await _send_error(
+            ws,
+            scenario_id,
+            stage,
+            f"{type(e).__name__}: {e}",
+            recoverable=(stage == "synthesis"),
+        )
+    finally:
+        # Critical: never leak a slot -- disconnects, timeouts, and crashes all land here.
+        if holds_slot:
+            runtime.GATE.release()
+        else:
+            runtime.GATE.abandon(ticket)

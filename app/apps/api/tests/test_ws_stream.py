@@ -1,6 +1,35 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
-from matrix_api.main import app
+
+# Full-env test: needs eclipse-sumo (matrix_api.main imports the kernel), the
+# redis client AND a reachable Redis with the demo scenario cached (docker
+# compose up). In bare mode it skips cleanly -- tests/test_runtime_hardening.py
+# covers the pipeline against mocked kernel seams.
+pytest.importorskip("sumo", reason="eclipse-sumo not installed (bare env)")
+redis = pytest.importorskip("redis", reason="redis client not installed (bare env)")
+
+
+def _redis_up() -> bool:
+    try:
+        client = redis.from_url(
+            os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0"),
+            socket_connect_timeout=0.5,
+            socket_timeout=0.5,
+        )
+        try:
+            return bool(client.ping())
+        finally:
+            client.close()
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(not _redis_up(), reason="Redis not reachable (full-env test)")
+
+from matrix_api.main import app  # noqa: E402
+
 
 @pytest.fixture
 def client():
