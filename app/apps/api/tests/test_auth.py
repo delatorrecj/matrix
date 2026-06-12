@@ -19,6 +19,7 @@ from matrix_kernel.results import DimensionResult  # noqa: E402
 from matrix_kernel.trajectory import Frame, Trajectory  # noqa: E402
 
 from matrix_api import auth  # noqa: E402
+from matrix_api import db  # noqa: E402
 from matrix_api import main as api_main  # noqa: E402
 from matrix_api.main import app  # noqa: E402
 
@@ -43,6 +44,10 @@ def clean_auth_env(monkeypatch):
 
 @pytest.fixture
 def client():
+    # These tests probe auth/rate-limit behavior through GET /runs/r-1, which
+    # returns an honest 404 for unknown runs since the persistence layer landed —
+    # seed the run so 200 means "authorized", not "stub endpoint".
+    db.save_run("s-auth-probe", run_id="r-1", status="done")
     return TestClient(app)
 
 
