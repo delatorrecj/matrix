@@ -1,0 +1,44 @@
+{
+  "fixture_id": "flood2024_closures",
+  "gate_id": "VAL-02",
+  "title": "2024 Iloilo City flood — recorded road-closure segments (PLACEHOLDER)",
+  "provisional": true,
+  "provenance": "PROVISIONAL — replace with sourced data: derive the observed closure set by intersecting the Copernicus Global Flood Monitoring Sentinel-1 2024 Iloilo flood extent (INVENTORY id S1-GFM, acquisition status ⏳) with the OSM-ILO road network, cross-checked against Iloilo CDRRMO / news closure reports. The segment list below is a hand-authored placeholder over known flood-prone Iloilo City corridors (NOAH hazard zones in Jaro, Molo, Mandurriao); segment ids and lengths are approximate, NOT measured. Any VAL-02 value computed against this fixture must not be published as validation.",
+  "source_dataset_id": "S1-GFM",
+  "event": "2024 Iloilo City flood event (exact event/date to be pinned at S1-GFM acquisition)",
+  "unit": "length-weighted IoU over closed road segments",
+  "transcribed": "2026-06-10",
+  "observations": [
+    {
+      "segment_id": "osm_jalandoni_st",
+      "name": "Jalandoni St (Jaro/La Paz)",
+      "length_m": 850.0
+    },
+    {
+      "segment_id": "osm_q_abeto_st",
+      "name": "Q. Abeto St (Mandurriao)",
+      "length_m": 600.0
+    },
+    {
+      "segment_id": "osm_e_lopez_st",
+      "name": "E. Lopez St (Jaro)",
+      "length_m": 1200.0
+    },
+    {
+      "segment_id": "osm_lopez_jaena_jaro",
+      "name": "Lopez Jaena St (Jaro)",
+      "length_m": 900.0
+    },
+    {
+      "segment_id": "osm_mh_del_pilar_molo",
+      "name": "M.H. del Pilar St (Molo)",
+      "length_m": 700.0
+    },
+    {
+      "segment_id": "osm_b_aquino_diversion_mandurriao",
+      "name": "Sen. B. Aquino Ave (Diversion Rd), Mandurriao segment",
+      "length_m": 1500.0
+    }
+  ],
+  "notes": "Replacement recipe: (1) fetch the S1-GFM 2024 Iloilo flood extent (data/fetch, INVENTORY S1-GFM); (2) intersect with OSM-ILO drivable ways to get flooded segment ids + measured lengths; (3) replace `observations`, set provisional=false, and update provenance with the event date + processing steps; (4) re-run the VAL-02 gate. The gate computation itself (length_weighted_iou) is final — only this ground-truth side is placeholder."
+}
