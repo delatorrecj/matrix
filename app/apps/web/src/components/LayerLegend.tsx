@@ -1,4 +1,4 @@
-import { Layers, Map as MapIcon, ShieldAlert } from "lucide-react";
+import { Layers } from "lucide-react";
 
 interface LayerLegendProps {
   layers: {
