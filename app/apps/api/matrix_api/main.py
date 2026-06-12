@@ -22,7 +22,8 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from pydantic import BaseModel
@@ -49,7 +50,17 @@ except ImportError as _exc:  # pragma: no cover - only without the kernel env
         "matrix_kernel unavailable (%s) — REST persistence endpoints only", _exc
     )
 
-app = FastAPI(title="MATRIX API", version="0.1.0")
+from matrix_api.auth import allowed_origins, authorize_websocket, require_api_key
+
+# Auth + rate limiting are env-gated and OFF by default (see matrix_api/auth.py);
+# /health, /validation, and the docs stay open even when enabled.
+app = FastAPI(title="MATRIX API", version="0.1.0", dependencies=[Depends(require_api_key)])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins(),  # MATRIX_ALLOWED_ORIGINS; defaults to localhost:3000
+    allow_methods=["*"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 # app/ repo root (main.py -> matrix_api -> api -> apps -> app) for the validation report.
 _APP_ROOT = Path(__file__).resolve().parents[3]
@@ -250,6 +261,10 @@ async def _send_error(
 
 @app.websocket("/simulate/{scenario_id}")
 async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
+    # Env-gated auth/rate guard (no-op by default); rejects the pending handshake
+    # with 1008/1013 before any kernel work can be triggered.
+    if not await authorize_websocket(ws):
+        return
     await ws.accept()
     timer = runtime.StageTimer()
     stage = "accept"  # tracks where a generic failure happened, for the ERROR event
