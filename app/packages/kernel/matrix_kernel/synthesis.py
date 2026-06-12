@@ -5,6 +5,7 @@ Must cite equation_id + dataset_ids for any number it asserts.
 """
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -13,15 +14,15 @@ from google.genai import types
 
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.citation_guard import strip_uncited_claims
+from matrix_kernel.llm import LLMUnavailable, generate_content, make_client
+
+logger = logging.getLogger(__name__)
 
 
 def synthesize(results: list[DimensionResult], client: genai.Client | None = None) -> tuple[str, list[dict[str, Any]]]:
     """Generate a narrative from results, enforcing citations."""
     if not results:
         return "No results produced.", []
-
-    if not client:
-        client = genai.Client()
 
     model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro")
     
@@ -44,7 +45,10 @@ def synthesize(results: list[DimensionResult], client: genai.Client | None = Non
     prompt = results_text + "\nWrite the summary narrative now."
 
     try:
-        response = client.models.generate_content(
+        if not client:
+            client = make_client()
+        response = generate_content(
+            client,
             model=model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -52,9 +56,11 @@ def synthesize(results: list[DimensionResult], client: genai.Client | None = Non
                 temperature=0.2,
             ),
         )
-        narrative = response.text
-    except Exception as e:
-        print(f"Warning: Gemini synthesis failed ({e}).")
+        narrative = response.text or ""
+    except LLMUnavailable as e:
+        logger.warning(
+            "synthesis: Gemini unavailable after %d attempt(s) — serving the "
+            "placeholder narrative. (%s)", e.attempts, e)
         narrative = "Synthesis narrative generation failed. Please see the raw data."
 
     # Enforce citation guard
