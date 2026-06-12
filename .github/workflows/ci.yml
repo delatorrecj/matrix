@@ -1,0 +1,136 @@
+# MATRIX CI — kernel (pytest), api (pytest), web (vitest + next build).
+#
+# Design notes (read before "fixing" this file):
+#
+# * Jobs run in parallel and are independent; a failure in one does not cancel the others.
+# * No Redis service container — deliberately. The kernel's three integration tests are
+#   written to SKIP when Redis is unreachable, but to RUN (and fail) against a reachable
+#   Redis that lacks the seeded baseline/demo keys (`tests/test_timing_probe.py` calls
+#   `load_baseline()`, which raises KeyError on an empty Redis). Seeding requires the
+#   gitignored ~42 MB SUMO network (`app/packages/kernel/data/iloilo.net.xml`), which a CI
+#   clone does not have. Expected kernel result in CI: ~20 passed, 3 skipped (the documented
+#   "SUMO up, Redis down" mode — see CLAUDE.md / docs/qad-matrix.md). If a CI-seedable
+#   fixture ever lands, add `services: redis: image: redis:7` back to the kernel job.
+# * No Playwright in CI — the e2e suite needs a live API + seeded data. Unit tests only.
+# * `uv sync --locked` is strict on purpose: PRs that change a pyproject.toml must also
+#   re-lock, or CI fails. Both lockfiles were verified fresh when this workflow landed.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kernel:
+    name: kernel (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app/packages/kernel
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        # astral-sh publishes no floating major tag for v8 — pin the release SHA (their
+        # README's own convention).
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: app/packages/kernel/uv.lock
+          cache-suffix: kernel
+          python-version: "3.12"
+
+      # Full locked sync: includes eclipse-sumo (manylinux wheel bundles the SUMO
+      # binaries — no apt install needed) and the dev extra (pytest).
+      # Heavy first run: the lock pins the CUDA torch stack via sentence-transformers.
+      - name: Sync dependencies (locked, includes eclipse-sumo)
+        run: uv sync --locked --extra dev
+
+      # Expected: ~20 passed, 3 skipped (Redis-bound integration tests skip — see header).
+      - name: Run kernel tests
+        run: uv run --no-sync python -m pytest -q
+
+  api:
+    name: api (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app/apps/api
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        # astral-sh publishes no floating major tag for v8 — pin the release SHA (their
+        # README's own convention).
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: app/apps/api/uv.lock
+          cache-suffix: api
+          python-version: "3.12"
+
+      # Installs matrix-api + matrix-kernel (editable path dep) from the api lockfile.
+      - name: Sync dependencies (locked)
+        run: uv sync --locked
+
+      # `tests/test_ws_stream.py::test_ws_stream_all_modules` is a live integration test:
+      # it drives the real WS pipeline and needs Redis with a seeded `scenario:demo:latest`
+      # (or the gitignored SUMO network for a live run) — not reproducible in CI today, so
+      # it is excluded via -k. When a PR makes it CI-runnable (mocked kernel/Redis), remove
+      # the -k filter. pytest exit code 5 (= everything deselected / nothing collected) is
+      # treated as success until API unit tests land.
+      - name: Run API tests
+        run: |
+          if [ ! -d tests ]; then
+            echo "No tests/ directory in app/apps/api yet — nothing to run (API unit tests land in a later PR)."
+            exit 0
+          fi
+          set +e
+          uv run --no-sync --with pytest python -m pytest -q -k "not test_ws_stream_all_modules"
+          rc=$?
+          set -e
+          if [ "$rc" -eq 5 ]; then
+            echo "pytest: no runnable API tests after excluding the live-integration WS stream test"
+            echo "(it needs Redis + a seeded demo scenario). Passing until API unit tests land."
+            exit 0
+          fi
+          exit "$rc"
+
+  web:
+    name: web (vitest + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app/apps/web
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Node 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (vitest)
+        run: npm run test -- --run
+
+      # next build needs no env vars today (the map style is keyless OpenFreeMap and the
+      # WS URL is currently hardcoded — see app/.env.example notes).
+      - name: Build
+        run: npm run build

@@ -16,12 +16,23 @@ venv/
 # pytest caches (any level — app/.gitignore also covers app/ subtree)
 .pytest_cache/
 
-# Secrets — API keys (e.g. data/.env, app/.env)
+# Secrets — API keys (e.g. data/.env, app/.env). A bare `.env` pattern already
+# matches at every depth; the explicit forms below are belt-and-braces so a future
+# edit to one line can't silently expose a key. `.env.example` files stay tracked.
 .env
+**/.env
 .env.local
+*.local.env
 *.key
 credentials.json
 token.json
+
+# Intermediates (never committed, always regenerated)
+.tmp/
+
+# Claude Code agent worktrees — full checkouts (could include local .env copies);
+# never add them to the parent repo.
+.claude/worktrees/
 
 # OS cruft
 .DS_Store
