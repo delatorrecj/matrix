@@ -15,7 +15,8 @@ import asyncio
 import os
 import time
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
 
@@ -25,7 +26,17 @@ from matrix_kernel.trajectory import Trajectory
 from matrix_kernel.orchestrator import parse_scenario
 from matrix_kernel.synthesis import synthesize
 
-app = FastAPI(title="MATRIX API", version="0.1.0")
+from matrix_api.auth import allowed_origins, authorize_websocket, require_api_key
+
+# Auth + rate limiting are env-gated and OFF by default (see matrix_api/auth.py);
+# /health, /validation, and the docs stay open even when enabled.
+app = FastAPI(title="MATRIX API", version="0.1.0", dependencies=[Depends(require_api_key)])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins(),  # MATRIX_ALLOWED_ORIGINS; defaults to localhost:3000
+    allow_methods=["*"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
 EVENT_TYPES = ("ACCEPTED", "PLAYBACK_FRAME", "DIMENSION_RESULT", "SYNTHESIS", "DONE")
@@ -112,6 +123,10 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
 
 @app.websocket("/simulate/{scenario_id}")
 async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
+    # Env-gated auth/rate guard (no-op by default); rejects the pending handshake
+    # with 1008/1013 before any kernel work can be triggered.
+    if not await authorize_websocket(ws):
+        return
     await ws.accept()
     t0 = time.perf_counter()
     try:
