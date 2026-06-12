@@ -1,13 +1,17 @@
 """Unified simulation kernel -- TraCI delta runner (U7; PRD-F1, SDD §2, RFC RT-03/05).
 
-simulate(scenario) runs SUMO via TraCI, applies the scenario edit (e.g. close a lane), and
-returns ONE per-edge + playback Trajectory computed as a DELTA against the cached nightly
-baseline (Redis baseline:iloilo:latest). All five impact modules score this one dataset --
-the architectural reason results never contradict. Never fork into five simulators.
+simulate(scenario) runs SUMO via TraCI, applies the scenario's network edit (lane closure,
+full road closure, speed change, capacity change -- dispatched per intervention_type by
+matrix_kernel.scenario), and returns ONE per-edge + playback Trajectory computed as a DELTA
+against the cached nightly baseline (Redis baseline:iloilo:latest). All five impact modules
+score this one dataset -- the architectural reason results never contradict. Never fork
+into five simulators.
 
-TraCI applies the closure dynamically; SUMO itself writes edgeData (volumes) + geo FCD
+TraCI applies the edit dynamically; SUMO itself writes edgeData (volumes) + geo FCD
 (playback) to files, so the step loop does no per-vehicle Python I/O (keeps it fast). The
 trajectory schema (matrix_kernel.trajectory) is FROZEN here -- Phase-3 modules build on it.
+The Scenario model + intervention dispatch live in matrix_kernel.scenario (SUMO-free);
+`Scenario` is re-exported here so v1 call sites keep importing from the runner.
 """
 from __future__ import annotations
 
@@ -16,26 +20,14 @@ import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
 from matrix_kernel import sumo_env  # wires SUMO_HOME + tools
 from matrix_kernel.baseline import NET, ROU, SIM_END, load_baseline
 from matrix_kernel.personas import ILOILO_MODE_SHARE
+from matrix_kernel.scenario import Scenario, apply_intervention  # noqa: F401  (Scenario re-exported)
 from matrix_kernel.trajectory import Frame, Trajectory
-
-
-@dataclass(frozen=True)
-class Scenario:
-    """A proposed project. For Milestone A it is supplied structured (the Gemini orchestrator
-    that turns NL/map input into this is Phase 4). `description` is keyword-matched to the
-    affected corridor; `lanes_closed` is how many lanes to close on each matched edge."""
-
-    scenario_id: str
-    description: str
-    corridor: str = ""        # street-name keyword for the affected corridor (structured input)
-    lanes_closed: int = 1
 
 
 @lru_cache(maxsize=1)
@@ -74,6 +66,15 @@ def target_edges(corridor: str, top_n: int = 1) -> list[str]:
     return [eid for eid, _ in sorted(base.items(), key=lambda kv: kv[1], reverse=True)[:top_n]]
 
 
+def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:
+    """Resolve WHERE a scenario applies -> SUMO edge ids. The single seam for edge
+    resolution: today it keyword-matches `scenario.location` (falling back to the v1
+    `corridor` field) via target_edges(). `scenario.geometry` (GeoJSON) is carried on
+    the Scenario but resolved by matrix_kernel.geometry (separate unit), which plugs in
+    here once it lands."""
+    return target_edges(scenario.effective_location, top_n=top_n)
+
+
 def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
              max_frames: int = 40) -> Trajectory:
     """Run the scenario via TraCI as a delta vs the cached baseline -> one Trajectory."""
@@ -81,8 +82,7 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
         raise FileNotFoundError("network/demand missing -- run build_network.py + build_demand.py")
     import traci
 
-    closed = target_edges(scenario.corridor)
-    edge_lanes: dict[str, int] = {}
+    affected = resolve_edges(scenario)
     with tempfile.TemporaryDirectory() as td:
         add = Path(td) / "ed.add.xml"
         edge_out = Path(td) / "edgeout.xml"
@@ -96,20 +96,13 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "--fcd-output", str(fcd_out), "--fcd-output.geo", "--device.fcd.period", str(sample_period),
             "--device.rerouting.probability", "1", "--device.rerouting.period", "60",
             "--end", str(end), "--no-step-log", "true", "--xml-validation", "never",
-            "--ignore-route-errors", "true",  # closure may strand a route -> drop it, don't abort
+            "--ignore-route-errors", "true",  # an edit may strand a route -> drop it, don't abort
         ]
         os.environ["SUMO_HOME"] = sumo_env.sumo_home()
         traci.start(cmd)
         try:
-            # Apply the scenario: close `lanes_closed` lanes on each affected edge (capacity cut).
-            for eid in closed:
-                try:
-                    nlanes = traci.edge.getLaneNumber(eid)
-                    edge_lanes[eid] = nlanes
-                    for i in range(min(scenario.lanes_closed, nlanes)):
-                        traci.lane.setDisallowed(f"{eid}_{i}", ["passenger"])
-                except traci.TraCIException:
-                    continue
+            # Apply the scenario's network edit via the per-intervention dispatcher.
+            applied = apply_intervention(traci, scenario, affected)
             while traci.simulation.getMinExpectedNumber() > 0 and traci.simulation.getTime() < end:
                 traci.simulationStep()
         finally:
@@ -125,9 +118,15 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "kind": "scenario",
             "scenario_id": scenario.scenario_id,
             "description": scenario.description,
-            "closed_edges": closed,
-            "edge_lanes": edge_lanes,
-            "lanes_closed": scenario.lanes_closed,
+            # -- Scenario v2 provenance (PRD-F14): the exact edit that was applied --
+            "intervention_type": scenario.intervention_type,
+            "affected_edges": affected,
+            "applied": applied,  # dispatch record: edges touched, parameters, TraCI calls, assumptions
+            "edge_resolution": "keyword-match",  # GeoJSON resolver lands with matrix_kernel.geometry
+            # -- legacy keys: the five modules read these as "the affected corridor" -- keep. --
+            "closed_edges": affected,
+            "edge_lanes": applied["edge_lanes"],
+            "lanes_closed": applied["lanes_closed_legacy"],
             "sim_end_s": end,
             "edges_with_traffic": len(edge_counts),
         },
