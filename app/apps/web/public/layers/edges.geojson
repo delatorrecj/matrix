@@ -1,0 +1,31 @@
+{
+  "type": "FeatureCollection",
+  "_provenance": {
+    "status": "PROVISIONAL",
+    "warning": "DEV FIXTURE ONLY — every feature in this file is hand-drawn and the edge_id values are PLACEHOLDERS. They are NOT real SUMO edge ids and will NOT match any kernel Trajectory.edge_counts. The real edges layer must be exported from the Iloilo SUMO net (app/packages/kernel/data/iloilo.net.xml, built by app/packages/data/build_network.py — gitignored, not in this repo), with one LineString per edge carrying its true SUMO id in properties.edge_id.",
+    "purpose": "Illustrates the congestion-choropleth data contract (see public/layers/README.md) and lets the layer render something in dev before the real export exists.",
+    "generated": "2026-06-13"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "LineString", "coordinates": [[122.5505, 10.7160], [122.5560, 10.7145], [122.5615, 10.7132]] },
+      "properties": { "edge_id": "PROVISIONAL-E1", "provisional": true, "note": "placeholder id — not a SUMO edge" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "LineString", "coordinates": [[122.5615, 10.7132], [122.5668, 10.7118], [122.5720, 10.7106]] },
+      "properties": { "edge_id": "PROVISIONAL-E2", "provisional": true, "note": "placeholder id — not a SUMO edge" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "LineString", "coordinates": [[122.5560, 10.7145], [122.5572, 10.7090], [122.5580, 10.7040]] },
+      "properties": { "edge_id": "PROVISIONAL-E3", "provisional": true, "note": "placeholder id — not a SUMO edge" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "LineString", "coordinates": [[122.5668, 10.7118], [122.5660, 10.7062], [122.5652, 10.7010]] },
+      "properties": { "edge_id": "PROVISIONAL-E4", "provisional": true, "note": "placeholder id — not a SUMO edge" }
+    }
+  ]
+}

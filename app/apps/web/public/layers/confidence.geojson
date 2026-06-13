@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "_provenance": {
+    "status": "PROVISIONAL",
+    "warning": "DEV FIXTURE ONLY — the H/M/L tiers below are INVENTED for layout/dev preview. Real confidence cells must be derived from kernel output (DimensionResult computed confidences, packages/kernel/matrix_kernel/results.py) or from the per-dimension data-confidence map (data/READINESS.md) — never hand-assigned. Do not present this file as a MATRIX confidence assessment.",
+    "purpose": "Illustrates the confidence-heatmap data contract (Polygon or Point features with properties.confidence in H/M/L; see public/layers/README.md).",
+    "generated": "2026-06-13"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [[[122.5500, 10.7050], [122.5550, 10.7050], [122.5550, 10.7100], [122.5500, 10.7100], [122.5500, 10.7050]]] },
+      "properties": { "confidence": "H", "basis": "PROVISIONAL sample — tier invented for dev preview, not computed" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [[[122.5550, 10.7050], [122.5600, 10.7050], [122.5600, 10.7100], [122.5550, 10.7100], [122.5550, 10.7050]]] },
+      "properties": { "confidence": "M", "basis": "PROVISIONAL sample — tier invented for dev preview, not computed" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [[[122.5600, 10.7050], [122.5650, 10.7050], [122.5650, 10.7100], [122.5600, 10.7100], [122.5600, 10.7050]]] },
+      "properties": { "confidence": "L", "basis": "PROVISIONAL sample — tier invented for dev preview, not computed" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [[[122.5550, 10.7100], [122.5600, 10.7100], [122.5600, 10.7150], [122.5550, 10.7150], [122.5550, 10.7100]]] },
+      "properties": { "confidence": "M", "basis": "PROVISIONAL sample — tier invented for dev preview, not computed" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [122.5675, 10.7125] },
+      "properties": { "confidence": "H", "basis": "PROVISIONAL sample — Point-form cell (rendered as a grid cell), tier invented for dev preview" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [122.5675, 10.7075] },
+      "properties": { "confidence": "L", "basis": "PROVISIONAL sample — Point-form cell (rendered as a grid cell), tier invented for dev preview" }
+    }
+  ]
+}
