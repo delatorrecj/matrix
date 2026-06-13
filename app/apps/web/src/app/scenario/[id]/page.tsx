@@ -8,6 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
+import SynthesisNarrative, { SynthesisCitation } from "@/components/SynthesisNarrative";
 import ValidationPanel from "@/components/ValidationPanel";
 import BiasAuditLog from "@/components/BiasAuditLog";
 import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
@@ -51,7 +52,10 @@ export default function ScenarioSimulation() {
 
   const [results, setResults] = useState<ResultCard[]>([]);
   const [tripsData, setTripsData] = useState<{ path: [number, number][], timestamps: number[] }[]>([]);
-  const [synthesis, setSynthesis] = useState<{ narrative: string } | null>(null);
+  const [synthesis, setSynthesis] = useState<{
+    narrative: string;
+    citations: SynthesisCitation[];
+  } | null>(null);
   const [inspectData, setInspectData] = useState<ProvenanceData | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -119,10 +123,11 @@ export default function ScenarioSimulation() {
           confidence,
           confidenceBasis: "Computed from input dataset confidences per methods §2",
           equationId: String(msg.equation_id ?? ""),
-          equationText: `Result for ${metric}`,
-          inputs: (Array.isArray(msg.input_dataset_ids) ? msg.input_dataset_ids : []).map((id: string) => ({
-            id, name: id, confidence, vintage: "current"
-          })),
+          // No equation text or per-dataset metadata arrives over the stream yet —
+          // the drawer renders honest "not provided" fallbacks (never invented).
+          inputs: (Array.isArray(msg.input_dataset_ids) ? msg.input_dataset_ids : []).map(
+            (id: string) => ({ id })
+          ),
           assumptions: Array.isArray(msg.assumptions) ? msg.assumptions : [],
           references: Array.isArray(msg.references) ? msg.references : []
         };
@@ -139,7 +144,13 @@ export default function ScenarioSimulation() {
         }]);
       } else if (msg.type === "SYNTHESIS") {
         if (typeof msg.narrative === "string") {
-          setSynthesis({ narrative: msg.narrative });
+          const citations = (Array.isArray(msg.citations) ? msg.citations : []).filter(
+            (c): c is SynthesisCitation =>
+              !!c &&
+              typeof c === "object" &&
+              typeof (c as { equation_id?: unknown }).equation_id === "string"
+          );
+          setSynthesis({ narrative: msg.narrative, citations });
         }
       } else if (msg.type === "DONE") {
         ws.close();
@@ -158,6 +169,19 @@ export default function ScenarioSimulation() {
       ws.close();
     };
   }, [scenarioId, runAttempt, dispatch]);
+
+  // Citation chip → Inspect drawer: resolve the equation id against the
+  // accumulated results (glass box: an unmatched citation never opens a drawer —
+  // SynthesisNarrative renders it disabled instead).
+  const handleCiteClick = useCallback(
+    (equationId: string) => {
+      const match = results.find((r) => r.provData.equationId === equationId);
+      if (!match) return;
+      setInspectData(match.provData);
+      setIsDrawerOpen(true);
+    },
+    [results]
+  );
 
   // Cancel: user-initiated stop — distinct from error and from done.
   const cancelRun = useCallback(() => {
@@ -277,10 +301,12 @@ export default function ScenarioSimulation() {
           })}
 
           {synthesis && (
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg mt-2">
-              <h4 className="text-xs font-bold text-primary mb-2 uppercase">Synthesis</h4>
-              <p className="text-sm text-foreground">{synthesis.narrative}</p>
-            </div>
+            <SynthesisNarrative
+              narrative={synthesis.narrative}
+              citations={synthesis.citations}
+              resolvableEquationIds={results.map((r) => r.provData.equationId)}
+              onCiteClick={handleCiteClick}
+            />
           )}
 
           <ValidationPanel />
