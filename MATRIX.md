@@ -365,6 +365,18 @@ This roadmap assumes a 10x fullstack team using Claude Code, Gemini CLI, Antigra
 - Live demo rehearsal with backup scenarios
 - If Top 8: promo video (July 5), online voting (July 6–12), final live pitch (July 31)
 
+### Beyond the Hackathon — Product Hardening (from 2026-06-14)
+
+The hackathon is now a **milestone and showcase, not the destination.** As of 2026-06-14 MATRIX is built as a **real-world product**, and whatever results from that work is what we present at AAIH 2026. A 16-unit batch (PRs #1–#17, merged to `main`) closed — or honestly labeled as PROVISIONAL — the seams that read as demo-grade: a corridor-only scenario engine, mock cockpit data, zero persistence, hardcoded validation, no access control, a hardcoded pilot city, and pre-existing glass-box debt. The product now ships:
+
+- **Typed scenario engine + geometry** — interventions beyond corridor lane-closures (`full_closure`, `speed_change`, `capacity_change`), and a GeoJSON (Point/Polygon) → SUMO-edge geometry engine, fronted by a **structured scenario builder** (`/builder`). This is how `PRD-F2` map-drop is now delivered.
+- **Computed validation, not asserted** — VAL-01 (Calderon-2014 RMSE) and VAL-02 (2024 flood IoU) are now *computed* into a `validation_report.json` and surfaced in-product, replacing hardcoded `PASS` values. The Calderon fixture is genuinely sourced; the flood fixture is labeled **PROVISIONAL** until a real fixture replaces it.
+- **Persistence, resilience, and access control** — Postgres/PostGIS-backed runs/audit with an in-memory fallback; Gemini retry/backoff + hard timeout; env-gated auth + rate-limit + CORS (default off).
+- **City-agnostic by construction** — a `CityConfig` layer makes Iloilo a zero-change default rather than a hardcoded assumption, matching the §10 scaling claim.
+- **Interactive glass-box provenance** — citation chips open Inspect; dataset metadata is clickable; the validation panel reads live; dataset tiers are registered and proxy constants are named and PROVISIONAL-labeled.
+
+**Honest debt carried forward** (surfaced, not hidden): mode-share is still uncalibrated (Behavioral stays **Medium**); end-to-end is still **~123 s against the 90-second budget**, though per-stage timings are now visible to attack it; flood/edges/confidence-map samples are PROVISIONAL; the live validation numbers need the corridor→edge map plus a kernel run to move from fixture to live. *For a glass-box product, labeling provisional data is the feature, not a hedge.* The full change record is **[CR-006 — Beyond the Hackathon](docs/cr-006-beyond-hackathon.md)**.
+
 ---
 
 ## 9. Feature Tiers (Prioritization Discipline)
@@ -470,6 +482,7 @@ For team transparency, key changes from the Foundation Document:
 - **LLM models:** Gemini 1.5/2.0 (deprecated) → Gemini 3.1 Flash-Lite + Pro
 - **Removed false claims:** DILG MC 2020-036 fare percentage, fabricated 2026 citations, MiroFish-as-architecture-reference
 - **Added Iloilo-specific institutional anchors:** Clean Air Asia SMMR, UNESCAP electric mobility, ICLEI roadmap, JICA STRADA-3 baseline
+- **Destination reframed (2026-06-14):** Hackathon submission → **real-world product**, with the hackathon as a milestone/showcase. Demo-grade seams were hardened or honestly labeled PROVISIONAL — typed scenario engine + geometry, computed validation (VAL-01/VAL-02), persistence + auth, city-agnostic `CityConfig`, interactive glass-box provenance — per [CR-006](docs/cr-006-beyond-hackathon.md). *Honesty (computed validation, clickable provenance, labeled provisional data) is the product story.*
 
 ---
 

@@ -2,10 +2,10 @@
 
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-04
-**Version:** 0.2
+**Version:** 0.3
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-07 — Phase 4, 5, and 6 implementation completed.
+**Last reconciled:** 2026-06-14 — **Phase 8 (Beyond the Hackathon — Product Hardening) added** per [CR-006](cr-006-beyond-hackathon.md); the 16-unit batch (PRs #1–#17) is merged into `main` (`2f4e636`).
 
 > **Phase-gated, not calendar-gated.** Work proceeds one phase at a time. Each phase has an explicit **Gate** — a checklist of exit criteria. **We stop at every Gate, review, and only then start the next phase.** No phase begins until the prior Gate passes. Dates are deliberately omitted; the gate criteria are the schedule.
 
@@ -207,6 +207,45 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 
 ---
 
+## Phase 8 — Beyond the Hackathon (Product Hardening)  *(added by [CR-006](cr-006-beyond-hackathon.md), 2026-06-14)*
+
+**Goal:** Turn the Milestone-B demo into a **real-world product**, with the hackathon reframed from *destination* to *milestone/showcase*. Close — or honestly label as PROVISIONAL — every demo-grade seam: a corridor-only scenario engine, mock cockpit data, zero persistence, hardcoded validation, no access control, a hardcoded pilot city, and pre-existing glass-box debt. For a glass-box product, *labeling provisional data is the feature, not a hedge.*
+
+**Status (2026-06-14):** **Shipped.** All 16 units are merged into `main` (`2f4e636`) as PRs #1–#17. This phase documents merged work; it is a completed batch, not a forward plan.
+
+| # | Task (→ PR) | Owner | Produces |
+|---|------|-------|----------|
+| 8.1 | CI for kernel/api/web + secrets hygiene (→ #1) | Jerico | `.github/workflows/*`, `SECURITY.md`, `.gitignore`, `.env.example` |
+| 8.2 | **Scenario v2** — typed interventions (`lane_closure`/`full_closure`/`speed_change`/`capacity_change`), orchestrator parsing, TraCI dispatch, geometry-carrying `Scenario` (→ #2) | Jerico | typed `Scenario`, TraCI dispatch |
+| 8.3 | **Geometry engine** — GeoJSON (Point/Polygon) → SUMO edge ids (→ #3) | Jerico | geometry→edge resolver |
+| 8.4 | **Facility demand-redistribution module** — gravity trip deltas (method `BEH-4-PROVISIONAL`) (→ #4) | Jerico | `…/demand_delta.py` |
+| 8.5 | **Real VAL-01/VAL-02 gates** — computed Calderon-2014 RMSE + 2024 flood IoU + `validation_report.json` (Calderon fixture sourced; flood fixture **PROVISIONAL**) (→ #5) | Jerico | `validation_report.json` |
+| 8.6 | **City-agnostic `CityConfig` layer** — Iloilo = zero-change default (→ #6) | Jerico | `CityConfig` |
+| 8.7 | **LLM resilience** — retry/backoff, hard timeout, typed `LLMUnavailable` (→ #7) | Jerico | Gemini wrapper |
+| 8.8 | **API persistence** — Postgres/PostGIS schema, db layer (in-memory fallback), wired `/scenario`,`/runs`,`/audit` + `GET /validation` (→ #8) | Jerico | `schema.sql`, db layer |
+| 8.9 | **WS runtime hardening** — per-stage timings in `DONE`, stage timeouts, typed `ERROR` + `QUEUED` events, concurrency semaphore, dependency-aware `/health` (→ #9) | Jerico | hardened WS runtime |
+| 8.10 | **Auth + rate limit + CORS** — env-gated, default off; WS honors the key (→ #10) | Jerico | auth middleware |
+| 8.11 | **Live cockpit** — real `POST /scenario`, no unlabeled mock data, sample-mode labeled (→ #11) | Yushin | live cockpit |
+| 8.12 | **Progressive simulation UX** — skeletons, n/5·m/17 progress, cancel, reconnect, stage-timing summary (→ #12) | Yushin | progressive UX |
+| 8.13 | **Interactive glass-box provenance** — citation chips → Inspect, clickable dataset metadata, a11y, `ValidationPanel` wired to `GET /validation` (→ #13) | Yushin | interactive provenance |
+| 8.14 | **Map data layers** — congestion choropleth, confidence heatmap, flood overlay (flood sample REAL from CCHAIN/NOAH; others **PROVISIONAL**) (→ #14) | Yushin | map layers |
+| 8.15 | **Structured scenario builder** — intervention picker + map placement + parameter form → NL serialization, `/builder` route (→ #15) | Yushin | `/builder` |
+| 8.16 | **Glass-box debt remediation** — SOCI-3 `8500` provenance (#16); dataset tiers registered (EMB/LIPAD/DEM/NHFR=H, S5P-NO2=M, from [INVENTORY.md](../data/INVENTORY.md)), `method_capped_confidence` for ECO-4/SOC-1, proxy constants (`0.05`/`50`/`12`) named + PROVISIONAL, citation guard enforces dataset basis (#17) | Jerico | debt-clean kernel |
+
+### Gate 8 — Product-hardening checkpoint
+- [x] CI runs on kernel/api/web; secrets hygiene in place (no committed secrets).
+- [x] Scenario engine accepts typed interventions + GeoJSON geometry (not corridor-only).
+- [x] Validation gates are **computed** (VAL-01 Calderon RMSE + VAL-02 flood IoU → `validation_report.json`), not hardcoded — flood fixture carried as **PROVISIONAL**.
+- [x] API persists runs/audit; `/scenario`,`/runs`,`/audit`,`GET /validation` wired; in-memory fallback when no DB.
+- [x] Frontend cockpit consumes the live API with no unlabeled mock data; provenance is clickable; `ValidationPanel` reads `GET /validation`.
+- [x] City-agnostic `CityConfig` exists; Iloilo is a zero-change default.
+- [x] Glass-box debt closed or labeled: dataset tiers registered, proxy constants named + PROVISIONAL, citation guard enforces a dataset basis.
+- [ ] **Carried debt (honest, not hidden):** mode-share still **uncalibrated** (Behavioral stays **M**); end-to-end still **~123 s vs the 90 s budget** — per-stage timings now visible to attack it; **flood/edges/confidence-map samples PROVISIONAL**; **live VAL numbers need the corridor→edge map + a kernel run** (fixture → live).
+
+> **methods-matrix follow-ups (recorded under [CR-006 §4.1](cr-006-beyond-hackathon.md), pending the next Locked-doc revision):** promote `BEH-4-PROVISIONAL` (facility demand, `demand_delta.py`) to a real methods §3.1 `BEH-4` row; ratify the VAL-01/VAL-02 thresholds + the dataset-tier additions. The Locked methods ledger absorbs these at its next revision, citing CR-006.
+
+---
+
 ## Risk Register
 
 | Risk | Severity | Mitigation |
@@ -216,13 +255,15 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | BIR zonal-values machine-readability (was: PDF scan-only) | **Resolved 2026-06-04** | Acquired as machine-readable `.xls` (DO17-2021, Sheet 9), parsed to `bir_zonal_rdo74_2021.csv` (5,680 entries) → `ECON-1` L→M (CR-003, pending sign-off). CCHAIN RWI + nighttime lights remain the barangay-level proxy. |
 | Gemini 3.1 Flash-Lite rate limits on the 500-persona batch | Medium | Generate once, cache to Redis (`personas:iloilo:v1`); reuse the same pool for all demo runs. |
 | Phase 2 overruns on SUMO network-import complexity | Medium | Timebox at Gate 2; fallback = NetworkX graph + synthetic trajectory good enough to demo the five modules and the glass-box story. |
-| Mode-share calibration is literature-derived, not a live travel survey | Ongoing | Carry Behavioral behavior at **M**; show the H/M/L label honestly. Bias auditor + confidence layer turn this into a trust feature, not a hidden gap. |
+| Mode-share calibration is literature-derived, not a live travel survey | Ongoing | Carry Behavioral behavior at **M**; show the H/M/L label honestly. Bias auditor + confidence layer turn this into a trust feature, not a hidden gap. **(Phase 8: still uncalibrated — carried, not closed.)** |
+| End-to-end ~123 s exceeds the 90 s budget | Ongoing | Phase 8 (PR #9) made **per-stage timings visible in the `DONE` event** so the dominant cost can be attacked precisely; the budget is not yet met. |
+| Validation gates / map samples ship on **PROVISIONAL** fixtures | Ongoing | Phase 8 computes VAL-01/VAL-02 from fixtures (Calderon genuinely sourced; flood **PROVISIONAL**) and labels flood/edges/confidence-map samples PROVISIONAL in-product. **Live numbers need the corridor→edge map + a kernel run.** Honesty is surfaced, not hidden. |
 | Nested app + docs in one repo blurs concerns (and `FMD/` is a *separate* nested repo) | Low | Resolved the two-repo sync risk by nesting — `app/` shares the clone + `data/`. Keep app changes scoped to `app/`; never `git add FMD`. If the app later needs its own CI/remote, split it out then. |
 
 ---
 
 ## Critical path, in one line
 
-> Scaffold → SUMO network import → **baseline trajectory (profiled)** → five glass-box modules → streaming API → frontend on live events → end-to-end **< 90 s** → one polished scenario + one real planner.
+> Scaffold → SUMO network import → **baseline trajectory (profiled)** → five glass-box modules → streaming API → frontend on live events → end-to-end **< 90 s** → one polished scenario + one real planner → **(Phase 8) harden into a real product: typed scenarios + geometry, computed validation, persistence, auth, city-agnostic, glass-box debt closed.**
 
-The single gating dependency is the **baseline trajectory dataset** (Phase 2): every module and the entire latency strategy hang off it. Everything in Track B parallelizes around it.
+The single gating dependency is the **baseline trajectory dataset** (Phase 2): every module and the entire latency strategy hang off it. Everything in Track B parallelizes around it. **Phase 8 (Beyond the Hackathon)** then converts the demo into a product whose *honesty is the differentiator* — computed validation, clickable provenance, and provisional data labeled as such ([CR-006](cr-006-beyond-hackathon.md)).
