@@ -16,6 +16,15 @@ from matrix_kernel.confidence import confidence_rubric, earned_confidence_interv
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
 
+# PROVISIONAL — uncalibrated Milestone-A stand-in for population density in the
+# SOCI-3 health-exposure proxy (methods-matrix.md §3.5: PM2.5 × population
+# density over ECO-2 + WorldPop). A single flat persons/km² figure substitutes
+# for the real per-zone WorldPop density, which is not yet wired into the kernel.
+# The exact 8500 figure is not sourced from a specific dataset; it is an
+# order-of-magnitude placeholder, surfaced honestly in the SOCI-3 assumptions so
+# Inspect shows it for what it is. Replace with per-zone WorldPop density.
+_GENERIC_POP_DENSITY = 8500.0  # persons/km², PROVISIONAL placeholder
+
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, eco2_val: float = 0.0) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
@@ -45,7 +54,7 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
     results.append(res2)
 
     # ── SOCI-3: Health-exposure proxy ──
-    val3 = eco2_val * 8500.0  # PM2.5 x generic pop density
+    val3 = eco2_val * _GENERIC_POP_DENSITY  # PM2.5 × generic pop density
     lo3, hi3 = earned_confidence_interval(val3, lambda: val3 * rng.uniform(0.7, 1.3), n=500)
 
     res3 = DimensionResult(
@@ -58,7 +67,12 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
         confidence=confidence_rubric(["EMB", "S5P-NO2", "WorldPop"]),
         input_dataset_ids=["EMB", "S5P-NO2", "WorldPop"],
         references=[],
-        assumptions=["uses ECO-2 passed value × average density"],
+        assumptions=[
+            "uses ECO-2 passed value × population density",
+            f"PROVISIONAL — uncalibrated Milestone-A generic population-density "
+            f"stand-in ({_GENERIC_POP_DENSITY:.0f} persons/km²); not sourced from a "
+            f"specific dataset; per-zone WorldPop density not yet wired (methods §3.5)",
+        ],
     )
     results.append(res3)
 
