@@ -16,6 +16,12 @@ from matrix_kernel.confidence import confidence_rubric, earned_confidence_interv
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
 
+# ECON-1 land-value proxy: PHP of land-value change per unit trip delta. PROVISIONAL —
+# an uncalibrated Milestone-A round number, NOT a BIR-ZV-derived uplift. Methods §3.4 wants
+# `ΔLV = LV_base · uplift(Δaccessibility)` off the BIR zonal schedule; this stand-in stays
+# until that uplift curve is wired. No source backs the literal ₱/trip figure.
+_PHP_PER_TRIP_PROXY = 50.0
+
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
@@ -27,8 +33,8 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     delta_trips = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor) if corridor else 0.0
 
     # ── ECON-1: Land-value Δ (≤1 km) ──
-    # Approximated based on corridor trips
-    val1 = float(delta_trips) * 50.0  # e.g., 50 PHP per trip delta
+    # Approximated based on corridor trips (PROVISIONAL proxy; see _PHP_PER_TRIP_PROXY).
+    val1 = float(delta_trips) * _PHP_PER_TRIP_PROXY
     lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.6, 1.4), n=500)
 
     results.append(DimensionResult(
@@ -41,7 +47,12 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         confidence=confidence_rubric(["BIR-ZV", "CCHAIN"]),
         input_dataset_ids=["BIR-ZV", "CCHAIN"],
         references=["BIR-ZV"],
-        assumptions=["land value proxy from trip delta (Milestone A)"],
+        assumptions=[
+            "land value proxy from trip delta (Milestone A)",
+            f"land-value proxy = ₱{_PHP_PER_TRIP_PROXY:g} per unit trip delta — PROVISIONAL, "
+            "uncalibrated Milestone-A round number, NOT a BIR-ZV-derived uplift (methods §3.4 "
+            "wants ΔLV = LV_base · uplift(Δaccessibility)); no source backs this ₱/trip figure",
+        ],
     ))
 
     # ── ECON-2: Footfall Δ per zone ──

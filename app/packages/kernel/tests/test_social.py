@@ -22,3 +22,11 @@ def test_social_results():
         assert r.dimension == "social"
         assert r.equation_id and r.input_dataset_ids
         assert r.range[0] <= r.value <= r.range[1]
+
+    by_id = {r.equation_id: r for r in results}
+    # SOC-1 (CCHAIN + NHFR, both H, but equity-weighted access is literature-calibrated)
+    # now emits the M methods §3.3 documents — previously L because NHFR was unregistered.
+    assert by_id["SOC-1"].confidence == "M"
+    # The SOC-2 vendors-per-lane proxy constant surfaces its provenance under Inspect (PRD-F14).
+    soc2_assumptions = " ".join(by_id["SOC-2"].assumptions)
+    assert "PROVISIONAL" in soc2_assumptions and "12" in soc2_assumptions

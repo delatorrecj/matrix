@@ -11,9 +11,19 @@ from __future__ import annotations
 
 import random
 from matrix_kernel.baseline import load_baseline
-from matrix_kernel.confidence import confidence_rubric, earned_confidence_interval
+from matrix_kernel.confidence import (
+    confidence_rubric,
+    earned_confidence_interval,
+    method_capped_confidence,
+)
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
+
+# SOC-2 displacement proxy: informal vendors displaced per closed lane. PROVISIONAL —
+# an uncalibrated Milestone-A round number, not a survey-derived density. Methods §3.3
+# counts "informal workers/vendors within impact buffer" from CCHAIN osm_poi_* / OSM-ILO;
+# this stand-in stays until that buffer count is wired. No source backs the literal.
+_VENDORS_PER_CLOSED_LANE = 12
 
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
@@ -29,6 +39,8 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     val1 = float(delta_trips) * 0.001
     lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.5, 1.5), n=500)
 
+    # Methods §3.3: SOC-1 is M. Inputs (CCHAIN RWI + isochrones, NHFR registry) are H, but
+    # equity-weighted access is a literature-calibrated method → cap at M (worst-factor rule).
     results.append(DimensionResult(
         dimension="social",
         metric="Equity-weighted access",
@@ -36,16 +48,20 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         value=val1,
         range=(lo1, hi1),
         unit="index",
-        confidence=confidence_rubric(["CCHAIN", "NHFR"]),
+        confidence=method_capped_confidence(["CCHAIN", "NHFR"], "M"),
         input_dataset_ids=["CCHAIN", "NHFR"],
         references=[],
-        assumptions=["access index proportional to trips (Milestone A proxy)"],
+        assumptions=[
+            "access index proportional to trips (Milestone A proxy)",
+            "confidence capped at M: inputs are H but equity-weighted access is "
+            "literature-calibrated (methods §3.3)",
+        ],
     ))
 
     # ── SOC-2: Displacement risk count ──
-    # Static count based on lanes closed
+    # Static count based on lanes closed (PROVISIONAL proxy; see _VENDORS_PER_CLOSED_LANE).
     lanes_closed = trajectory.meta.get("lanes_closed", 0)
-    val2 = float(lanes_closed * 12)  # dummy vendor count
+    val2 = float(lanes_closed * _VENDORS_PER_CLOSED_LANE)
     lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.8, 1.2), n=500)
 
     results.append(DimensionResult(
@@ -58,7 +74,11 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         confidence=confidence_rubric(["CCHAIN", "OSM-ILO"]),
         input_dataset_ids=["CCHAIN", "OSM-ILO"],
         references=[],
-        assumptions=["approx 12 informal vendors per closed lane"],
+        assumptions=[
+            f"vendors displaced per closed lane = {_VENDORS_PER_CLOSED_LANE} — PROVISIONAL, "
+            "uncalibrated Milestone-A round number standing in for the methods §3.3 "
+            "impact-buffer count over CCHAIN osm_poi_* / OSM-ILO; no source backs this value",
+        ],
     ))
 
     # ── SOC-3: Distributional split ──

@@ -29,9 +29,11 @@ def synthesize(results: list[DimensionResult], client: genai.Client | None = Non
     # Provide the results to the LLM
     results_text = "Here are the simulation results. You MUST cite the Equation ID in brackets e.g., [BEH-1] when mentioning ANY number from these results:\n\n"
     valid_citations = set()
-    
+    citation_datasets: dict[str, list[str]] = {}  # equation_id -> its dataset basis (methods §4)
+
     for r in results:
         valid_citations.add(r.equation_id)
+        citation_datasets[r.equation_id] = list(r.input_dataset_ids)
         results_text += f"- {r.dimension.title()} ({r.equation_id}): {r.metric} = {r.value:.2f} {r.unit} (Range: {r.range[0]:.2f} to {r.range[1]:.2f}). Confidence: {r.confidence}.\n"
     
     system_instruction = (
@@ -63,8 +65,9 @@ def synthesize(results: list[DimensionResult], client: genai.Client | None = Non
             "placeholder narrative. (%s)", e.attempts, e)
         narrative = "Synthesis narrative generation failed. Please see the raw data."
 
-    # Enforce citation guard
-    safe_narrative = strip_uncited_claims(narrative, valid_citations)
+    # Enforce citation guard — a numeric claim must cite an equation_id that resolves to a
+    # non-empty dataset basis (methods §4); passing the mapping enforces that basis.
+    safe_narrative = strip_uncited_claims(narrative, valid_citations, citation_datasets)
     
     # Build citations list
     citations = []
