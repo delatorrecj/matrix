@@ -18,6 +18,8 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
+from matrix_kernel.config import get_city_config
+from matrix_kernel.llm import generate_content
 from matrix_kernel.scenario import Scenario
 
 
@@ -44,10 +46,11 @@ def parse_scenario(query: str, client: Optional[genai.Client] = None) -> Scenari
         client = genai.Client()  # Automatically picks up GOOGLE_API_KEY from environment
 
     model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro")
+    city_name = get_city_config().name  # city-agnostic: Iloilo by default (CityConfig)
 
     system_instruction = (
         "You are the MATRIX Orchestrator. Your job is to parse natural language urban planning "
-        "queries into structured simulation parameters for the city of Iloilo.\n"
+        f"queries into structured simulation parameters for {city_name}.\n"
         "Classify the intervention into exactly one type:\n"
         "- lane_closure: one or more lanes closed but the road stays open (roadworks, utility digs, "
         "parking-lane removal).\n"
@@ -64,7 +67,11 @@ def parse_scenario(query: str, client: Optional[genai.Client] = None) -> Scenari
         "flag it as ambiguous and ask for clarification."
     )
 
-    response = client.models.generate_content(
+    # Resilient call: retry/backoff + hard timeout, typed LLMUnavailable on exhaustion
+    # (matrix_kernel.llm). The orchestrator has no silent fallback — a parse failure must
+    # surface (the API layer turns LLMUnavailable into a clear error), never a guessed scenario.
+    response = generate_content(
+        client,
         model=model_name,
         contents=query,
         config=types.GenerateContentConfig(

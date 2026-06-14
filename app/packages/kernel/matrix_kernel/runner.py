@@ -66,13 +66,28 @@ def target_edges(corridor: str, top_n: int = 1) -> list[str]:
     return [eid for eid, _ in sorted(base.items(), key=lambda kv: kv[1], reverse=True)[:top_n]]
 
 
+def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
+    """Resolve WHERE a scenario applies -> (SUMO edge ids, resolution method).
+
+    The single seam for edge resolution. When the Scenario carries a `geometry` (a
+    map-drop GeoJSON Point/Polygon) it is resolved to edges via matrix_kernel.geometry
+    against the runner's cached net; an off-network geometry honestly falls through to
+    the keyword match on `scenario.location` (PRD-F14 -- never a silent guess). With no
+    geometry it keyword-matches the location (falling back to the busiest baseline edge).
+    The returned method string is recorded in Trajectory.meta for provenance."""
+    if scenario.geometry is not None:
+        from matrix_kernel.geometry import resolve_geometry
+
+        edges = resolve_geometry(_net(), scenario.geometry)
+        if edges:
+            return edges, "geometry"
+        return target_edges(scenario.effective_location, top_n=top_n), "keyword-match (geometry off-network)"
+    return target_edges(scenario.effective_location, top_n=top_n), "keyword-match"
+
+
 def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:
-    """Resolve WHERE a scenario applies -> SUMO edge ids. The single seam for edge
-    resolution: today it keyword-matches `scenario.location` (falling back to the v1
-    `corridor` field) via target_edges(). `scenario.geometry` (GeoJSON) is carried on
-    the Scenario but resolved by matrix_kernel.geometry (separate unit), which plugs in
-    here once it lands."""
-    return target_edges(scenario.effective_location, top_n=top_n)
+    """Edge ids a scenario affects (back-compat wrapper over _resolve_edges)."""
+    return _resolve_edges(scenario, top_n)[0]
 
 
 def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
@@ -82,7 +97,7 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
         raise FileNotFoundError("network/demand missing -- run build_network.py + build_demand.py")
     import traci
 
-    affected = resolve_edges(scenario)
+    affected, edge_resolution = _resolve_edges(scenario)
     with tempfile.TemporaryDirectory() as td:
         add = Path(td) / "ed.add.xml"
         edge_out = Path(td) / "edgeout.xml"
@@ -122,7 +137,7 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "intervention_type": scenario.intervention_type,
             "affected_edges": affected,
             "applied": applied,  # dispatch record: edges touched, parameters, TraCI calls, assumptions
-            "edge_resolution": "keyword-match",  # GeoJSON resolver lands with matrix_kernel.geometry
+            "edge_resolution": edge_resolution,  # "geometry" (map-drop) or "keyword-match"
             # -- legacy keys: the five modules read these as "the affected corridor" -- keep. --
             "closed_edges": affected,
             "edge_lanes": applied["edge_lanes"],
