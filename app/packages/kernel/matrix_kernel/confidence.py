@@ -31,6 +31,15 @@ DATASET_TIERS: dict[str, Confidence] = {
     "WHO-EMEP": "H",        # established emission factors
     # Bias-audited synthetic persona pool -- validated to the ground-truth anchor (H)
     "PERSONA-POOL": "H",
+    # Live ground monitoring / open-gov registries -- current, full Iloilo coverage (H).
+    # Tiers taken from data/INVENTORY.md's Conf column (the dataset-quality ledger); a
+    # weaker *method* on top of these still caps a result via the worst-factor rule.
+    "EMB": "H",             # DENR-EMB ground air-quality stations (INVENTORY OPENAQ/EMB row: H)
+    "LIPAD": "H",           # PhilLiDAR/LiPAD Iloilo flood + DTM (INVENTORY LIPAD: H)
+    "DEM": "H",             # Copernicus GLO-30 DEM (INVENTORY DEM-GLO30: H)
+    "NHFR": "H",            # DOH National Health Facility Registry, live open-gov (INVENTORY NHFR: H)
+    # Satellite proxy -- live but a regional proxy for ground concentrations (M)
+    "S5P-NO2": "M",         # Sentinel-5P NO2 (INVENTORY S5P-NO2: M)
     # Literature-calibration anchors / proxies -- literature-calibrated or ~>10yr (M)
     "Calderon2014": "M",
     "TSSP-2019": "M",
@@ -55,6 +64,22 @@ def confidence_rubric(input_dataset_ids: Sequence[str]) -> Confidence:
         raise ValueError("confidence_rubric: no datasets to assess (glass-box, PRD-F14)")
     worst = min(_RANK[DATASET_TIERS.get(ds, "L")] for ds in input_dataset_ids)
     return _BY_RANK[worst]
+
+
+def method_capped_confidence(
+    input_dataset_ids: Sequence[str], method_maturity: Confidence
+) -> Confidence:
+    """Worst of the data-tier rubric AND the equation's method maturity (methods §2).
+
+    `confidence = f(data vintage, coverage, method maturity, validation)` — worst factor
+    caps the tier. `confidence_rubric` covers the *data* factors; some equations sit on a
+    *method* that is weaker than their inputs (e.g. ECO-4's flood-exposure redistribution or
+    SOC-1's equity-weighted access are literature-calibrated → M even though the flood-hazard
+    and registry inputs are H). Pass that ceiling here so the demotion is computed and
+    declared, never silently inherited or guessed. Mirrors `demand_delta._computed_confidence`.
+    """
+    data_tier = confidence_rubric(input_dataset_ids)
+    return _BY_RANK[min(_RANK[data_tier], _RANK[method_maturity])]
 
 
 def earned_confidence_interval(

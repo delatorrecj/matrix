@@ -22,3 +22,8 @@ def test_economic_results():
         assert r.dimension == "economic"
         assert r.equation_id and r.input_dataset_ids
         assert r.range[0] <= r.value <= r.range[1]
+
+    # The ECON-1 ₱/trip land-value proxy constant surfaces its provenance under Inspect (PRD-F14).
+    econ1 = next(r for r in results if r.equation_id == "ECON-1")
+    econ1_assumptions = " ".join(econ1.assumptions)
+    assert "PROVISIONAL" in econ1_assumptions and "50" in econ1_assumptions

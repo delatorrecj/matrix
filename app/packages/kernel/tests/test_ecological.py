@@ -22,3 +22,12 @@ def test_ecological_results():
         assert r.dimension == "ecological"
         assert r.equation_id and r.input_dataset_ids
         assert r.range[0] <= r.value <= r.range[1]
+
+    by_id = {r.equation_id: r for r in results}
+    # ECO-2 (EMB H + S5P-NO2 M) and ECO-4 (H hazard / M redistribution) now emit the M that
+    # methods §3.2 documents — previously L because EMB/S5P/LIPAD/DEM were unregistered tiers.
+    assert by_id["ECO-2"].confidence == "M"
+    assert by_id["ECO-4"].confidence == "M"
+    # The ECO-2 PM2.5∝CO2e proxy constant surfaces its provenance under Inspect (PRD-F14).
+    eco2_assumptions = " ".join(by_id["ECO-2"].assumptions)
+    assert "PROVISIONAL" in eco2_assumptions and "0.05" in eco2_assumptions

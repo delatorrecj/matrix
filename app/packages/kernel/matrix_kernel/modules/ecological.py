@@ -12,7 +12,11 @@ from __future__ import annotations
 
 import random
 from matrix_kernel.baseline import load_baseline
-from matrix_kernel.confidence import confidence_rubric, earned_confidence_interval
+from matrix_kernel.confidence import (
+    confidence_rubric,
+    earned_confidence_interval,
+    method_capped_confidence,
+)
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
 
@@ -20,6 +24,12 @@ from matrix_kernel.trajectory import Trajectory
 _AVG_EDGE_LENGTH_KM = 0.150  # 150 meters
 _EF_CO2_G_PER_KM = 120.0     # fleet average emission factor
 _DAYS_PER_YR = 365.0
+
+# ECO-2 air-quality proxy: PM2.5 delta as a fraction of the CO2e delta. PROVISIONAL —
+# an uncalibrated Milestone-A stand-in for the methods §3.2 dispersion-to-station model
+# (`ΔPM2.5 ∝ Δemissions` calibrated to EMB/OPENAQ readings), which is not yet implemented.
+# No published coefficient backs this literal; it is a placeholder ratio, not a measurement.
+_PM25_PER_CO2E_PROXY = 0.05
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
@@ -58,11 +68,11 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     ))
 
     # ── ECO-2: Air-quality delta ──
-    # Proportional to emissions delta
-    delta_pm25 = delta_co2e_kt_yr * 0.05  # proxy scaling factor
+    # Proportional to emissions delta (PROVISIONAL proxy; see _PM25_PER_CO2E_PROXY).
+    delta_pm25 = delta_co2e_kt_yr * _PM25_PER_CO2E_PROXY
     lo2, hi2 = earned_confidence_interval(
         delta_pm25, lambda: delta_pm25 * rng.uniform(0.6, 1.4), n=500)
-        
+
     results.append(DimensionResult(
         dimension="ecological",
         metric="Air-quality delta",
@@ -73,7 +83,12 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         confidence=confidence_rubric(["EMB", "S5P-NO2"]),
         input_dataset_ids=["EMB", "S5P-NO2"],
         references=[],
-        assumptions=["linear proportionality to CO2e emissions (Milestone A)"],
+        assumptions=[
+            "linear proportionality to CO2e emissions (Milestone A)",
+            f"PM2.5/CO2e proxy coefficient = {_PM25_PER_CO2E_PROXY} — PROVISIONAL, "
+            "uncalibrated Milestone-A stand-in for the methods §3.2 dispersion-to-station "
+            "model; no published coefficient backs this value (placeholder, not a measurement)",
+        ],
     ))
 
     # ── ECO-3: Green-cover loss ──
@@ -93,6 +108,9 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     ))
 
     # ── ECO-4: Flood-exposure Δ ──
+    # Methods §3.2: "H (hazard) / M (redistribution)". The hazard layers (CCHAIN/LIPAD/DEM)
+    # are High, but the value emitted is the *redistribution* of exposed population, whose
+    # method is literature-calibrated → M. Cap on that weaker factor (worst-factor rule).
     val4 = 0.0
     results.append(DimensionResult(
         dimension="ecological",
@@ -101,10 +119,14 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         value=val4,
         range=(val4, val4),
         unit="persons",
-        confidence=confidence_rubric(["CCHAIN", "LIPAD", "DEM"]),
+        confidence=method_capped_confidence(["CCHAIN", "LIPAD", "DEM"], "M"),
         input_dataset_ids=["CCHAIN", "LIPAD", "DEM"],
         references=[],
-        assumptions=["lane closure does not alter flood routing (Milestone A)"],
+        assumptions=[
+            "lane closure does not alter flood routing (Milestone A)",
+            "confidence capped at M: flood-hazard inputs are H but the exposure-"
+            "redistribution method is literature-calibrated (methods §3.2)",
+        ],
     ))
 
     return results

@@ -30,3 +30,6 @@ def test_societal_results():
     # Glass box: the provisional density placeholder must be disclosed honestly
     # in the assumptions surfaced under Inspect (PRD-F14).
     assert any("PROVISIONAL" in a for a in soci3.assumptions)
+    # SOCI-3 (EMB H + S5P-NO2 M + WorldPop H) now emits the M methods §3.5 documents —
+    # previously L because EMB/S5P-NO2 were unregistered dataset tiers.
+    assert soci3.confidence == "M"
