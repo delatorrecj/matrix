@@ -5,7 +5,7 @@ import pytest
 # skip cleanly on a bare venv instead of erroring at collection (`uv sync` runs it).
 pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in app/packages/kernel")
 
-from matrix_kernel.modules.societal import score
+from matrix_kernel.modules.societal import score, _GENERIC_POP_DENSITY
 from matrix_kernel.trajectory import Trajectory
 
 def test_societal_results():
@@ -24,6 +24,9 @@ def test_societal_results():
         assert r.equation_id and r.input_dataset_ids
         assert r.range[0] <= r.value <= r.range[1]
 
-    # Check SOCI-3 uses the passed eco2_val
+    # Check SOCI-3 uses the passed eco2_val × the named density constant
     soci3 = next(r for r in results if r.equation_id == "SOCI-3")
-    assert soci3.value == 10.0 * 8500.0
+    assert soci3.value == 10.0 * _GENERIC_POP_DENSITY
+    # Glass box: the provisional density placeholder must be disclosed honestly
+    # in the assumptions surfaced under Inspect (PRD-F14).
+    assert any("PROVISIONAL" in a for a in soci3.assumptions)
