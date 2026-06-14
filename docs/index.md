@@ -44,7 +44,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 — test reality: 23 w/ SUMO, ~15 bare) |
 | SAD — Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — 5-agent build roster |
 | BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 — Gemini 2.0 past-tense; stack as-built) |
-| Implementation Plan — phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.2 | Draft | 2026-06-04 | N/A — execution sequence + gates; companion to BUILD |
+| Implementation Plan — phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.3 | Draft | 2026-06-14 | 2026-06-14 (CR-006 — Phase 8 "Beyond the Hackathon" added; PRs #1–#17 merged) |
 | Implementation Plan — critical path (file-level) | [implementation-plan-critical-path.md](implementation-plan-critical-path.md) | 0.1 | Draft | 2026-06-04 | N/A — granular vertical-slice walk; companion to the gated plan |
 | CLR — Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — banner set: PWA needs PIA + counsel |
 | GTM — Go-To-Market | [gtm-matrix.md](gtm-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 — competitor survey + ASEAN-award citation) |
@@ -55,6 +55,14 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | RFC ID | File | Feature | Status | Last Updated |
 |--------|------|---------|--------|--------------|
 | matrix-rfc-001 | [rfc-matrix-realtime-pipeline.md](rfc-matrix-realtime-pipeline.md) | Real-time simulation pipeline (90 s budget) | Approved | 2026-06-02 |
+
+### Change Records (standalone files)
+
+CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-006 is the first CR written as a standalone FMD Change Record file:
+
+| CR ID | File | Title | Status | Date |
+|-------|------|-------|--------|------|
+| CR-006 | [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) | Beyond the Hackathon — product-hardening pivot (PRs #1–#17) | Applied | 2026-06-14 |
 
 ---
 
@@ -67,6 +75,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | CR-003 | 2026-06-04 | **Progress reconciliation:** synced gated plan + INVENTORY to on-disk reality (BIR ZV `.xls` downloaded + parsed → 5,680 entries; Phase 1 ~70% done; SUMO Stage 1 built). **Upgraded `ECON-1` confidence L→M** in [methods-matrix §3.4](methods-matrix.md) now that BIR-ZV is acquired — **Locked-doc edit applied.** | implementation-plan-matrix.md | implementation-plan-matrix, INVENTORY, methods, this index | (logged here) |
 | CR-004 | 2026-06-07 | **Milestone B complete (Phases 4-6):** Integrated Gemini orchestrator and synthesis with citation guard. Scaffolded Next.js 14 frontend with DSD compliance, Deck.gl, and glass-box Inspect Drawer. Deployment configs wired for Vercel + Fly.io. | implementation-plan-matrix.md | implementation-plan-matrix, implementation-plan-critical-path, build, qad, dsd, sdd, this index | (logged here) |
 | CR-005 | 2026-06-09 | **Truth reconciliation + grounding pass.** Reconciled stale guidance (root `CLAUDE.md`, `apps/web/SCAFFOLD.md`, auto-memory) to the as-built code (Milestone A+B): modules + runner + frontend are built, not stubs. Corrected the test claim (**23 with `eclipse-sumo` / ~15+1 on a bare venv**). Closed truth flags: Gemini 2.0 → past tense (prd/sdd/build); added a **sourced citation** for the ASEAN Clean Tourist City Award 2026 (MATRIX.md/gtm); softened the "no ASEAN platform" absolute to a **competitor feature-survey** (gtm); guarded that the Calderon-2014 + 2024-flood **validations read as planned, not shipped** (qad/methods). Seeded the DSD anti-pattern register. Also corrected the QAD Definition-of-Done (validation ledger + 90 s budget were checked but are not met — now honest). **Locked-doc edit applied under this CR: PRD (Gemini 2.0 → past tense); SDD + methods verified accurate vs as-built, no content change.** | CLAUDE.md / code audit | CLAUDE, app/README, SCAFFOLD, MATRIX.md, prd, dsd, qad, build, gtm, memory, this index | (logged here) |
+| CR-006 | 2026-06-14 | **Beyond the Hackathon — product-hardening pivot.** Reframed MATRIX from hackathon submission → **real-world product** (hackathon = milestone/showcase). Documents the merged 16-unit batch (PRs #1–#17 at `2f4e636`): CI + secrets hygiene; **Scenario v2** typed interventions + geometry engine; facility demand-redistribution (`BEH-4-PROVISIONAL`); **computed VAL-01/VAL-02** gates (Calderon RMSE sourced, flood IoU **PROVISIONAL**); city-agnostic `CityConfig`; LLM resilience; **API persistence** (Postgres/PostGIS, `/runs`,`/audit`,`GET /validation`); WS hardening (`QUEUED` event + `DONE.timings`, stage timeouts, semaphore, dependency-aware `/health`); auth+rate-limit+CORS; live cockpit + progressive UX + interactive glass-box provenance; map data layers; structured scenario builder (`/builder`); glass-box debt remediation (SOCI-3 provenance, dataset tiers registered, proxy constants named + PROVISIONAL, citation guard enforces dataset basis). Records PRD/SDD/RFC/methods **amendments** without editing the Locked docs; **methods follow-ups deferred to this CR:** promote `BEH-4-PROVISIONAL`→ methods §3.1; ratify VAL-01/VAL-02 thresholds + dataset-tier additions. Honest debt carried: mode-share uncalibrated; ~123 s vs 90 s budget; flood/edges/confidence-map samples PROVISIONAL. | MATRIX.md §8/Appendix A | cr-006 (new), implementation-plan-matrix, MATRIX.md, this index | [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) |
 
 ---
 
