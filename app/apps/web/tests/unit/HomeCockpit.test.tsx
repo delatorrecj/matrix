@@ -70,6 +70,12 @@ describe('MatrixCockpit scenario submission', () => {
     });
   });
 
+  it('offers a discoverable link to the structured scenario builder', () => {
+    render(<MatrixCockpit />);
+    const link = screen.getByRole('link', { name: /Build a structured scenario/i });
+    expect(link).toHaveAttribute('href', '/builder');
+  });
+
   it('shows a loading state while the request is in flight', async () => {
     let resolveFetch!: (value: Response) => void;
     fetchMock.mockReturnValue(new Promise<Response>((resolve) => { resolveFetch = resolve; }));
