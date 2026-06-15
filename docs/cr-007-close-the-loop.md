@@ -114,6 +114,40 @@ Decide in a later PR whether to add it as an explicit alias.
 
 ---
 
+## 4a. PR 2 — live e2e (verification) + model-id fix
+
+Ran one real scenario end-to-end against the full local stack (Docker Postgres/Redis/Chroma +
+uvicorn), 2026-06-16: **"Close 2 lanes on Diversion Road for roadworks."**
+
+- **POST /scenario** (live Gemini orchestrator): parsed → `lane_closure`, location `Diversion Road`,
+  lanes `2`. ✅
+- **WS /simulate/{id}**: `ACCEPTED → 20×PLAYBACK_FRAME → 17×DIMENSION_RESULT (all 5 dimensions) →
+  SYNTHESIS (1395 chars, 17 citations) → DONE`. Every result carried `equation_id +
+  input_dataset_ids` (Inspect-resolvable). ✅
+- **The PR 1 seam, proven live**: the persisted **Diversion Road** scenario was simulated (not a
+  blank). Postgres `scenarios` row = `lane_closure / Diversion Road`; the `run` links to it; **17
+  `dimension_results` rows** persisted; `GET /runs/{id}` reloaded `status=done` + 17 results with
+  full provenance. ✅
+- **Timings (P2 datapoint)**: `total_ms=48122` (**48 s — under the 90 s budget**), `sumo_ms=44012`
+  (the bottleneck), `modules_ms=89`, `gemini_ms=3810`. The documented "~123 s" was a cold-baseline
+  figure; with a warm cached baseline the delta run is well under budget. P2 should target SUMO.
+- **Validation**: VAL-01/02 = `NOT_RUN` (expected; that is PR 5).
+
+**Two real findings (environment, not PR-1 defects):**
+
+1. **Model-id bug (fixed here).** The live API has **no bare `gemini-3.1-pro`** — `models/gemini-3.1-pro`
+   returns 404. The published id is **`gemini-3.1-pro-preview`**. The code defaults
+   (`orchestrator.py`, `synthesis.py`) and `app/.env.example` were corrected to `gemini-3.1-pro-preview`
+   (still Gemini 3.1 Pro per the Locked decision — just the correct live id). `gemini-3.1-flash-lite`
+   already resolves and was left as-is.
+2. **Billing blocker (action for the user).** This `GOOGLE_API_KEY` is **free-tier**: Gemini 3.1 Pro
+   (and 2.5-pro / 2.0-flash) return **429 RESOURCE_EXHAUSTED, limit: 0**. Only flash-tier models work
+   on the key (`gemini-3.1-flash-lite`, `gemini-3-flash-preview`, `gemini-2.5-flash`). The e2e
+   therefore ran orchestration + synthesis on **`gemini-3.1-flash-lite` as a clearly-labeled
+   verification substitution** (the LLM never originates numbers — PRD-F14 — so the glass-box path is
+   unaffected). **Production with the mandated `gemini-3.1-pro-preview` needs billing enabled** on the
+   Google AI Studio / Cloud project.
+
 ## 5. Glass-box posture
 
 PR 1 ships no number, so the glass-box ledger is untouched. The change *strengthens* the mandate:
