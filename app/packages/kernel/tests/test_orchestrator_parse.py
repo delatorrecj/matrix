@@ -90,6 +90,27 @@ def test_capacity_change_carries_factor():
     assert sc.parameters == {"capacity_factor": 1.5}
 
 
+def test_geometry_passthrough_sets_scenario_geometry():
+    """A map-drop geometry supplied out-of-band (the API's structured field) rides onto
+    the Scenario verbatim -- the LLM never originates geometry (PRD-F14)."""
+    schema = ScenarioSchema(
+        description="Fully close the dropped area for flooding",
+        intervention_type="full_closure", location="", is_ambiguous=False,
+    )
+    geom = {"type": "Point", "coordinates": [122.5621, 10.7202]}
+    sc = parse_scenario("flood closure here", client=FakeClient(schema), geometry=geom)
+    assert sc.geometry == geom
+    assert sc.intervention_type == "full_closure"
+
+
+def test_geometry_defaults_to_none_when_absent():
+    schema = ScenarioSchema(
+        description="Close one lane on A", intervention_type="lane_closure",
+        location="A", is_ambiguous=False,
+    )
+    assert parse_scenario("q", client=FakeClient(schema)).geometry is None
+
+
 def test_ambiguous_query_raises_with_clarification():
     schema = ScenarioSchema(
         description="", intervention_type="lane_closure", is_ambiguous=True,

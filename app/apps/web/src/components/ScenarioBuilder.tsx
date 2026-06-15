@@ -73,6 +73,7 @@ import {
   AmbiguousScenarioError,
   ApiUnreachableError,
   createScenario,
+  type ScenarioGeometry,
 } from "@/lib/api";
 
 // ── Domain types ─────────────────────────────────────────────────────────────
@@ -404,7 +405,10 @@ export default function ScenarioBuilder() {
     setClarification(null);
     setSubmitError(null);
     try {
-      const scenario = await createScenario(query);
+      // Geometry travels as a STRUCTURED field (not just the NL suffix) so the kernel
+      // resolves edges from exactly what was drawn (PRD-F14). The review query still
+      // shows the suffix verbatim — what you see is still what is sent.
+      const scenario = await createScenario(query, drawnGeometryToGeoJSON(state.geometry));
       router.push(`/scenario/${scenario.scenario_id}`);
       // Keep the spinner up while Next.js navigates away.
     } catch (err) {
@@ -417,7 +421,7 @@ export default function ScenarioBuilder() {
       }
       setIsSubmitting(false);
     }
-  }, [isSubmitting, query, router]);
+  }, [isSubmitting, query, router, state.geometry]);
 
   // ── Step navigation ─────────────────────────────────────────────────────────
 
@@ -854,22 +858,34 @@ function Field({
   );
 }
 
-/** Build the same GeoJSON Feature object the suffix serializes (for display). */
-function geometryFeature(geometry: DrawnGeometry) {
+/**
+ * Drawn geometry → a bare GeoJSON *geometry* (Point/Polygon), 5-dp WGS84 lon/lat.
+ * Returns `null` for an incomplete polygon (<3 vertices) — the same honesty rule as
+ * `buildGeometrySuffix`. This is the structured channel sent to `POST /scenario`
+ * (a bare geometry, not a Feature, so PostGIS `ST_GeomFromGeoJSON` accepts it directly).
+ */
+export function drawnGeometryToGeoJSON(
+  geometry: DrawnGeometry | null
+): ScenarioGeometry | null {
+  if (!geometry) return null;
   if (geometry.kind === "point") {
-    return {
-      type: "Feature",
-      geometry: { type: "Point", coordinates: geometry.point.map((c) => Number(c.toFixed(5))) },
-      properties: {},
-    };
+    return { type: "Point", coordinates: geometry.point.map((c) => Number(c.toFixed(5))) };
   }
+  if (geometry.vertices.length < 3) return null;
   const ring = geometry.vertices.map((v) => v.map((c) => Number(c.toFixed(5))));
-  const closed = ring.length >= 3 ? [...ring, ring[0]] : ring;
-  return {
-    type: "Feature",
-    geometry: { type: "Polygon", coordinates: [closed] },
-    properties: {},
-  };
+  return { type: "Polygon", coordinates: [[...ring, ring[0]]] };
+}
+
+/** Build the GeoJSON Feature object the suffix serializes (for display). */
+function geometryFeature(geometry: DrawnGeometry) {
+  // For an incomplete polygon drawnGeometryToGeoJSON returns null; display the raw
+  // (open) ring in that case so the review panel still shows what was drawn.
+  const geo =
+    drawnGeometryToGeoJSON(geometry) ??
+    (geometry.kind === "polygon"
+      ? { type: "Polygon", coordinates: [geometry.vertices.map((v) => v.map((c) => Number(c.toFixed(5))))] }
+      : { type: "Point", coordinates: [] });
+  return { type: "Feature", geometry: geo, properties: {} };
 }
 
 function GeometrySummary({ geometry }: { geometry: DrawnGeometry | null }) {

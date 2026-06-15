@@ -48,6 +48,28 @@ describe('createScenario', () => {
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/json');
   });
 
+  it('includes a structured geometry field only when one is supplied', async () => {
+    const payload = { scenario_id: 'scn-geo', description: 'school', corridor: '', lanes_closed: 1 };
+    const geometry = { type: 'Point' as const, coordinates: [122.561, 10.712] };
+    fetchMock.mockResolvedValue(jsonResponse(200, payload));
+
+    await createScenario('Build a school here', geometry);
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({
+      query: 'Build a school here',
+      input_type: 'nl',
+      geometry,
+    });
+  });
+
+  it('omits geometry from the body when none is passed (plain NL path)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { scenario_id: 's', description: '', corridor: '', lanes_closed: 1 }));
+    await createScenario('Close a lane on X');
+    const [, init] = fetchMock.mock.calls[0];
+    expect('geometry' in JSON.parse(init.body)).toBe(false);
+  });
+
   it('throws AmbiguousScenarioError with the clarification on 400 + is_ambiguous', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(400, { error: 'Which corridor do you mean?', is_ambiguous: true })

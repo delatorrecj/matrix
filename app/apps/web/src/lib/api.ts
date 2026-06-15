@@ -57,17 +57,33 @@ export async function apiFetch(
   }
 }
 
+/** A GeoJSON geometry (Point/Polygon) drawn on the map — the structured map-drop channel. */
+export interface ScenarioGeometry {
+  type: "Point" | "Polygon";
+  coordinates: number[] | number[][][];
+}
+
 /**
  * `POST /scenario` — parse a natural-language query into a structured scenario.
+ *
+ * When a map-drop `geometry` is supplied it is sent as a structured field (NOT folded
+ * into the NL string), so the kernel resolves edges from exactly what was drawn — the
+ * LLM never originates geometry (PRD-F14). Omitted entirely when absent, so the plain
+ * NL path posts `{query, input_type}` unchanged.
  *
  * Throws `AmbiguousScenarioError` when the orchestrator asks for clarification
  * (HTTP 400 + `is_ambiguous`), `ApiUnreachableError` when the API is down, and
  * a plain `Error` for any other non-2xx response.
  */
-export async function createScenario(query: string): Promise<ScenarioResponse> {
+export async function createScenario(
+  query: string,
+  geometry?: ScenarioGeometry | null
+): Promise<ScenarioResponse> {
+  const body: Record<string, unknown> = { query, input_type: "nl" };
+  if (geometry) body.geometry = geometry;
   const res = await apiFetch("/scenario", {
     method: "POST",
-    body: JSON.stringify({ query, input_type: "nl" }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {

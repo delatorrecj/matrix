@@ -153,6 +153,26 @@ describe("ScenarioBuilder", () => {
     expect(screen.getByTestId("review-query")).toHaveTextContent("Geometry (GeoJSON):");
   });
 
+  it("submits a drawn point as a STRUCTURED geometry field (not just the NL suffix)", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, SCENARIO_OK));
+    render(<ScenarioBuilder />);
+
+    clickNext(); // → Location (lane_closure default)
+    fireEvent.change(screen.getByLabelText(/Longitude/i), { target: { value: "122.561" } });
+    fireEvent.change(screen.getByLabelText(/Latitude/i), { target: { value: "10.712" } });
+    fireEvent.click(screen.getByRole("button", { name: /Set point/i }));
+    clickNext(); // → Parameters
+    clickNext(); // → Review
+    fireEvent.click(screen.getByRole("button", { name: /Submit scenario/i }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/scenario/scn-789"));
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.geometry).toEqual({ type: "Point", coordinates: [122.561, 10.712] });
+    // the human-readable NL query still carries the suffix (glass box: what you see is sent)
+    expect(body.query).toContain("Geometry (GeoJSON):");
+  });
+
   it("renders the clarification message inline on a 400 ambiguous response", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(400, { error: "Which corridor do you mean?", is_ambiguous: true })

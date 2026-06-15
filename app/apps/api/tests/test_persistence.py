@@ -101,13 +101,14 @@ def test_init_is_idempotent():
 
 
 def test_scenario_roundtrip(client, monkeypatch):
-    monkeypatch.setattr(main, "parse_scenario", lambda q: _fake_scenario("scn-test-1"))
+    monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: _fake_scenario("scn-test-1"))
     resp = client.post("/scenario", json={"query": "close a lane on Diversion Rd"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["scenario_id"] == "scn-test-1"
     assert body["corridor"] == "Diversion"
     assert body["intervention_type"] == "lane_closure"  # v2 rides along
+    assert body["geometry"]["type"] == "Point"  # surfaced so the client can confirm the map-drop
 
     stored = db.get_scenario("scn-test-1")
     assert stored is not None
@@ -119,10 +120,28 @@ def test_scenario_roundtrip(client, monkeypatch):
     assert stored["geometry"]["type"] == "Point"
 
 
+def test_scenario_forwards_structured_geometry_to_parser(client, monkeypatch):
+    """POST /scenario forwards a structured `geometry` field straight to the orchestrator
+    (the map-drop channel) — the LLM never originates geometry (PRD-F14)."""
+    seen: dict = {}
+
+    def fake_parse(q, geometry=None):
+        seen["query"] = q
+        seen["geometry"] = geometry
+        return _fake_scenario("scn-geo")
+
+    monkeypatch.setattr(main, "parse_scenario", fake_parse)
+    geom = {"type": "Point", "coordinates": [122.5621, 10.7202]}
+    resp = client.post("/scenario", json={"query": "drop a school here", "geometry": geom})
+    assert resp.status_code == 200
+    assert seen["geometry"] == geom  # passed through structurally, not folded into the NL string
+    assert seen["query"] == "drop a school here"
+
+
 def test_scenario_v1_only_fields(client, monkeypatch):
     """Persistence works for a plain v1 Scenario (no v2 attributes at all)."""
     v1 = SimpleNamespace(scenario_id="scn-v1", description="v1", corridor="Molo", lanes_closed=2)
-    monkeypatch.setattr(main, "parse_scenario", lambda q: v1)
+    monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: v1)
     assert client.post("/scenario", json={"query": "q"}).status_code == 200
     stored = db.get_scenario("scn-v1")
     assert stored["parsed_params"]["intervention_type"] is None
@@ -130,12 +149,92 @@ def test_scenario_v1_only_fields(client, monkeypatch):
 
 
 def test_scenario_ambiguous_returns_400(client, monkeypatch):
-    def boom(q):
+    def boom(q, geometry=None):
         raise ValueError("which corridor?")
     monkeypatch.setattr(main, "parse_scenario", boom)
     resp = client.post("/scenario", json={"query": "build something somewhere"})
     assert resp.status_code == 400
     assert resp.json()["is_ambiguous"] is True
+
+
+# ─── the seam fix: a live run simulates the PERSISTED scenario, not a blank stand-in ─────
+
+
+def test_scenario_from_record_rebuilds_v2_fields_and_geometry():
+    """db.get_scenario record → kernel Scenario with intervention type, location,
+    parameters and the map-drop geometry intact (SUMO-free; runs on a bare venv)."""
+    rec = {
+        "scenario_id": "scn-x",
+        "description": "fully close Diversion for flooding",
+        "intervention_type": "full_closure",
+        "location": "Diversion Rd",
+        "parsed_params": {"corridor": "Diversion Rd", "lanes_closed": 1, "parameters": {}},
+        "geometry": {"type": "Point", "coordinates": [122.56, 10.72]},
+    }
+    sc = main._scenario_from_record(rec)
+    assert sc.scenario_id == "scn-x"
+    assert sc.intervention_type == "full_closure"
+    assert sc.location == "Diversion Rd"
+    assert sc.geometry["type"] == "Point"
+
+
+def test_scenario_from_record_v1_only_is_lane_closure():
+    rec = {"scenario_id": "scn-v1", "description": "v1",
+           "parsed_params": {"corridor": "Molo", "lanes_closed": 2}}
+    sc = main._scenario_from_record(rec)
+    assert sc.intervention_type == "lane_closure"
+    assert sc.corridor == "Molo"
+    assert sc.lanes_closed == 2
+    assert sc.geometry is None
+
+
+def _fake_redis_module(get_returns=None):
+    """A stand-in `redis` module whose client.get(...) always returns `get_returns`."""
+    return SimpleNamespace(from_url=lambda url: SimpleNamespace(get=lambda key: get_returns))
+
+
+def test_get_trajectory_simulates_persisted_scenario(monkeypatch):
+    """No cached trajectory → the live run simulates the user's PERSISTED scenario
+    (type, location, parameters, geometry), not a blank stand-in — the core seam fix."""
+    import sys
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=None))
+    monkeypatch.setattr(main.db, "get_scenario", lambda sid: {
+        "scenario_id": sid, "description": "speed calming",
+        "intervention_type": "speed_change", "location": "Diversion Rd",
+        "parsed_params": {"corridor": "Diversion Rd", "lanes_closed": 1,
+                          "parameters": {"max_speed_kph": 20.0}},
+        "geometry": {"type": "Point", "coordinates": [122.56, 10.72]},
+    })
+    captured: dict = {}
+
+    def fake_simulate(scenario):
+        captured["sc"] = scenario
+        return "TRAJ"
+
+    monkeypatch.setattr(main, "simulate", fake_simulate)
+    assert main._get_trajectory("scn-live") == "TRAJ"
+    assert captured["sc"].intervention_type == "speed_change"
+    assert captured["sc"].location == "Diversion Rd"
+    assert captured["sc"].geometry["type"] == "Point"
+    assert captured["sc"].parameters == {"max_speed_kph": 20.0}
+
+
+def test_get_trajectory_blank_only_when_nothing_persisted(monkeypatch):
+    """No cache AND no persisted record → an honest blank live scenario, never a crash."""
+    import sys
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=None))
+    monkeypatch.setattr(main.db, "get_scenario", lambda sid: None)
+    captured: dict = {}
+
+    def fake_simulate(scenario):
+        captured["sc"] = scenario
+        return "TRAJ"
+
+    monkeypatch.setattr(main, "simulate", fake_simulate)
+    assert main._get_trajectory("never-seen") == "TRAJ"
+    assert captured["sc"].scenario_id == "never-seen"
+    assert captured["sc"].corridor == ""
+    assert captured["sc"].intervention_type == "lane_closure"
 
 
 # ─── runs lifecycle (save_run -> save_dimension_results -> GET /runs/{id}) ──────────────

@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildScenarioQuery,
   buildGeometrySuffix,
+  drawnGeometryToGeoJSON,
   INITIAL_BUILDER_STATE,
   type BuilderState,
   type DrawnGeometry,
@@ -177,6 +178,38 @@ describe("buildGeometrySuffix — GeoJSON embedding", () => {
     expect(
       buildGeometrySuffix({ kind: "polygon", vertices: [[122.0, 10.0], [122.2, 10.0]] })
     ).toBe("");
+  });
+});
+
+describe("drawnGeometryToGeoJSON — structured map-drop channel", () => {
+  it("returns null when no geometry", () => {
+    expect(drawnGeometryToGeoJSON(null)).toBeNull();
+  });
+
+  it("emits a bare Point geometry (not a Feature) with 5-dp lon/lat", () => {
+    const geo = drawnGeometryToGeoJSON({ kind: "point", point: [122.5612345, 10.7126789] });
+    expect(geo).toEqual({ type: "Point", coordinates: [122.56123, 10.71268] });
+  });
+
+  it("emits a bare closed-ring Polygon geometry for 3+ vertices", () => {
+    const geo = drawnGeometryToGeoJSON({
+      kind: "polygon",
+      vertices: [
+        [122.0, 10.0],
+        [122.2, 10.0],
+        [122.1, 10.3],
+      ],
+    });
+    expect(geo?.type).toBe("Polygon");
+    const ring = (geo!.coordinates as number[][][])[0];
+    expect(ring).toHaveLength(4);
+    expect(ring[0]).toEqual(ring[3]); // closed ring
+  });
+
+  it("returns null for an incomplete polygon (<3 vertices)", () => {
+    expect(
+      drawnGeometryToGeoJSON({ kind: "polygon", vertices: [[122.0, 10.0], [122.2, 10.0]] })
+    ).toBeNull();
   });
 });
 
