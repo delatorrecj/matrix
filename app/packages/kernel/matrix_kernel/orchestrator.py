@@ -56,7 +56,7 @@ def parse_scenario(
     if not client:
         client = genai.Client()  # Automatically picks up GOOGLE_API_KEY from environment
 
-    model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro")
+    model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro-preview")
     city_name = get_city_config().name  # city-agnostic: Iloilo by default (CityConfig)
 
     system_instruction = (

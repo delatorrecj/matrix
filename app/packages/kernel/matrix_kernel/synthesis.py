@@ -24,7 +24,7 @@ def synthesize(results: list[DimensionResult], client: genai.Client | None = Non
     if not results:
         return "No results produced.", []
 
-    model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro")
+    model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro-preview")
     
     # Provide the results to the LLM
     results_text = "Here are the simulation results. You MUST cite the Equation ID in brackets e.g., [BEH-1] when mentioning ANY number from these results:\n\n"
