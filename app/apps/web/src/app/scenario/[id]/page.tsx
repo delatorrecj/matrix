@@ -25,6 +25,20 @@ import {
   reduceRunEvent,
   statusLabel,
 } from "@/lib/simulationRun";
+import { LayerLegend } from "@/components/LayerLegend";
+import {
+  useMapLayers,
+  fetchStaticLayer,
+  confidenceCellsFromGeoJSON,
+} from "@/components/map";
+import type {
+  ConfidenceCell,
+  EdgeCounts,
+  EdgesFeatureCollection,
+  FeatureCollection,
+  MapLayerToggles,
+} from "@/components/map";
+import { Route, Activity, Gauge, Waves } from "lucide-react";
 
 /** One DIMENSION_RESULT rendered as a glass-box metric card. */
 interface ResultCard {
@@ -52,6 +66,17 @@ export default function ScenarioSimulation() {
 
   const [results, setResults] = useState<ResultCard[]>([]);
   const [tripsData, setTripsData] = useState<{ path: [number, number][], timestamps: number[] }[]>([]);
+
+  // Map data layers. `agents` toggles the page-owned TripsLayer; congestion/confidence/flood
+  // are assembled by useMapLayers. Static files (edges/flood/confidence) load once; congestion
+  // is driven by the live EDGE_COUNTS stream event (reset per run, like tripsData/results).
+  const [edgeCounts, setEdgeCounts] = useState<EdgeCounts>({});
+  const [activeLayers, setActiveLayers] = useState<MapLayerToggles>({
+    agents: true, congestion: true, confidence: false, flood: false,
+  });
+  const [edgesGeoJSON, setEdgesGeoJSON] = useState<EdgesFeatureCollection | null>(null);
+  const [floodGeoJSON, setFloodGeoJSON] = useState<FeatureCollection | null>(null);
+  const [confidenceCells, setConfidenceCells] = useState<ConfidenceCell[]>([]);
   const [synthesis, setSynthesis] = useState<{
     narrative: string;
     citations: SynthesisCitation[];
@@ -65,21 +90,50 @@ export default function ScenarioSimulation() {
     setRunState((s) => reduceRunEvent(s, event));
   }, []);
 
-  // DeckGL setup
-  const layers = [
-    new TripsLayer({
-      id: "trips-layer",
-      data: tripsData,
-      getPath: (d: { path: [number, number][] }) => d.path,
-      getTimestamps: (d: { timestamps: number[] }) => d.timestamps,
-      getColor: [29, 78, 216],
-      opacity: 0.8,
-      widthMinPixels: 2,
-      rounded: true,
-      trailLength: 100,
-      currentTime: time,
-    })
-  ];
+  // DeckGL setup — data layers (flood/congestion/confidence, bottom→top) sit under the
+  // animated agent trajectories. useMapLayers omits any layer whose data is absent.
+  const dataLayers = useMapLayers(activeLayers, {
+    edgesGeoJSON,
+    edgeCounts,
+    confidenceCells,
+    floodGeoJSON,
+  });
+  const tripsLayer = new TripsLayer({
+    id: "trips-layer",
+    data: tripsData,
+    getPath: (d: { path: [number, number][] }) => d.path,
+    getTimestamps: (d: { timestamps: number[] }) => d.timestamps,
+    getColor: [29, 78, 216],
+    opacity: 0.8,
+    widthMinPixels: 2,
+    rounded: true,
+    trailLength: 100,
+    currentTime: time,
+  });
+  const layers = [...dataLayers, ...(activeLayers.agents ? [tripsLayer] : [])];
+
+  const handleToggleLayer = useCallback((id: string) => {
+    setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  // Static map layers load once (graceful no-op on a miss — fetchStaticLayer resolves null).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [edges, flood, confidence] = await Promise.all([
+        fetchStaticLayer("edges"),
+        fetchStaticLayer("flood"),
+        fetchStaticLayer("confidence"),
+      ]);
+      if (cancelled) return;
+      setEdgesGeoJSON(edges as EdgesFeatureCollection | null);
+      setFloodGeoJSON(flood);
+      setConfidenceCells(confidence ? confidenceCellsFromGeoJSON(confidence) : []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // WebSocket connection — one run per (scenarioId, runAttempt).
   useEffect(() => {
@@ -107,6 +161,11 @@ export default function ScenarioSimulation() {
         if (Array.isArray(msg.agents)) {
           const agents = msg.agents;
           setTripsData((prev) => [...prev, ...agents]);
+        }
+      } else if (msg.type === "EDGE_COUNTS") {
+        // Aggregate per-edge counts that drive the congestion choropleth.
+        if (msg.edge_counts && typeof msg.edge_counts === "object") {
+          setEdgeCounts(msg.edge_counts as EdgeCounts);
         }
       } else if (msg.type === "DIMENSION_RESULT") {
         // Build provenance data payload format expected by InspectDrawer
@@ -194,6 +253,7 @@ export default function ScenarioSimulation() {
   const retryRun = useCallback(() => {
     setResults([]);
     setTripsData([]);
+    setEdgeCounts({});
     setSynthesis(null);
     setRunState(initialRunState());
     setRunAttempt((a) => a + 1);
@@ -333,6 +393,19 @@ export default function ScenarioSimulation() {
             reuseMaps
           />
         </DeckGL>
+
+        {/* Map layer toggles — drives useMapLayers + the page-owned TripsLayer */}
+        <div className="absolute left-4 top-4 z-10">
+          <LayerLegend
+            layers={[
+              { id: "agents", label: "Agent Trajectories", icon: Route, active: !!activeLayers.agents },
+              { id: "congestion", label: "Congestion", icon: Activity, active: !!activeLayers.congestion },
+              { id: "confidence", label: "Confidence", icon: Gauge, active: !!activeLayers.confidence },
+              { id: "flood", label: "Flood Zones", icon: Waves, active: !!activeLayers.flood },
+            ]}
+            onToggleLayer={handleToggleLayer}
+          />
+        </div>
 
         {/* Timeline Scrubber */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface px-6 py-3 rounded-full shadow-lg border border-border flex items-center gap-4 min-w-[300px]">

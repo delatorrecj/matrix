@@ -1,7 +1,7 @@
 """MATRIX API gateway. FastAPI + WebSocket. SDD §2, RFC §3.
 
 `/simulate/{id}` streams the real progressive pipeline:
-  ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> DIMENSION_RESULT (per module, provenance intact)
+  ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> EDGE_COUNTS -> DIMENSION_RESULT (per module, provenance intact)
   -> SYNTHESIS (templated; Gemini 3.1 Pro synthesis is Phase 4) -> DONE
 Any stage failure emits a typed ERROR event before closing -- never a silent drop.
 DONE carries per-stage timings {sumo_ms, modules_ms, gemini_ms, total_ms} (RFC-001
@@ -73,7 +73,7 @@ def _init_persistence() -> None:
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
 # QUEUED and ERROR extend the original sequence (additive only -- never reordered).
-EVENT_TYPES = ("ACCEPTED", "QUEUED", "PLAYBACK_FRAME", "DIMENSION_RESULT", "SYNTHESIS", "DONE", "ERROR")
+EVENT_TYPES = ("ACCEPTED", "QUEUED", "PLAYBACK_FRAME", "EDGE_COUNTS", "DIMENSION_RESULT", "SYNTHESIS", "DONE", "ERROR")
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
 MAX_STREAM_FRAMES = 20
 
@@ -354,6 +354,11 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
 
         for fr in traj.frames[:MAX_STREAM_FRAMES]:
             await ws.send_json({"type": "PLAYBACK_FRAME", "tick": fr.tick, "agents": fr.agents})
+
+        # Per-edge aggregate vehicle counts for the congestion choropleth (drives the map's
+        # congestion layer; join key = SUMO edge id, matching public/layers/edges.geojson).
+        # One message; an absent edge id means zero recorded vehicles, never a guess (PRD-F14).
+        await ws.send_json({"type": "EDGE_COUNTS", "edge_counts": traj.edge_counts})
 
         stage = "modules"
         with timer.stage("modules"):
