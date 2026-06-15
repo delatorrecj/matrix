@@ -40,8 +40,19 @@ class ScenarioSchema(BaseModel):
     clarification_prompt: str = Field(description="If is_ambiguous is true, provide a helpful prompt asking the user for the missing information.", default="")
 
 
-def parse_scenario(query: str, client: Optional[genai.Client] = None) -> Scenario:
-    """Parse an NL query into a structured Scenario."""
+def parse_scenario(
+    query: str,
+    client: Optional[genai.Client] = None,
+    geometry: Optional[dict] = None,
+) -> Scenario:
+    """Parse an NL query into a structured Scenario.
+
+    `geometry` is an optional GeoJSON geometry dict (a map-drop Point/Polygon) supplied
+    by the API out-of-band — it arrives as a structured field on POST /scenario, NOT via
+    NL parsing (the LLM never originates geometry; PRD-F14). When present it is set on the
+    returned Scenario verbatim, so the runner resolves edges from the drawn geometry
+    (matrix_kernel.geometry) instead of the location keyword.
+    """
     if not client:
         client = genai.Client()  # Automatically picks up GOOGLE_API_KEY from environment
 
@@ -109,6 +120,6 @@ def parse_scenario(query: str, client: Optional[genai.Client] = None) -> Scenari
         lanes_closed=result.lanes_closed,
         intervention_type=result.intervention_type,
         location=result.location,
-        geometry=None,                    # map-drop GeoJSON arrives via the API, not NL parsing
+        geometry=geometry if isinstance(geometry, dict) else None,  # map-drop GeoJSON, via the API
         parameters=parameters,
     )

@@ -96,6 +96,10 @@ def health() -> dict:
 class ScenarioInput(BaseModel):
     query: str
     input_type: str = "nl"
+    # Optional map-drop geometry: a GeoJSON *geometry* dict (Point/Polygon), supplied
+    # structurally by the builder/map UI. The LLM never originates it (PRD-F14); it rides
+    # straight through to Scenario.geometry so the kernel resolves edges from what was drawn.
+    geometry: dict | None = None
 
 @app.post("/scenario")
 def create_scenario(input_data: ScenarioInput) -> dict:
@@ -107,7 +111,7 @@ def create_scenario(input_data: ScenarioInput) -> dict:
             content={"error": f"scenario parser unavailable: {_KERNEL_IMPORT_ERROR}"},
         )
     try:
-        scenario = parse_scenario(input_data.query)
+        scenario = parse_scenario(input_data.query, geometry=input_data.geometry)
     except ValueError as e:
         # LLM flagged as ambiguous
         return JSONResponse(status_code=400, content={"error": str(e), "is_ambiguous": True})
@@ -121,6 +125,7 @@ def create_scenario(input_data: ScenarioInput) -> dict:
         "lanes_closed": getattr(scenario, "lanes_closed", None),
         "intervention_type": getattr(scenario, "intervention_type", None),
         "location": getattr(scenario, "location", None),
+        "geometry": getattr(scenario, "geometry", None),
     }
 
 @app.get("/runs/{run_id}")
@@ -214,15 +219,61 @@ def _result_payload(r) -> dict:
     }
 
 
+def _scenario_from_record(record: dict) -> "Scenario":
+    """Rebuild a kernel Scenario from a persisted scenario record (db.get_scenario).
+
+    This is what makes a live run simulate the user's ACTUAL parsed intervention —
+    its type, location, parameters, and map-drop geometry — rather than a blank
+    stand-in. The SUMO-free Scenario is imported directly (not via the runner) so the
+    rebuild is unit-testable on a bare venv. v1-only records (no intervention_type)
+    rebuild as a plain lane_closure, exactly as before."""
+    from matrix_kernel.scenario import Scenario as _Scenario  # SUMO-free; safe on a bare venv
+
+    params = record.get("parsed_params") or {}
+    geometry = record.get("geometry")
+    return _Scenario(
+        scenario_id=str(record.get("scenario_id") or ""),
+        description=record.get("description") or params.get("description") or "",
+        corridor=params.get("corridor") or "",
+        lanes_closed=int(params.get("lanes_closed") or 1),
+        intervention_type=record.get("intervention_type") or params.get("intervention_type") or "lane_closure",
+        location=record.get("location") or params.get("location") or "",
+        geometry=geometry if isinstance(geometry, dict) else None,
+        parameters=params.get("parameters") or {},
+    )
+
+
+# The one id whose run falls back to the pre-warmed demo trajectory (Milestone A snappy
+# stream). Every other id resolves to its own persisted scenario — so a real run reflects
+# the user's query instead of being shadowed by the cached demo.
+_DEMO_SCENARIO_ID = os.environ.get("MATRIX_DEMO_SCENARIO_ID", "demo")
+
+
 def _get_trajectory(scenario_id: str) -> Trajectory:
-    """Milestone A: serve the cached demo scenario for a snappy stream; else run the kernel live."""
+    """Resolve the Trajectory for a run, in priority order:
+      1. an id-specific pre-warmed trajectory cached in Redis (scenario:<id>:latest);
+      2. for the demo id only, the pre-warmed demo trajectory (snappy stream);
+      3. the PERSISTED scenario (POST /scenario) simulated live via the kernel;
+      4. a blank live scenario, only when nothing was ever persisted for this id.
+    """
     import redis
 
+    from matrix_kernel.scenario import Scenario as _Scenario  # SUMO-free; safe on a bare venv
+
     r = redis.from_url(REDIS_URL)
-    raw = r.get(f"scenario:{scenario_id}:latest") or r.get("scenario:demo:latest")
+    raw = r.get(f"scenario:{scenario_id}:latest")
+    if raw is None and scenario_id == _DEMO_SCENARIO_ID:
+        raw = r.get("scenario:demo:latest")
     if raw is not None:
         return Trajectory.from_json(raw)
-    return simulate(Scenario(scenario_id, "live scenario", corridor=""))
+
+    record = db.get_scenario(scenario_id)
+    scenario = (
+        _scenario_from_record(record)
+        if record
+        else _Scenario(scenario_id, "live scenario", corridor="")
+    )
+    return simulate(scenario)
 
 
 async def _score_all_modules(traj: Trajectory) -> list:
