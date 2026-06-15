@@ -148,6 +148,29 @@ uvicorn), 2026-06-16: **"Close 2 lanes on Diversion Road for roadworks."**
    unaffected). **Production with the mandated `gemini-3.1-pro-preview` needs billing enabled** on the
    Google AI Studio / Cloud project.
 
+## 4b. PR 3 — stream `edge_counts` + wire the map data layers
+
+The `src/components/map/` module (congestion/confidence/flood factories + `useMapLayers`) shipped in
+CR-006 but was never imported. PR 3 connects it, and adds the backend event it needs.
+
+- **Backend**: the WS pipeline now emits a dedicated **`EDGE_COUNTS`** event (after the
+  `PLAYBACK_FRAME`s, before the `DIMENSION_RESULT`s) carrying `Trajectory.edge_counts` — the
+  per-edge vehicle counts that drive the congestion choropleth. Added to `EVENT_TYPES`; the run-state
+  reducer treats it as a no-op (it is page-owned data, not lifecycle).
+- **Frontend** (`scenario/[id]/page.tsx`): added a `LayerLegend` (Agent Trajectories / Congestion /
+  Confidence / Flood Zones), `useMapLayers` assembling flood→congestion→confidence under the
+  `TripsLayer`, static-layer fetches (`fetchStaticLayer` for edges/flood/confidence, once on mount),
+  `edgeCounts` accumulated from the new event and **reset per `runAttempt`** alongside
+  `tripsData`/`results`. The `agents` toggle gates the page-owned `TripsLayer`.
+- **Verified**: live WS now streams `EDGE_COUNTS` (6,619 real SUMO edge ids, correctly positioned);
+  browser preview shows all four legend toggles, no console errors, and the **REAL** `flood.geojson`
+  (25 features) loads and toggles. Tests: web `159 passed`; the `EDGE_COUNTS` order/payload assertion
+  lives in `test_runtime_hardening` (runs in the ubuntu CI api job).
+- **Known caveat (tracked to PR 7)**: `edges.geojson` ships PROVISIONAL placeholder ids that do not
+  match the real `edge_counts` keys, so the **congestion layer renders mostly NO_DATA until a real
+  edges export** from `build_network.py`. The wiring + join contract are correct; only the static
+  sample is provisional. `flood.geojson` is REAL and renders today.
+
 ## 5. Glass-box posture
 
 PR 1 ships no number, so the glass-box ledger is untouched. The change *strengthens* the mandate:

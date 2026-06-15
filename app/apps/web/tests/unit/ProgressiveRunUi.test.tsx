@@ -288,6 +288,30 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     );
   });
 
+  it("renders the map layer legend and ingests EDGE_COUNTS without disrupting the run", () => {
+    render(<ScenarioSimulation />);
+    const ws = lastSocket();
+
+    // Layer toggles are present (congestion/confidence/flood are assembled by useMapLayers).
+    expect(screen.getByText("Congestion")).toBeInTheDocument();
+    expect(screen.getByText("Flood Zones")).toBeInTheDocument();
+
+    act(() => {
+      ws.onopen?.();
+      ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
+      ws.emit({ type: "EDGE_COUNTS", edge_counts: { "edge-1": 12, "edge-2": 3 } });
+      ws.emit(RESULT_BEH_1);
+    });
+
+    // EDGE_COUNTS is a no-op for run progress; the dimension result still lands.
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running simulation…");
+    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
+
+    // Toggling a layer must not crash the page.
+    fireEvent.click(screen.getByText("Flood Zones"));
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running simulation…");
+  });
+
   it("survives unknown event types without losing state", () => {
     render(<ScenarioSimulation />);
     const ws = lastSocket();

@@ -3,8 +3,10 @@
  *
  * Server events (matrix_api/main.py EVENT_TYPES — RFC matrix-rfc-001 §3 plus the
  * additive QUEUED/ERROR hardening events; order is never changed, only extended):
- *   ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> DIMENSION_RESULT*17 -> SYNTHESIS -> DONE
+ *   ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> EDGE_COUNTS -> DIMENSION_RESULT*17 -> SYNTHESIS -> DONE
  *   ERROR may arrive at any stage. Unknown event types are ignored (never crash).
+ *   EDGE_COUNTS carries the congestion choropleth data and is consumed by the page
+ *   (not this reducer) — it is a no-op here, like any other non-lifecycle event.
  *
  * Local control events (WS_OPEN / WS_CLOSED / CANCEL) are folded into the same
  * reducer so the whole lifecycle is unit-testable as plain data.

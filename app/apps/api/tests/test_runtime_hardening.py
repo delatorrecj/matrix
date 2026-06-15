@@ -109,8 +109,15 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
     assert types[-2] == "SYNTHESIS"
     assert types[-1] == "DONE"
     assert types.count("PLAYBACK_FRAME") == 1
+    assert types.count("EDGE_COUNTS") == 1  # one aggregate counts event after the frames
     assert types.count("DIMENSION_RESULT") == 5
     assert "QUEUED" not in types  # under capacity -> no queueing
+    # EDGE_COUNTS streams the trajectory's per-edge counts (congestion choropleth source),
+    # after the frames and before the dimension results.
+    edge_evt = next(e for e in events if e["type"] == "EDGE_COUNTS")
+    assert edge_evt["edge_counts"] == FAKE_TRAJ.edge_counts
+    assert types.index("EDGE_COUNTS") > types.index("PLAYBACK_FRAME")
+    assert types.index("EDGE_COUNTS") < types.index("DIMENSION_RESULT")
 
     done = events[-1]
     assert done["scenario_id"] == "s1"
