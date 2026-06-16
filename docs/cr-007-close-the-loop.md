@@ -203,6 +203,30 @@ transfer model, so the fixture's `passenger_transfer_max` points stay out of sco
 (unpinned). The name flag also nudged junction-joining (36,354 → 36,557 edges). Pin the netconvert
 image tag before any deploy so the net is reproducible.
 
+## 4d. PR 5b — VAL-01 machinery shipped; the result is honestly WITHHELD
+
+With the net named (PR 5a), the corridor→edge mapping is finally possible. This ships the VAL-01
+machinery and records why the *number* is not published.
+
+- **`validation.py`**: `validate_calderon` / `run_validation_gates` gain an optional `quantity`
+  filter (default None = unchanged). The live VAL-01 validates **`passenger_flow_max` only** —
+  MATRIX produces edge passenger-flow proxies but models **no route transfers**, so the fixture's
+  `passenger_transfer_max` points are out of scope, not silently mapped to edge flows (PRD-F14).
+  3 new tests; 23 validation tests pass.
+- **`matrix_kernel/build_validation_report.py`**: maps `lopez_jaena → "Lopez Jaena Street"`,
+  `diversion → "Benigno S. Aquino Jr. Avenue"` against the named net, pulls each corridor's peak
+  per-edge flow from the cached baseline, runs the gate, and writes `app/validation_report.json`
+  (now **gitignored**).
+- **Result (withheld, by the user's call):** against the *uncalibrated* baseline the simulated
+  flows are **2744 / 1848 pax** vs Calderon's **90 / 275** → **NRMSE ≈ 11.95, FAIL by ~40×**. That
+  is a mode-share calibration gap (P1-6) plus a proxy/unit scale mismatch — **not a model
+  validation.** Per the glass-box mandate an *unvalidated* FAIL is not shipped as a validation:
+  `GET /validation` keeps **VAL-01 = NOT_RUN** with an honest reason ("computable but withheld
+  pending calibration + proxy reconciliation"), and the report stays gitignored — generate it at
+  deploy once VAL-01 is meaningful.
+
+VAL-02 stays NOT_RUN (PROVISIONAL flood fixture; no sourced Sentinel-1 extent).
+
 ## 5. Glass-box posture
 
 PR 1 ships no number, so the glass-box ledger is untouched. The change *strengthens* the mandate:
