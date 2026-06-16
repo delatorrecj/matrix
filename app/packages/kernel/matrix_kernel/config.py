@@ -44,6 +44,27 @@ KERNEL_DATA = Path(__file__).resolve().parent.parent / "data"
 # confidence = M (the documented "soft spot" in READINESS.md; methods §3.1, §4).
 # Glass-box note: per-city anchors are bias-audit inputs — any replacement anchor
 # (env/file override) MUST document its source the same way.
+#
+# CALIBRATION PATH (CR-007 PR 9):
+#   Current values: Calderon 2014 BRT study extrapolated to 2026 via LPTRP context.
+#   Data reviewed and found insufficient for re-calibration:
+#     - routes.json (data/raw/transport/): 24 LPTRP route titles + URLs only; no passenger
+#       counts, no OD data.
+#     - PSA FIES 2023: household income/expenditure — no modal split.
+#     - TSSP 2019 (data/raw/transport/): bicycle-specific safety study; no broader share.
+#   Blocker: a meaningful re-calibration requires LTFRB OD survey (FOI path below) or a
+#   new local household travel survey (~300 respondents, ~2 weeks fieldwork).
+#
+#   FOI PATH: File a Freedom of Information request with LTFRB Regional Office 6
+#     (Iloilo City) under Executive Order No. 2 (2016) for the most recent Origin-
+#     Destination (OD) survey for Iloilo City, and/or any PUV route ridership data.
+#     Template: https://foi.gov.ph  — attach a copy of the MATRIX project brief.
+#     Expected TAT: 15 working days.
+#
+#   INJECT CALIBRATED VALUES (once sourced):
+#     Set MATRIX_MODE_SHARE='{"jeepney":0.XX,"private_car":0.XX,...}' (must sum to 1.0)
+#     in the process environment before starting the API. config.py validates the sum
+#     and rejects invalid anchors. The bias auditor will enforce the new anchor at ±3%.
 ILOILO_MODE_SHARE: dict[str, float] = {
     "jeepney": 0.55,
     "private_car": 0.15,
