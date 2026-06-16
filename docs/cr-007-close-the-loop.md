@@ -4,7 +4,7 @@
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-16
 **Author:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** In progress (PR 1–8 merged; PR 9–10 planned)
+**Status:** In progress (PR 1–9 merged; PR 10 planned)
 **Trigger document:** [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) §6 (carried-forward debt) + the next-session handoff
 
 > **What this Record is.** CR-006 shipped a 16-unit product-hardening batch (PRs #1–#17), but
@@ -339,9 +339,38 @@ travels on a single structured channel instead of being implied in prose.
 
 ---
 
+## 4h. PR 9 — Mode-share calibration
+
+No re-calibration of `ILOILO_MODE_SHARE` is possible from currently available data.
+This PR documents the gap honestly and provides the path forward.
+
+**Data reviewed and found insufficient:**
+- `data/raw/transport/routes.json`: 24 LPTRP route titles + URL links only — no ridership
+  counts, no OD data.
+- PSA FIES 2023: household income/expenditure survey — modal split not collected.
+- TSSP 2019 (`data/raw/transport/`): bicycle safety study — does not cover the full modal
+  breakdown.
+
+**Calibration path (documented in `config.py`):**
+A meaningful re-calibration requires one of:
+1. **LTFRB FOI**: Freedom of Information request to LTFRB Regional Office 6 (Iloilo City)
+   under EO No. 2 (2016) for the most recent OD survey and/or PUV route ridership data.
+   Template: https://foi.gov.ph. Expected TAT: 15 working days.
+2. **Local household travel survey**: ~300 respondents, ~2 weeks fieldwork. Provides the
+   highest-quality anchor for BEH-2 confidence upgrade from M → H.
+
+**Values unchanged:** `jeepney=0.55, private_car=0.15, motorcycle=0.15, walk=0.10, bicycle=0.05`
+(Calderon 2014 BRT study + LPTRP jeepney-dominant context). Behavioral module confidence
+stays M; bias-auditor ±3% enforcement unchanged. The `MATRIX_MODE_SHARE` env var path for
+injecting calibrated values is documented in `config.py` (and already implemented in
+`load_city_config()` — it was always there).
+
+**`config.py`**: `ILOILO_MODE_SHARE` comment block extended with the full calibration note:
+data reviewed, blockers, FOI path, and env-var injection recipe.
+
+---
+
 ## 6. Carried-forward debt
 
-- Mode-share uncalibrated → Behavioral + bias-audit anchor stay **M** (PR 9 — calibration
-  documentation + FOI path; real values require LTFRB FOI or a local travel survey).
 - Deploy to Fly.io + Vercel never executed (PR 10 — config fixed; actual deploy requires
-  user credentials + volume with net files pre-loaded).
+  user credentials + a Fly volume with net files pre-loaded from `build_network.py`).
