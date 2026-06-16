@@ -250,6 +250,13 @@ def stage2_netconvert(osm_path: Path, net_path: Path) -> Path:
         "--osm.turn-lanes",
         # ── output metadata ──
         "--output.original-names",
+        # Write the OSM `name` tag onto each edge so the kernel can resolve a scenario's
+        # NAMED corridor (runner.target_edges; the VAL-01 corridor→edge mapping) instead of
+        # silently falling back to the busiest baseline edge. Without this every edge's
+        # getName() is empty, so keyword/NL location targeting never matches (PRD-F14: a
+        # silent busiest-edge fallback mislabeled as a keyword match). Stage 1 already
+        # preserves the `name` way-tag, so this only needs the netconvert flag.
+        "--output.street-names",  "true",
         "--xml-validation",       "never",   # suppress DTD warnings
     ]
 

@@ -52,37 +52,61 @@ def _mode_for(vehicle_id: str) -> str:
     return modes[-1]
 
 
-def target_edges(corridor: str, top_n: int = 1) -> list[str]:
-    """Edges the scenario affects: those whose street name contains `corridor` (an explicit,
-    structured keyword -- NL parsing is the Phase-4 orchestrator's job). Falls back to the
-    busiest baseline edge so a scenario always has a measurable corridor."""
+def _keyword_edges(corridor: str) -> list[str]:
+    """SUMO edge ids whose street name contains `corridor` (case-insensitive), else [].
+
+    Kept separate from the busiest-edge fallback so the resolution METHOD can be reported
+    honestly (a real name match vs a fallback). Requires the net to carry street names
+    (build_network.py `--output.street-names`); an empty result is an honest miss, not a
+    guess (PRD-F14)."""
     key = corridor.strip().lower()
-    if key:
-        hits = [e.getID() for e in _net().getEdges()
-                if e.getName() and key in e.getName().lower()]
-        if hits:
-            return hits
+    if not key:
+        return []
+    return [e.getID() for e in _net().getEdges() if e.getName() and key in e.getName().lower()]
+
+
+def _busiest_baseline_edges(top_n: int = 1) -> list[str]:
+    """The top_n busiest edges in the cached baseline -- the honest last resort so a
+    scenario always has SOMETHING to measure when it names no resolvable location. The
+    caller labels this as a fallback; it is never presented as a location match."""
     base = load_baseline().edge_counts
     return [eid for eid, _ in sorted(base.items(), key=lambda kv: kv[1], reverse=True)[:top_n]]
+
+
+def target_edges(corridor: str, top_n: int = 1) -> list[str]:
+    """Edges the scenario affects: street-name match on `corridor`, else the busiest
+    baseline edge. Back-compat wrapper over the two resolvers above (callers that need to
+    know WHICH path was taken use _resolve_edges, which labels it)."""
+    return _keyword_edges(corridor) or _busiest_baseline_edges(top_n)
 
 
 def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
     """Resolve WHERE a scenario applies -> (SUMO edge ids, resolution method).
 
-    The single seam for edge resolution. When the Scenario carries a `geometry` (a
-    map-drop GeoJSON Point/Polygon) it is resolved to edges via matrix_kernel.geometry
-    against the runner's cached net; an off-network geometry honestly falls through to
-    the keyword match on `scenario.location` (PRD-F14 -- never a silent guess). With no
-    geometry it keyword-matches the location (falling back to the busiest baseline edge).
-    The returned method string is recorded in Trajectory.meta for provenance."""
-    if scenario.geometry is not None:
+    Order: a map-drop `geometry` (resolved against the cached net via
+    matrix_kernel.geometry) wins; else the location keyword is matched against edge street
+    names; else the busiest baseline edge is the honest last resort. The method string is
+    recorded verbatim in Trajectory.meta (PRD-F14) and names the busiest-edge FALLBACK
+    explicitly -- a run must never claim a named-corridor ("keyword-match") it did not make
+    (it previously did, because the net carried no street names so every keyword silently
+    fell back to the busiest edge)."""
+    geom = scenario.geometry is not None
+    if geom:
         from matrix_kernel.geometry import resolve_geometry
 
         edges = resolve_geometry(_net(), scenario.geometry)
         if edges:
             return edges, "geometry"
-        return target_edges(scenario.effective_location, top_n=top_n), "keyword-match (geometry off-network)"
-    return target_edges(scenario.effective_location, top_n=top_n), "keyword-match"
+
+    loc = scenario.effective_location
+    kw = _keyword_edges(loc)
+    if kw:
+        return kw, "keyword-match (geometry off-network)" if geom else "keyword-match"
+
+    detail = f"no edge named like {loc!r}" if loc.strip() else "no location given"
+    if geom:
+        detail = f"geometry off-network; {detail}"
+    return _busiest_baseline_edges(top_n), f"busiest-baseline-fallback ({detail})"
 
 
 def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:

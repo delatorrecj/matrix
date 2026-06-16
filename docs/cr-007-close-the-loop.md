@@ -4,7 +4,7 @@
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-16
 **Author:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** In progress (PR 1 of the plan merged; PR 2–10 planned)
+**Status:** In progress (PR 1–4 merged = P0 closed; PR 5a net-prereq done; PR 5b–10 in progress/planned)
 **Trigger document:** [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) §6 (carried-forward debt) + the next-session handoff
 
 > **What this Record is.** CR-006 shipped a 16-unit product-hardening batch (PRs #1–#17), but
@@ -170,6 +170,38 @@ CR-006 but was never imported. PR 3 connects it, and adds the backend event it n
   match the real `edge_counts` keys, so the **congestion layer renders mostly NO_DATA until a real
   edges export** from `build_network.py`. The wiring + join contract are correct; only the static
   sample is provisional. `flood.geojson` is REAL and renders today.
+
+## 4c. PR 5a — street names in the net + honest edge resolution (VAL-01 prerequisite)
+
+Building VAL-01 surfaced a deeper defect: the SUMO net had **0 of 36,354 edges named**, so
+`runner.target_edges` never matched a street keyword and **silently fell back to the busiest
+baseline edge — while `_resolve_edges` labeled it `"keyword-match"`.** Every NL/keyword scenario
+(no map-drop geometry) therefore simulated the busiest edge, not the named location, and the glass
+box claimed a corridor match it never made. (This is why PR 2's "Diversion Road" e2e actually ran on
+the busiest edge.)
+
+Fix (user-chosen path: regenerate the net with names):
+
+- **`build_network.py`** adds netconvert `--output.street-names true`. Stage 1 already preserved the
+  OSM `name` way-tag, so this is the only change needed. Regenerated locally: **10,175 edges now
+  named** (was 0); `"Benigno S. Aquino Jr. Avenue"` (Iloilo's "Diversion Road") → 205 edges,
+  `"Lopez Jaena Street"` → 138 edges, both via real keyword-match. Edge-id alignment with the cached
+  baseline is **100%** (all 6,599 trafficked ids preserved — the +203 edges carry no demand), so no
+  re-seed was needed.
+- **`runner._resolve_edges`** now separates a real keyword match from the busiest-edge fallback and
+  labels the latter honestly, e.g. `busiest-baseline-fallback (no edge named like 'X')` /
+  `(no location given)` / `(geometry off-network; …)` — never `"keyword-match"` for a fallback
+  (PRD-F14). New `tests/test_edge_resolution.py` (6 tests) locks the labeling.
+
+The net is gitignored, so the committed change is the build flag + the resolver; any environment
+that regenerates the net gets named targeting. **VAL-01 (PR 5b) is now unblocked**: the corridor→edge
+map is `lopez_jaena → "Lopez Jaena Street"`, `diversion → "Benigno S. Aquino Jr. Avenue"`, resolved
+against the named net. VAL-01 will validate only the `passenger_flow_max` quantity (MATRIX has no
+transfer model, so the fixture's `passenger_transfer_max` points stay out of scope).
+
+**Reproducibility debt (new, tracked):** the net is built from `ghcr.io/eclipse-sumo/sumo:latest`
+(unpinned). The name flag also nudged junction-joining (36,354 → 36,557 edges). Pin the netconvert
+image tag before any deploy so the net is reproducible.
 
 ## 5. Glass-box posture
 
