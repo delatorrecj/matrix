@@ -68,10 +68,10 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
         references=[],
         assumptions=[
             "uses ECO-2 passed value × population density",
-            f"population density = {_GENERIC_POP_DENSITY:.0f} persons/km² — PSA 2020 "
-            "Population Census of the Philippines (August 2020 CPH): Iloilo City "
-            "457,626 persons / 78.34 km²; city-wide average, not per-zone; "
-            "per-zone WorldPop density not yet wired into the kernel (methods §3.5, §3.6)",
+            f"population density = {_GENERIC_POP_DENSITY:.0f} persons/km² (PSA 2020 CPH: "
+            "Iloilo City 457,626 persons / 78.34 km²); city-wide average applied uniformly "
+            "— PROVISIONAL per-zone weighting; per-zone WorldPop density not yet wired "
+            "into the kernel (methods §3.5, §3.6)",
         ],
     )
     results.append(res3)
