@@ -116,7 +116,7 @@ a specific Iloilo measurement; they are order-of-magnitude placeholders declared
 | `_PM25_PER_CO2E_PROXY` | `modules/ecological.py` | 0.05 | ECO-2 air-quality delta | Calibrated dispersion-to-station coefficient (EMB readings vs modelled emissions) |
 | `_PHP_PER_TRIP_PROXY` | `modules/economic.py` | ₱50.0 / trip | ECON-1 land-value Δ | BIR-ZV zonal schedule uplift curve (`ΔLV = LV_base × uplift(Δaccessibility)`) |
 | `_VENDORS_PER_CLOSED_LANE` | `modules/social.py` | 12 vendors | SOC-2 displacement risk | CCHAIN `osm_poi_*` impact-buffer count |
-| `_GENERIC_POP_DENSITY` | `modules/societal.py` | 8,500 persons/km² | SOCI-3 health-exposure proxy | Per-zone WorldPop density wired into the kernel |
+| `_GENERIC_POP_DENSITY` | `modules/societal.py` | 5,843 persons/km² (PSA 2020 CPH Iloilo City: 457,626 persons / 78.34 km²; city-wide average; updated CR-007 PR 7) | SOCI-3 health-exposure proxy | Per-zone WorldPop density wired into the kernel |
 | `FACILITY_PROFILES` | `demand_delta.py` | per-kind `trips_per_capacity`, `redirected_fraction`, `catchment_radius_m` | BEH-4 (all kinds) | Local travel-survey calibration per facility kind |
 
 ---
