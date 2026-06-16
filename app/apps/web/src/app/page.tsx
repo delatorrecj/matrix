@@ -7,7 +7,8 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import { PolygonLayer } from "@deck.gl/layers";
-import { Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon, Layers, Play, Pause, SkipBack, SkipForward, Loader2, WifiOff, AlertTriangle } from "lucide-react";
+import { Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon, Layers, Play, Pause, SkipBack, SkipForward, Loader2, WifiOff, AlertTriangle, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 
 import { DimensionCard } from "@/components/DimensionCard";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
@@ -170,6 +171,15 @@ export default function MatrixCockpit() {
               "Simulate Scenario"
             )}
           </button>
+
+          {/* Secondary path: the structured builder (multi-step intervention composer). */}
+          <Link
+            href="/builder"
+            className="mt-2 flex items-center justify-center gap-1.5 text-sm text-text-muted hover:text-primary transition-colors"
+          >
+            <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+            Build a structured scenario
+          </Link>
 
           {clarification && (
             <div role="alert" className="mt-3 p-3 rounded-md border border-warning/30 bg-warning/10 text-sm">
