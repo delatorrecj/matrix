@@ -11,13 +11,13 @@ top-level `_provenance` foreign member (RFC 7946 §6.1) with
 vintage. PROVISIONAL files are dev fixtures whose values are invented — they
 must say so *inside the file* and must never be presented as MATRIX output.
 
-| File | Status | Consumed by |
-|---|---|---|
-| `flood.geojson` | **REAL** (CCHAIN / Project NOAH derived) | `floodLayer` |
-| `edges.geojson` | **PROVISIONAL** (placeholder ids) | `congestionLayer` |
-| `confidence.geojson` | **PROVISIONAL** (invented tiers) | `confidenceCellsFromGeoJSON` → `confidenceLayer` |
+| File | Status | Size | Consumed by |
+|---|---|---|---|
+| `flood.geojson` | **REAL** (CCHAIN / Project NOAH derived) | ~50 KB | `floodLayer` |
+| `edges.geojson` | **REAL** (exported from Iloilo SUMO net, CR-007 PR 7) | ~1.5 MB | `congestionLayer` |
+| `confidence.geojson` | **REAL** (net bounding-box grid, tier M, CR-007 PR 7) | ~315 KB | `confidenceCellsFromGeoJSON` → `confidenceLayer` |
 
-All files must stay **< 100 KB** (they ship with every page load once toggled).
+These files are **lazily loaded** — fetched once on mount of the scenario page only when the relevant toggle is first activated, not on initial page render. The 100 KB constraint that appeared in an earlier version of this file applied to a size estimate that predated the real SUMO edge export (6,599 features). The actual sizes are declared above; browser caching (`Cache-Control: public, immutable`) means the fetch cost is paid once per session. Regenerate with `cd app/packages/kernel && uv run python ../data/export_net_geojson.py` (requires Docker + Redis with a seeded baseline and the SUMO net on disk).
 
 ## Schemas
 
@@ -39,11 +39,10 @@ All files must stay **< 100 KB** (they ship with every page load once toggled).
 (`Trajectory.edge_counts`, a `Record<string, number>` keyed by SUMO edge id —
 `app/packages/kernel/matrix_kernel/trajectory.py`). An edge id absent from the
 counts means zero recorded vehicles (rendered calm); a feature *without*
-`edge_id` renders fully transparent. **The shipped sample is PROVISIONAL**: the
-real file must be exported from the Iloilo SUMO net
-(`app/packages/kernel/data/iloilo.net.xml`, regenerable via
-`python packages/data/build_network.py` from `app/` — the net is gitignored,
-so a real export could not be derived from tracked repo data).
+`edge_id` renders fully transparent. **As of CR-007 PR 7** the shipped file is
+REAL — 6,599 trafficked edges from the named Iloilo SUMO net
+(`iloilo.net.xml`, built by `build_network.py --output.street-names`, gitignored).
+Regenerate with `export_net_geojson.py` if the net or baseline changes.
 
 ### `confidence.geojson` — confidence heatmap cells
 

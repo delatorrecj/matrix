@@ -4,7 +4,7 @@
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-16
 **Author:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** In progress (PR 1–6 merged; PR 7–10 planned)
+**Status:** In progress (PR 1–7 merged; PR 8–10 planned)
 **Trigger document:** [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) §6 (carried-forward debt) + the next-session handoff
 
 > **What this Record is.** CR-006 shipped a 16-unit product-hardening batch (PRs #1–#17), but
@@ -260,6 +260,44 @@ and verifies that the per-kind constant assumptions still carry the PROVISIONAL 
 the constants are PROVISIONAL even though the equation_id is ratified).
 
 **Kernel tests after this PR:** 167 passed, 10 skipped (bare mode). No module logic changed.
+
+---
+
+## 4f. PR 7 — real edges/confidence GeoJSON + sourced population density
+
+Replaces the two PROVISIONAL static layer fixtures with REAL exports (CR-007 PR 7).
+
+**`app/packages/data/export_net_geojson.py`** (new script):
+Loads the named Iloilo SUMO net (`iloilo.net.xml`, built with `--output.street-names`,
+PR 5a) and the Redis nightly baseline. Exports:
+- **`edges.geojson`** — 6,599 LineString features (baseline-trafficked edges), each
+  carrying the real SUMO edge id in `properties.edge_id` so the congestion choropleth
+  joins correctly. Coordinates rounded to 6 decimal places (~10 cm). 4,095 of the
+  6,599 features carry an OSM street name. File: ~1.5 MB (lazily loaded on toggle,
+  not on initial page render). Falls back to all non-internal edges if Redis is
+  unavailable.
+- **`confidence.geojson`** — 1,209 polygon cells on a 0.0045° (~500 m) grid over the
+  net bounding box. Every cell tier = M (conservative overall simulation confidence —
+  data inputs are H but uncalibrated mode-share and literature-calibrated methods cap
+  most results at M per the `method_capped_confidence` rule, CR-007 PR 6). BEH-1/BEH-3
+  and ECO-1 are H along the network corridors but a network-edge intersection pass to
+  vary the grid spatially is not yet wired. Uniform M is more honest than the previous
+  hand-drawn H/M/L. Rationale in the file's `_provenance.tier_rationale`. ~315 KB.
+
+**`modules/societal.py`**: `_GENERIC_POP_DENSITY` updated from uncited 8,500 → **5,843
+persons/km²** (PSA 2020 Population Census of the Philippines August 2020: Iloilo City
+457,626 persons / 78.34 km²). The assumption string updated to cite PSA 2020 CPH. The
+3 other proxy constants remain PROVISIONAL — PM2.5 proxy has a unit mismatch requiring
+a full dispersion model, ECON-1 proxy requires BIR-ZV uplift curve wiring, and SOC-2
+proxy requires the CCHAIN osm_poi_* buffer count (all tracked §3.6).
+
+**`docs/methods-matrix.md` §3.6**: `_GENERIC_POP_DENSITY` row updated to the sourced
+PSA 2020 value with citation.
+
+**`public/layers/README.md`**: Table updated to REAL status for both files; size note
+updated (100 KB constraint predated the real export).
+
+Kernel tests: 167 passed, 10 skipped (bare mode).
 
 ---
 
