@@ -33,3 +33,10 @@ fcd-output*.xml
 .chroma/
 *.duckdb
 .tmp/
+
+# Generated validation report (CR-007 PR 5b): a computed, baseline-dependent artifact
+# produced by `python -m matrix_kernel.build_validation_report`. GET /validation serves it
+# when present, else the live module reports NOT_RUN. Deliberately NOT committed — generate
+# it at deploy once demand is calibrated; an uncalibrated VAL-01 is withheld, not shipped.
+validation_report.json
+packages/kernel/validation_report.json

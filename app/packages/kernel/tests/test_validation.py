@@ -143,6 +143,28 @@ def test_calderon_gate_rejects_unknown_scenario():
         validate_calderon({}, simulated_source="injected:test", scenario="scenario9_maglev")
 
 
+def test_calderon_quantity_filter_scopes_to_flow_max():
+    """The live VAL-01 validates passenger_flow_max only (MATRIX models no transfers).
+    scenario1 has exactly 2 flow_max points (lopez_jaena, diversion)."""
+    sim = {"s1_lopez_jaena_flow_max": 90.0 * 1.05, "s1_diversion_flow_max": 275.0 * 1.05}
+    gate = validate_calderon(sim, simulated_source="injected:test", quantity="passenger_flow_max")
+    assert gate.n_points == 2
+    assert gate.details["quantity"] == "passenger_flow_max"
+    assert len(gate.details["pairs"]) == 2
+    assert gate.status == "PASS"  # 5% uniform error << 0.30
+
+
+def test_calderon_quantity_filter_still_rejects_cherry_picking():
+    sim = {"s1_lopez_jaena_flow_max": 90.0}  # missing the diversion flow point
+    with pytest.raises(ValueError, match="cherry-picking"):
+        validate_calderon(sim, simulated_source="injected:test", quantity="passenger_flow_max")
+
+
+def test_calderon_unknown_quantity_raises_listing_available():
+    with pytest.raises(ValueError, match="no 'passenger_teleport_max' points"):
+        validate_calderon({}, simulated_source="injected:test", quantity="passenger_teleport_max")
+
+
 # ── VAL-02: flood closure gate ───────────────────────────────────────────────────────
 
 def test_flood_gate_passes_on_full_overlap():

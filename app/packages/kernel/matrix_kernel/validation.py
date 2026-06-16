@@ -182,17 +182,28 @@ def validate_calderon(
     *,
     simulated_source: str,
     scenario: str = "scenario1_current",
+    quantity: str | None = None,
     fixture_path: Path = CALDERON_FIXTURE,
 ) -> GateResult:
     """RMSE of injected MATRIX corridor values vs the Calderon 2014 model (QAD VAL-01).
 
     `simulated` maps fixture observation ids -> MATRIX values in the fixture's unit.
-    Every observation point of the chosen scenario must be supplied — scoring a
-    flattering subset is cherry-picking and is rejected.
+    Every observation point of the chosen scenario (and `quantity`, if given) must be
+    supplied — scoring a flattering subset is cherry-picking and is rejected.
+
+    `quantity` restricts the gate to one published quantity (e.g. "passenger_flow_max").
+    MATRIX produces edge passenger-flow proxies but models no route transfers, so the live
+    VAL-01 validates `passenger_flow_max` only; the fixture's `passenger_transfer_max`
+    points are out of the kernel's scope, not silently mapped to edge flows (PRD-F14).
+    Default None keeps the original all-points behavior.
     """
     fx = load_fixture(fixture_path)
-    points = [p for p in fx["observations"] if p["scenario"] == scenario]
+    points = [p for p in fx["observations"]
+              if p["scenario"] == scenario and (quantity is None or p.get("quantity") == quantity)]
     if not points:
+        if quantity is not None and any(p["scenario"] == scenario for p in fx["observations"]):
+            quantities = sorted({p.get("quantity") for p in fx["observations"] if p["scenario"] == scenario})
+            raise ValueError(f"VAL-01: no {quantity!r} points in scenario {scenario!r}; has {quantities}")
         known = sorted({p["scenario"] for p in fx["observations"]})
         raise ValueError(f"VAL-01: unknown scenario {scenario!r}; fixture has {known}")
     missing = [p["id"] for p in points if p["id"] not in simulated]
@@ -224,6 +235,7 @@ def validate_calderon(
         threshold_provenance=VAL01_THRESHOLD_PROVENANCE,
         details={
             "scenario": scenario,
+            "quantity": quantity,
             "rmse": round(raw_rmse, 2),
             "rmse_unit": fx.get("unit", ""),
             "observed_mean": round(sum(obs) / len(obs), 2),
@@ -304,6 +316,7 @@ def run_validation_gates(
     calderon_simulated: Mapping[str, float] | None = None,
     calderon_source: str = "injected",
     calderon_scenario: str = "scenario1_current",
+    calderon_quantity: str | None = None,
     flood_simulated: Mapping[str, float] | None = None,
     flood_source: str = "injected",
 ) -> dict:
@@ -314,13 +327,19 @@ def run_validation_gates(
     """
     if calderon_simulated is not None:
         cal = validate_calderon(calderon_simulated, simulated_source=calderon_source,
-                                scenario=calderon_scenario)
+                                scenario=calderon_scenario, quantity=calderon_quantity)
     else:
         cal = _not_run(
             "VAL-01", _VAL01_NAME, "normalized_rmse", _VAL01_UNIT,
             VAL01_THRESHOLD_NRMSE, "<=", VAL01_THRESHOLD_PROVENANCE, CALDERON_FIXTURE,
-            "no simulated corridor values supplied — needs a kernel run "
-            "(see simulated_corridor_flows_from_baseline) plus the corridor→edge mapping",
+            "computable but WITHHELD: matrix_kernel.build_validation_report maps the corridors "
+            "(Lopez Jaena St; Benigno S. Aquino Jr. Avenue = the paper's 'Diversion Rd') to the "
+            "named net and runs the gate (passenger_flow_max only — MATRIX models no transfers), "
+            "but against the current uncalibrated synthetic demand the corridor passenger-flow "
+            "proxy sits ~an order of magnitude above the Calderon maxima — a mode-share "
+            "calibration gap (P1-6) plus a proxy/unit reconciliation, not a model validation. "
+            "Withheld until demand is calibrated and the flow proxy is reconciled: an unvalidated "
+            "FAIL is not a validation result (PRD-F14).",
         )
     if flood_simulated is not None:
         flood = validate_flood(flood_simulated, simulated_source=flood_source)
