@@ -4,7 +4,7 @@
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-16
 **Author:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** In progress (PR 1–9 merged; PR 10 planned)
+**Status:** Complete (PR 1–10 merged; actual Fly + Vercel deploy pending user credentials)
 **Trigger document:** [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) §6 (carried-forward debt) + the next-session handoff
 
 > **What this Record is.** CR-006 shipped a 16-unit product-hardening batch (PRs #1–#17), but
@@ -370,7 +370,43 @@ data reviewed, blockers, FOI path, and env-var injection recipe.
 
 ---
 
+## 4i. PR 10 — Deploy API → Fly.io + web → Vercel
+
+Deploy configs fixed and fully documented; actual `fly deploy` + `vercel --prod` require
+user credentials (FLY_API_TOKEN, Vercel auth) and are deferred to the first deploy session.
+
+**`app/Dockerfile.api`** — three bugs fixed:
+1. `python:3.11-slim` → `python:3.12-slim` (both packages require `>=3.12`).
+2. `apt-get install sumo sumo-tools sumo-doc` removed. The Ubuntu SUMO package would
+   shadow the `eclipse-sumo` Python wheel's binaries and break `sumo_env.py`. The wheel
+   ships its own SUMO binaries; only `libgdal-dev`, `libproj-dev`, `libxml2` (system link
+   libs) are needed from apt.
+3. `ENV MATRIX_NET_PATH=/data/iloilo.net.xml MATRIX_ROU_PATH=/data/iloilo.rou.xml` added
+   so the kernel reads net + demand from the Fly persistent volume, not the image.
+
+**`app/fly.toml`** — three additions:
+1. `[env]` block: `MATRIX_NET_PATH` + `MATRIX_ROU_PATH` (same paths as Dockerfile; fly.toml
+   overrides win at runtime).
+2. Secrets comment block: `GOOGLE_API_KEY`, `DATABASE_URL`, `SUPABASE_KEY`,
+   `MATRIX_JWT_SECRET` — all set via `fly secrets set`, never committed.
+3. `[[mounts]]`: `matrix_data` volume → `/data` — the persistent storage for net + demand
+   files (create with `fly volumes create matrix_data --region sin --size 5`).
+
+**`app/apps/web/vercel.json`** — three env vars added:
+`NEXT_PUBLIC_MAPBOX_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+(declared as `@secret_name` references — set actual values in the Vercel dashboard).
+
+**`docs/ops-matrix.md`** — new §7 "Deploy Runbook":
+Step-by-step first-time Fly + Vercel deploy, including volume creation, secrets, net file
+upload via `fly ssh sftp`, baseline seeding via `fly ssh console`, trajectory pre-warm
+recipe for demo sessions, nightly baseline refresh, and rollback (`fly deploy --image`).
+
+---
+
 ## 6. Carried-forward debt
 
-- Deploy to Fly.io + Vercel never executed (PR 10 — config fixed; actual deploy requires
-  user credentials + a Fly volume with net files pre-loaded from `build_network.py`).
+All CR-007 PRs shipped. Remaining operational steps (not code):
+- **Actual deploy**: `fly deploy` + `vercel --prod` (user credentials required; see §7).
+- **Mode-share re-calibration**: values unchanged; LTFRB FOI or travel survey needed.
+- **VAL-01 / VAL-02**: gates NOT_RUN; blocked on mode-share calibration + Sentinel-1 flood
+  extent (not a CR-007 scope item; tracked in `docs/qad-matrix.md`).

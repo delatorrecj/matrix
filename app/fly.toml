@@ -20,3 +20,23 @@ primary_region = "sin"
 [env]
   PORT = "8000"
   MATRIX_REDIS_URL = "redis://matrix-redis.internal:6379"
+  # Net + demand files live on the persistent volume mounted at /data (see [mounts]).
+  # These env vars are also set in Dockerfile.api; fly.toml overrides win at runtime.
+  MATRIX_NET_PATH = "/data/iloilo.net.xml"
+  MATRIX_ROU_PATH = "/data/iloilo.rou.xml"
+
+# Secrets (set via `fly secrets set KEY=value` -- never commit values):
+#   GOOGLE_API_KEY     — Gemini 3.1 Pro/Flash-Lite (must have billing enabled;
+#                        free-tier key has limit 0 for Pro models)
+#   DATABASE_URL       — Supabase Postgres connection string (pooled, port 6543)
+#   SUPABASE_KEY       — Supabase anon/service key (for db.py psycopg3 calls)
+#   MATRIX_JWT_SECRET  — JWT signing secret for the WS auth guard (if enabled)
+
+# Persistent volume for SUMO net + demand files (gitignored; not in the Docker image).
+# Create once: `fly volumes create matrix_data --region sin --size 5`
+# Pre-load: `fly ssh sftp put iloilo.net.xml /data/iloilo.net.xml`
+#            `fly ssh sftp put iloilo.rou.xml /data/iloilo.rou.xml`
+# Then seed baseline: `fly ssh console -C "python -c 'from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())'"`
+[[mounts]]
+  source = "matrix_data"
+  destination = "/data"

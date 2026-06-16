@@ -92,6 +92,98 @@ Severity ladder = QAD P0–P3. When an incident fires:
 
 ---
 
+## 7. Deploy Runbook (Fly.io + Vercel)
+
+**Status as of CR-007 PR 10:** configs fixed and documented; deploy not yet executed
+(requires user credentials + net files pre-loaded into a Fly persistent volume).
+
+### 7.1 Prerequisites
+
+- `fly` CLI installed and authenticated (`fly auth login`).
+- `vercel` CLI installed and authenticated (`vercel login`).
+- `GOOGLE_API_KEY` with billing enabled (free-tier key has limit 0 for Pro models).
+- Net + demand files built locally: `cd app/packages/kernel && uv run python ../../packages/data/build_network.py` + `build_demand.py`.
+
+### 7.2 First-time API deploy (Fly.io)
+
+```bash
+# 1. Create the app (if new)
+fly apps create matrix-api-backend --region sin
+
+# 2. Create Redis (Upstash managed Redis on Fly)
+fly ext redis create --name matrix-redis --region sin
+# note the redis URL — it will be matrix-redis.internal:6379 if Fly-native
+
+# 3. Create persistent volume for net + demand files (5 GB is ample)
+fly volumes create matrix_data --region sin --size 5
+
+# 4. Set secrets
+fly secrets set GOOGLE_API_KEY=<your_key>
+fly secrets set DATABASE_URL=<supabase_pooled_url>       # port 6543
+fly secrets set SUPABASE_KEY=<supabase_anon_key>
+
+# 5. Deploy
+cd app && fly deploy
+
+# 6. Upload net + demand files (do this BEFORE seeding the baseline)
+fly ssh sftp put packages/kernel/data/iloilo.net.xml /data/iloilo.net.xml
+fly ssh sftp put packages/kernel/data/iloilo.rou.xml /data/iloilo.rou.xml
+
+# 7. Seed the nightly baseline into Redis
+fly ssh console -C "python -c \"from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())\""
+
+# 8. Verify
+curl https://matrix-api-backend.fly.dev/health
+```
+
+### 7.3 First-time web deploy (Vercel)
+
+```bash
+# From apps/web; Vercel auto-detects Next.js
+cd app/apps/web
+vercel --prod
+
+# Set env secrets in Vercel dashboard (Settings → Environment Variables):
+#   NEXT_PUBLIC_MAPBOX_TOKEN    — Mapbox public token
+#   NEXT_PUBLIC_SUPABASE_URL    — Supabase project URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY — Supabase anon key
+# NEXT_PUBLIC_API_WS_URL is already set in vercel.json (wss://matrix-api-backend.fly.dev)
+```
+
+### 7.4 Nightly baseline refresh
+
+The SUMO baseline (`baseline:iloilo:latest`) expires from Redis when the TTL runs out or Redis restarts. Set a cron to re-seed it:
+
+```bash
+# On Fly (run once, or set up a Fly Machine cron):
+fly ssh console -C "python -c \"from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())\""
+```
+
+### 7.5 Pre-warm trajectory cache before a demo session
+
+```bash
+# SSH in and run the demo scenario once to populate scenario:demo:latest
+fly ssh console -C "python -c \"\
+from matrix_kernel.baseline import load_baseline; \
+from matrix_kernel.scenario import Scenario; \
+from matrix_kernel.runner import simulate; \
+import redis, os; \
+sc = Scenario('demo','Demo: Diversion Road closure','Benigno S. Aquino Jr. Avenue',1); \
+t = simulate(sc); \
+redis.from_url(os.environ.get('MATRIX_REDIS_URL','redis://localhost:6379/0')).set('scenario:demo:latest', t.to_json(), ex=7200); \
+print('pre-warmed', len(t.frames), 'frames') \
+\""
+```
+
+### 7.6 Rollback
+
+```bash
+fly releases list              # list available releases
+fly deploy --image <image-id>  # redeploy a specific release
+```
+
+---
+
 ## Self-Check
 
 - [x] Every SLO has a real measurement source (run metadata, run_trace, events).
