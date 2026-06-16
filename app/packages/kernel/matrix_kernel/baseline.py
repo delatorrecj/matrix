@@ -34,10 +34,11 @@ NET = _CITY.net_path
 ROU = _CITY.rou_path
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
 BASELINE_KEY = _CITY.baseline_key
-# Shared sim horizon (an AM-peak slice). Baseline + scenario MUST use the same window for a
-# fair BEH-1 delta. ~15 min keeps the slice tractable; the full-day expansion is an assumption
-# carried on BEH-1. Longer horizons raise fidelity at a (Phase-6) latency cost.
-SIM_END = 900.0
+# Shared sim horizon (an AM-peak slice). Both baseline and scenario MUST use the same value
+# for a fair BEH-1 delta — changing MATRIX_SIM_HORIZON requires re-running
+# run_nightly_baseline() to re-seed Redis.  900 s (15 min) is the AM-peak default;
+# 600 s saves ~8 s of SUMO wall time. Full-day expansion is an assumption on BEH-1.
+SIM_END = float(os.environ.get("MATRIX_SIM_HORIZON", "900"))
 
 
 def run_sumo_edge_counts(net: Path, rou: Path, end: float) -> dict[str, int]:
