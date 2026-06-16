@@ -27,15 +27,15 @@ PARAMS = {"facility_kind": "school", "capacity": 3000}
 def test_glass_box_provenance_present():
     dd = compute_demand_delta(GEOM_POINT, PARAMS)
     assert dd.equation_id == EQUATION_ID
-    assert "PROVISIONAL" in dd.equation_id          # honest: not yet in the Locked methods §3.1
+    assert dd.equation_id == "BEH-4"               # promoted from BEH-4-PROVISIONAL (CR-007 PR 6)
     assert dd.input_dataset_ids == ["Calderon2014"]
     assert dd.references == ["Calderon2014"]
     # Every gravity constant must be declared with provenance (PRD-F14).
     text = "\n".join(dd.assumptions)
     for needle in ("trips_per_capacity", "redirected_fraction", "catchment_radius_m",
-                   "gravity_exponent", "depart window", "Change Record"):
+                   "gravity_exponent", "depart window"):
         assert needle in text, f"assumption missing for {needle!r}"
-    # Uncalibrated heuristics -> at least the four gravity constants carry the honest label.
+    # Uncalibrated heuristics -> per-kind constants still carry the honest PROVISIONAL label.
     assert sum("PROVISIONAL" in a for a in dd.assumptions) >= 4
 
 
