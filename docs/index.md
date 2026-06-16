@@ -40,7 +40,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | PRD — Product Requirements | [prd-matrix.md](prd-matrix.md) | 0.1 | **Locked** | 2026-06-09 | 2026-06-09 (CR-005 — Gemini 2.0 past-tense; verified vs as-built `app/`) |
 | DSD — Design System | [dsd-matrix.md](dsd-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 — frontend built; anti-pattern register seeded) |
 | SDD — System Design | [sdd-matrix.md](sdd-matrix.md) | 0.1 | **Locked** | 2026-06-03 | 2026-06-09 (CR-005 — verified accurate vs as-built `app/`; no content change) |
-| Methods & Traceability (glass-box ledger) | [methods-matrix.md](methods-matrix.md) | 0.1 | **Locked** | 2026-06-03 | 2026-06-09 (CR-005 — verified: validations already marked planned, not shipped) |
+| Methods & Traceability (glass-box ledger) | [methods-matrix.md](methods-matrix.md) | 0.1 | **Locked** | 2026-06-03 | 2026-06-17 (CR-007 PR 6 — BEH-4 promoted, dataset tiers ratified, method_capped_confidence rule + §3.6 proxy constants added) |
 | QAD — QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 — test reality: 23 w/ SUMO, ~15 bare) |
 | SAD — Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A — 5-agent build roster |
 | BUILD — Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 — Gemini 2.0 past-tense; stack as-built) |

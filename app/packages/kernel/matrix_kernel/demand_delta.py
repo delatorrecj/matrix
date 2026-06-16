@@ -12,8 +12,8 @@ Glass box (PRD-F14): every constant is surfaced in `DemandDelta.assumptions` wit
 provenance. The gravity constants are honestly labeled "PROVISIONAL — uncalibrated", so the
 *computed* confidence is L — heuristic method maturity caps the tier (methods §2 worst-factor
 rule) — and the output renders "directional only" (PRD-F5) until calibration lands. The
-equation id is provisional too: facility gravity redistribution is NOT yet a row in the
-Locked methods-matrix §3.1; promoting it to a real BEH-4 entry requires a Change Record.
+The equation was promoted from BEH-4-PROVISIONAL to BEH-4 by CR-007 PR 6; facility gravity
+redistribution is now a ratified §3.1 row. Per-kind constants remain PROVISIONAL (§3.6).
 
 Consumed by the scenario dispatcher as:
 
@@ -35,7 +35,7 @@ from matrix_kernel.confidence import confidence_rubric
 from matrix_kernel.personas import ILOILO_MODE_SHARE
 from matrix_kernel.results import Confidence
 
-EQUATION_ID = "BEH-4-PROVISIONAL"   # not in Locked methods §3.1 yet — promotion needs a CR
+EQUATION_ID = "BEH-4"  # promoted from BEH-4-PROVISIONAL by CR-007 PR 6
 INPUT_DATASET_IDS = ["Calderon2014"]  # the mode-share anchor is the only dataset consumed
 REFERENCES = ["Calderon2014"]
 
@@ -273,8 +273,8 @@ def compute_demand_delta(geometry: dict | None, parameters: dict,
     # Resolve each constant: caller override (Scenario.parameters) beats the PROVISIONAL
     # default; either way the provenance line lands in `assumptions`.
     assumptions: list[str] = [
-        f"equation {EQUATION_ID}: facility gravity redistribution is not yet a row in the "
-        "Locked methods-matrix §3.1 — promotion to BEH-4 requires a Change Record",
+        f"equation {EQUATION_ID}: facility gravity redistribution (methods-matrix §3.1 BEH-4, "
+        "promoted from BEH-4-PROVISIONAL by CR-007 PR 6); per-kind constants in §3.6 PROVISIONAL",
     ]
     tpc = _resolve_constant(parameters, "trips_per_capacity", profile.trips_per_capacity,
                             f"trips per {profile.capacity_unit} per AM window, "

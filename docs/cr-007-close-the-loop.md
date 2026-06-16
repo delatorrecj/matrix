@@ -4,7 +4,7 @@
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-16
 **Author:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** In progress (PR 1–4 merged = P0 closed; PR 5a net-prereq done; PR 5b–10 in progress/planned)
+**Status:** In progress (PR 1–6 merged; PR 7–10 planned)
 **Trigger document:** [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) §6 (carried-forward debt) + the next-session handoff
 
 > **What this Record is.** CR-006 shipped a 16-unit product-hardening batch (PRs #1–#17), but
@@ -226,6 +226,42 @@ machinery and records why the *number* is not published.
   deploy once VAL-01 is meaningful.
 
 VAL-02 stays NOT_RUN (PROVISIONAL flood fixture; no sourced Sentinel-1 extent).
+
+## 4e. PR 6 — methods-matrix CR (BEH-4 promotion + ratifications)
+
+The Locked `docs/methods-matrix.md` is amended under CR-007 PR 6. No code equations changed;
+only the governance ledger catches up to the implementations that shipped in CR-006 and PR 5a/5b.
+
+**What the amendment records:**
+
+1. **BEH-4 promoted.** `demand_delta.py` shipped in CR-006 PR #4 under `BEH-4-PROVISIONAL`.
+   It is now a ratified §3.1 row: `BEH-4 — Facility demand redistribution` (gravity trip
+   deltas, Wilson-type distance decay, Calderon2014 mode-share anchor, confidence L — heuristic
+   method maturity caps the tier; per-kind constants remain PROVISIONAL, see §3.6).
+   `demand_delta.EQUATION_ID` updated from `"BEH-4-PROVISIONAL"` → `"BEH-4"`.
+
+2. **Dataset tiers ratified.** The five tiers added to `confidence.py DATASET_TIERS` in
+   CR-006 are now on record in the methods doc §2 (EMB/LIPAD/DEM/NHFR=H, S5P-NO2=M), with
+   their INVENTORY provenance cited. The authoritative source remains `confidence.py`.
+
+3. **`method_capped_confidence` rule ratified.** The rule — `confidence = min(data_tier,
+   method_maturity_tier)` — is now stated in §2. ECO-4 and SOC-1 Conf basis cells updated to
+   show the cap explicitly (`method_capped_confidence` applied, M ceiling, reason stated).
+
+4. **PROVISIONAL proxy constants ratified.** A new §3.6 table acknowledges all four Milestone-A
+   PROVISIONAL constants (`_PM25_PER_CO2E_PROXY=0.05`, `_PHP_PER_TRIP_PROXY=₱50.0`,
+   `_VENDORS_PER_CLOSED_LANE=12`, `_GENERIC_POP_DENSITY=8500`) and the BEH-4 `FACILITY_PROFILES`
+   defaults, with their current values and pending replacements. They remain PROVISIONAL until
+   PR 7 / PR 9 (mode-share calibration) land sourced values.
+
+**Test impact:** `test_demand_delta.py::test_glass_box_provenance_present` updated — the
+`"PROVISIONAL" in equation_id` guard was the promotion gate; now the test asserts `BEH-4` directly
+and verifies that the per-kind constant assumptions still carry the PROVISIONAL label (they do —
+the constants are PROVISIONAL even though the equation_id is ratified).
+
+**Kernel tests after this PR:** 167 passed, 10 skipped (bare mode). No module logic changed.
+
+---
 
 ## 5. Glass-box posture
 
