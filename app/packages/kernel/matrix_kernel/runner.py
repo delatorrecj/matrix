@@ -133,7 +133,7 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "-n", str(NET), "-r", str(ROU),
             "--additional-files", str(add),
             "--fcd-output", str(fcd_out), "--fcd-output.geo", "--device.fcd.period", str(sample_period),
-            "--device.rerouting.probability", "1", "--device.rerouting.period", "60",
+            "--device.rerouting.probability", "1", "--device.rerouting.period", "120",
             "--end", str(end), "--no-step-log", "true", "--xml-validation", "never",
             "--ignore-route-errors", "true",  # an edit may strand a route -> drop it, don't abort
         ]

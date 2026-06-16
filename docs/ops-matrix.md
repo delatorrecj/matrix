@@ -77,6 +77,21 @@ Severity ladder = QAD P0–P3. When an incident fires:
 
 ---
 
+## 6. Performance Tuning
+
+**Observed baseline latency (warm, no trajectory cache hit):** SUMO ≈ 44 s · modules ≈ 89 ms · Gemini ≈ 3.8 s · total ≈ 48 s. With a trajectory cache hit (Redis has `scenario:{id}:latest`) the SUMO stage is skipped entirely → total < 5 s. The 90 s budget (SLO §1) is met comfortably for warm runs; cold-start latency above 90 s signals a cache miss + slow Gemini call.
+
+| Knob | Env var | Default | Effect | Constraint |
+|------|---------|---------|--------|------------|
+| Sim horizon | `MATRIX_SIM_HORIZON` | `900` s | 600 s saves ~8 s of SUMO wall time | Baseline + scenario must share the same value — **always re-run `run_nightly_baseline()` after changing** |
+| Trajectory cache TTL | `MATRIX_TRAJ_CACHE_TTL_S` | `7200` s (2 h) | Repeated runs of the same scenario hit Redis, skipping SUMO | Set `0` to disable caching (forces live SUMO every run) |
+| Concurrent sim cap | `MATRIX_MAX_CONCURRENT_SIMS` | `2` | More → more parallel users; fewer → less memory pressure | Each SUMO run needs ~600 MB; a 2 GB Fly machine → cap 2 |
+| Rerouting period | `--device.rerouting.period` in `runner.py` | `120` s | Cut to 60 s for higher realism; increase to 180 s to save CPU | Hardcoded in source; a future PR may expose via env var |
+
+**The biggest single win is the trajectory cache.** For a hackathon demo where judges re-run the same scenarios, the first run costs ~48 s; every subsequent run < 1 s. Pre-warm the cache with `fly ssh console -C "python -m matrix_kernel.prewarm"` (stub — see §7) before a judged session.
+
+---
+
 ## Self-Check
 
 - [x] Every SLO has a real measurement source (run metadata, run_trace, events).

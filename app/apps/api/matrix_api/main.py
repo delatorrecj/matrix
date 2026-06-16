@@ -255,6 +255,8 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
       2. for the demo id only, the pre-warmed demo trajectory (snappy stream);
       3. the PERSISTED scenario (POST /scenario) simulated live via the kernel;
       4. a blank live scenario, only when nothing was ever persisted for this id.
+    After a live sim (3 or 4), the result is written back to Redis (TTL=MATRIX_TRAJ_CACHE_TTL_S,
+    default 2h) so repeated runs of the same id skip SUMO entirely (path 1).
     """
     import redis
 
@@ -273,7 +275,15 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
         if record
         else _Scenario(scenario_id, "live scenario", corridor="")
     )
-    return simulate(scenario)
+    traj = simulate(scenario)
+    # Write back to Redis so repeated runs of the same scenario_id skip SUMO entirely.
+    # Best-effort — a Redis failure must never abort a run that just completed.
+    try:
+        _ttl = int(os.environ.get("MATRIX_TRAJ_CACHE_TTL_S", "7200"))
+        r.set(f"scenario:{scenario_id}:latest", traj.to_json(), ex=_ttl)
+    except Exception:
+        pass
+    return traj
 
 
 async def _score_all_modules(traj: Trajectory) -> list:
