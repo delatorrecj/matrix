@@ -195,11 +195,11 @@ Recommended start: **Item 8** (appendix) — highest signal-to-effort, unblocks 
 
 ## 6. Definition of Done (CR-008 checklist)
 
-- [ ] **#8** methods Appendix A module⇄source matrix; cross-linked from MATRIX.md + PRD-F14.
+- [x] **#8** methods Appendix A module⇄source matrix; cross-linked from MATRIX.md + PRD-F14.
 - [ ] **#1** qad §8 Ground-Truth Comparison subsection + comparison-table artifact; methods §6 statuses truthful.
 - [ ] **#2** methods §3.3/§3.4 informal-sector model; tricycle archetype + vendor-footfall code (PROVISIONAL, glass-box); READINESS note.
-- [ ] **#3** `reweight_pool` implemented + tested; audit entry carries factors; methods §4 worked middle-class-bias example matches code.
-- [ ] **#4** methods §2 Low-Confidence Protocol; DSD alert spec + InspectDrawer trigger-reason; test.
+- [x] **#3** `reweight_pool` implemented + tested; audit entry carries factors; methods §4 worked middle-class-bias example matches code.
+- [x] **#4** methods §2 Low-Confidence Protocol; DSD alert spec + InspectDrawer trigger-reason; test.
 - [ ] **#5** Extreme-event resilience section (prd/methods); `flood_scenario` helper feeding VAL-02; QAD scenario row.
 - [ ] **#6** PRD-F20; `POST/GET /feedback` + `planner_feedback` table + test; SDD seam; OPS triage runbook; UI affordance.
 - [ ] **#7** `gazetteer.py` + JSON; orchestrator/GraphRAG integration; worked Hiligaynon example; deterministic resolution test.

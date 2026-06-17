@@ -148,12 +148,12 @@ Each non-trivial component documents what it does and how its output is made tra
 
 | Component | Purpose | Inputs → Output | Grounding | Known limits / failure mode | Traceability hook |
 |---|---|---|---|---|---|
-| **Orchestrator** (Gemini 3.1 Pro) | NL/map → structured sim plan | query → JSON plan | GraphRAG retrieval | mis-parse → clarification prompt (never guess) | `run_trace`: prompt, retrieved chunks, params |
+| **Orchestrator** (Gemini 3.1 Pro) | NL/map → structured sim plan | query → JSON plan | GraphRAG retrieval (OSM, gazetteer) injected into prompt | mis-parse → clarification prompt (never guess) | `run_trace.retrieved_chunks` and `prompt` params |
 | **Persona generator** (Flash-Lite) | commuter persona pool | archetypes → agents | mode-share anchor | LLM bias → bias auditor reweights | `bias_audit_log` |
 | **Bias auditor** (Python) | enforce mode-share fairness | persona batch → pass/reweight | Iloilo ground truth (Calderon2014) | anchor stale → flagged | public `bias_audit_log` |
 | **SUMO kernel** (TraCI) | physical trajectories | net + agents → per-tick dataset | deterministic physics | net gaps → confidence floor | seed + net version in `simulation_runs` |
 | **XGBoost baseline** | corridor volume forecast | history → baseline | trained on open series | extrapolation risk | model version stamped |
-| **Synthesis** (Gemini 3.1 Pro) | narratives + report | scores → prose | **must cite numbers + sources**; "unknown" allowed | hallucination → citation guard rejects uncited claims | citations resolve to equation_id + dataset_ids |
+| **Synthesis** (Gemini 3.1 Pro) | narratives + report | scores → prose | GraphRAG retrieval + **must cite numbers + sources** | hallucination → citation guard rejects uncited claims | citations resolve to `equation_id` + `dataset_ids` (not RAG text) |
 
 **Citation guard:** synthesis narrative claims that assert a number must reference an `equation_id` and its `input_dataset_ids`; uncited quantitative claims are blocked from render.
 
@@ -177,6 +177,20 @@ LLMs default to WEIRD/middle-class archetypes. If Flash-Lite generates a persona
 | `bicycle` | 0.05 | 0.03 | 0.60 | ~0.03 |
 
 **Result:** The resampled pool preserves the exact original persona count, but archetypes are resampled with replacement proportional to `f_k`. The new pool matches the anchor within ±3%, and the exact `adjustment_factors` are emitted to `bias_audit_log` (and surfaced in the Inspect drawer) so the correction is completely glass-box.
+
+### 4.2 Hiligaynon Gazetteer & RAG Retrieval Example
+
+*(CR-008 Items 7 & 9 — added 2026-06-17. Deterministic colloquial mapping and semantic retrieval.)*
+
+The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index to understand local context and regional colloquialisms. **The LLM never invents GIS nodes.** If a query contains a regional colloquialism, it is mapped *before* the LLM extracts it.
+
+**Example: Hiligaynon Query**
+- **Query:** *"Ano matabo kung siraduhon ang merkado kag ang tulay sa forbes?"*
+- **Gazetteer Pre-processing:** The term "merkado" triggers a hit for `Iloilo Central Market`, and "tulay sa forbes" hits `Forbes Bridge`.
+- **Query Annotation:** The orchestrator annotates the query before sending it to the LLM:
+  `Ano matabo kung siraduhon ang merkado kag ang tulay sa forbes? [GAZETTEER HIT: 'Iloilo Central Market' (OSM: way/87654321, SUMO Edge: E_central_mkt_front)] [GAZETTEER HIT: 'Forbes Bridge' (OSM: way/12345678, SUMO Edge: E_forbes_bridge)]`
+- **GraphRAG Retrieval:** The system retrieves top-k chunks from ChromaDB and injects them as `Relevant Local Context: [source]: text`.
+- **LLM Parse:** The Gemini model parses the annotated string, extracts the canonical location, and sets the structured geometry/SUMO edges based *only* on the explicitly provided gazetteer IDs.
 
 ---
 

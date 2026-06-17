@@ -19,6 +19,8 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 from matrix_kernel.config import get_city_config
+from matrix_kernel.gazetteer import annotate_query_with_gazetteer
+from matrix_kernel.graphrag import retrieve
 from matrix_kernel.llm import generate_content
 from matrix_kernel.scenario import Scenario
 
@@ -78,13 +80,23 @@ def parse_scenario(
         "flag it as ambiguous and ask for clarification."
     )
 
+    # Annotate colloquial terms with explicit GIS/OSM node hits (CR-008 Item 7)
+    annotated_query = annotate_query_with_gazetteer(query)
+
+    # Retrieve semantic context (CR-008 Item 9)
+    chunks = retrieve(query, top_k=3)
+    retrieved_context = ""
+    if chunks:
+        context_lines = [f"Source [{c['source']}]: {c['text']}" for c in chunks]
+        retrieved_context = "\n\nRelevant Local Context:\n" + "\n".join(context_lines)
+
     # Resilient call: retry/backoff + hard timeout, typed LLMUnavailable on exhaustion
     # (matrix_kernel.llm). The orchestrator has no silent fallback — a parse failure must
     # surface (the API layer turns LLMUnavailable into a clear error), never a guessed scenario.
     response = generate_content(
         client,
         model=model_name,
-        contents=query,
+        contents=annotated_query + retrieved_context,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             response_mime_type="application/json",

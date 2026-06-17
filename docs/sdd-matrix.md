@@ -271,7 +271,17 @@ graph TD
 
 **Fallback behavior:** Gemini error/timeout → serve cached parse for reference scenarios and/or baseline + delta; never silently retry past 2×; a data-sparse dimension returns "Low — directional only" rather than a fabricated number.
 
-### 8.1 AI Safety & Threat Surface
+### 8.1 RAG / GraphRAG Architecture (CR-008 Item 9)
+
+**Purpose:** Ground the LLM orchestrator and synthesis steps in local reality without injecting hallucinated data into the kernel. The GraphRAG pipeline provides context on OSM places, CCHAIN barangay summaries, literature, and the Hiligaynon gazetteer.
+
+**Flow:**
+1. **Ingestion (`build_graphrag.py`):** Static context (e.g., methods ledger snippets, gazetteer map) is chunked, embedded via `BAAI/bge-small-en-v1.5` (Sentence Transformers), and upserted into a local ChromaDB collection (`matrix_knowledge_base`) with `source` metadata.
+2. **Retrieval (`retrieve(top_k)`):** During a query parse or synthesis, the user prompt is embedded and matched against the collection using cosine similarity. The top-k hits (usually 3–5) are returned.
+3. **Injection:** The chunks are appended to the system prompt as `Relevant Local Context: [source]: text`.
+4. **Citation Contract:** The synthesis LLM may use this text to narrate *why* a location matters or *what* a colloquial term means, but it must explicitly cite the `[source]`. Critically, **numbers still cite `equation_id` and input datasets**, not the RAG text. RAG provides narrative grounding; the kernel provides the math.
+
+### 8.2 AI Safety & Threat Surface
 
 User scenario text and retrieved third-party content both reach the model, so this applies.
 
