@@ -483,6 +483,7 @@ For team transparency, key changes from the Foundation Document:
 - **Removed false claims:** DILG MC 2020-036 fare percentage, fabricated 2026 citations, MiroFish-as-architecture-reference
 - **Added Iloilo-specific institutional anchors:** Clean Air Asia SMMR, UNESCAP electric mobility, ICLEI roadmap, JICA STRADA-3 baseline
 - **Destination reframed (2026-06-14):** Hackathon submission → **real-world product**, with the hackathon as a milestone/showcase. Demo-grade seams were hardened or honestly labeled PROVISIONAL — typed scenario engine + geometry, computed validation (VAL-01/VAL-02), persistence + auth, city-agnostic `CityConfig`, interactive glass-box provenance — per [CR-006](docs/cr-006-beyond-hackathon.md). *Honesty (computed validation, clickable provenance, labeled provisional data) is the product story.*
+- **Module ⇄ data-source traceability:** A consolidated module-to-dataset mapping (every equation → dataset IDs → confidence tier) is maintained as [methods-matrix.md Appendix A](docs/methods-matrix.md#appendix-a--module--data-source-traceability-matrix) (CR-008 Item 8), so any number MATRIX displays can be traced to its source in one click.
 
 ---
 

@@ -49,6 +49,27 @@ A dimension flagged **Low** renders as *directional only* (`PRD-F5`) — never a
 
 **Method-maturity cap rule** (`method_capped_confidence`, ratified CR-007 PR 6): where an equation's method maturity is weaker than its input-data tier, confidence is capped at the method tier — not the data tier. `confidence = min(data_tier, method_maturity_tier)`. Applied explicitly to ECO-4 (exposure-redistribution method literature-calibrated → M despite H hazard inputs) and SOC-1 (equity-weighted access method literature-calibrated → M despite H registry inputs).
 
+### Low-Confidence Protocol
+
+*(CR-008 Item 4 — added 2026-06-17. Addresses judges' ask: "what happens when data is poor?")*
+
+**Every trigger below produces a `confidence = "L"` result.** The rendering consequence is identical in each case: the result is shown as *directional only* (`PRD-F5`) — the value is suppressed, the range is shown with a "directional" label, and the Inspect drawer prints the specific capping factor.
+
+| Trigger | Rule | Rubric row | Example |
+|---|---|---|---|
+| **Sparse or missing data** | Any input dataset with `INVENTORY.confidence = L` caps the whole result at L | Data vintage / coverage → L | A dimension referencing an unacquired dataset (status `⏳`) resolves at L |
+| **Dataset vintage > ~10 yr** | Data tier degrades to M (≤ 10 yr) or L (> 10 yr) per the rubric table | Data vintage → L | A dataset with a 2010 vintage used for a 2026 projection |
+| **Heuristic method maturity** | Method tier is L when the computation is a rule-of-thumb constant with no calibration data | Method → L | BEH-4 gravity constants (`_TRIPS_PER_CAPACITY`) before survey calibration |
+| **Unknown or unregistered dataset ID** | `confidence_rubric()` in `confidence.py` defaults any unknown `dataset_id` to tier L | Data coverage → L | A dataset ID not in `DATASET_TIERS` |
+| **PROVISIONAL constant** | Any equation with a constant flagged PROVISIONAL in §3.6 is capped at L until replaced with survey/FOI data | Method → L | `_PHP_PER_TRIP_PROXY = ₱50` (ECON-1), `_VENDORS_PER_CLOSED_LANE = 12` (SOC-2) |
+| **Unvalidated gate** | An output whose module has not passed its VAL gate (VAL-01/VAL-02) is reported directional only until gate passes | Validation → L | BEH-4 until Calderon corridor mapping resolves VAL-01 |
+| **Method-maturity cap (see above)** | `method_capped_confidence` applied when method tier < data tier | Method → L (or M) | ECO-4, SOC-1 → capped at M; equations with purely heuristic methods → L |
+
+**What the user sees for a Low result:**
+1. **Dimension Card:** score is replaced with a `—` or a range label; confidence chip shows `L` in amber with a warning glyph; "Directional only" badge is shown.
+2. **Inspect Drawer:** the *capping factor* is printed explicitly (e.g. "Capped by: heuristic method — `_TRIPS_PER_CAPACITY = 8` PROVISIONAL"), so a planner knows exactly why.
+3. **Narrative:** Gemini synthesis cites only the directional direction ("likely reduces…") — never a precise number — and the citation guard blocks any precise number from an L-tier result.
+
 **Dataset tier ledger** (authoritative: `packages/kernel/matrix_kernel/confidence.py` `DATASET_TIERS`; tiers below ratified CR-007 PR 6 from [data/INVENTORY.md](../data/INVENTORY.md)):
 
 | Dataset | Tier | Rationale |
@@ -136,6 +157,27 @@ Each non-trivial component documents what it does and how its output is made tra
 
 **Citation guard:** synthesis narrative claims that assert a number must reference an `equation_id` and its `input_dataset_ids`; uncited quantitative claims are blocked from render.
 
+### 4.1 Bias Auditor: Middle-Class-Bias Reweight Example
+
+*(CR-008 Item 3 — added 2026-06-17. Mathematical specification of `reweight_pool`.)*
+
+LLMs default to WEIRD/middle-class archetypes. If Flash-Lite generates a persona pool that over-indexes on private cars vs the Iloilo ground-truth (`Calderon2014`), the Bias Auditor corrects it using **stratified resampling with per-mode multiplicative importance weights**.
+
+**Correction formula:** `f_k = target_k / observed_k` (modes absent in observed but present in target receive a `10.0` injection weight).
+
+**Example: Flash-Lite private-car over-generation**
+- **Trigger:** Observed `private_car` is 0.18 vs anchor 0.07 (a +11% delta, far beyond the ±3% `MODE_SHARE_TOLERANCE`).
+
+| Mode | Observed | Target (Anchor) | Factor (`f_k`) | Resampled Share |
+|---|---|---|---|---|
+| `jeepney` | 0.50 | 0.59 | 1.18 | ~0.59 |
+| `private_car` | 0.18 | 0.07 | 0.38 | ~0.07 |
+| `walk` | 0.12 | 0.19 | 1.58 | ~0.19 |
+| `motorcycle` | 0.15 | 0.12 | 0.80 | ~0.12 |
+| `bicycle` | 0.05 | 0.03 | 0.60 | ~0.03 |
+
+**Result:** The resampled pool preserves the exact original persona count, but archetypes are resampled with replacement proportional to `f_k`. The new pool matches the anchor within ±3%, and the exact `adjustment_factors` are emitted to `bias_audit_log` (and surfaced in the Inspect drawer) so the correction is completely glass-box.
+
 ---
 
 ## 5. Uncertainty & Sensitivity (earned confidence — `PRD-F15`)
@@ -168,3 +210,102 @@ A run is reproducible: `simulation_runs` records the scenario params, **random s
 - **vs pure-LLM tools:** those generate the answer; MATRIX generates only *behavioral inputs* (personas, audited against ground truth) and computes outputs deterministically.
 
 > Glass-box rule of thumb for the team: *if you put a number on screen, you must be able to click it and see its equation, its data, and its confidence.* If you can't, it isn't ready.
+
+---
+
+## Appendix A — Module ⇄ Data-Source Traceability Matrix
+
+*(CR-008 Item 8 — added 2026-06-17. Addresses judges' ask: "include a table mapping each simulation module to its specific data source.")*
+
+**Programmatic source of truth:** `DATASET_TIERS` in [`packages/kernel/matrix_kernel/confidence.py`](../app/packages/kernel/matrix_kernel/confidence.py) is the authoritative ledger of dataset → confidence tier. The table below is generated from that registry + §3; if they drift, `confidence.py` wins.
+
+**Confidence tier key:** **H** = High (≤ 2yr vintage, full coverage, established method) · **M** = Medium (literature-calibrated, proxy, or partial coverage) · **L** = Low (heuristic, sparse, or unvalidated).
+
+---
+
+### Kernel & Persona Layer (shared foundation for all modules)
+
+| Equation / Role | Dataset ID | Description | INVENTORY Link | Tier |
+|---|---|---|---|---|
+| SUMO network (all modules) | `OSM-ILO` | OpenStreetMap Iloilo extract — roads, routes, POIs, heritage | [INVENTORY](../data/INVENTORY.md#osm-ilo) | **H** |
+| SUMO network (all modules) | `OVERTURE` | Overture Maps buildings + places + transportation | [INVENTORY](../data/INVENTORY.md#overture) | **H** |
+| SUMO network (all modules) | `SUMO-NET` | Derived network from OSM via netconvert (network physics) | [INVENTORY](../data/INVENTORY.md#osm-ilo) | **H** |
+| Persona pool (all modules) | `PERSONA-POOL` | ~500 commuter archetypes — Gemini Flash-Lite generated, bias-audited to mode-share anchor | [INVENTORY](../data/INVENTORY.md) | **H** |
+| Mode-share anchor (BEH-2, audit) | `Calderon2014` | Calderon 2014 Iloilo BRT study — literature mode-share ground-truth anchor | [INVENTORY](../data/INVENTORY.md#lit-calderon) | **M** |
+| Barangay socioeconomic (multi-module) | `CCHAIN` | Project CCHAIN — 20-yr barangay climate/socioeco/health, 180 Iloilo barangays | [INVENTORY](../data/INVENTORY.md#cchain) | **H** |
+
+---
+
+### Behavioral Module
+
+| Equation | Metric | Dataset IDs | Tier | Notes |
+|---|---|---|---|---|
+| **BEH-1** | Δ trips/day per corridor | `OSM-ILO`, `OVERTURE`, `PERSONA-POOL` | **H** | SUMO trajectory count — network physics |
+| **BEH-2** | Mode-share shift | `PERSONA-POOL`, `Calderon2014`, `CCHAIN` | **M** | Literature calibration (Calderon 2014) caps tier |
+| **BEH-3** | Peak saturation (V/C) | `SUMO-NET`, `OSM-ILO` | **H** | Volume/capacity from SUMO net; physics-based |
+| **BEH-4** | Facility demand redistribution | `Calderon2014` | **L** | Heuristic gravity model; per-kind constants PROVISIONAL (§3.6) |
+
+---
+
+### Ecological Module
+
+| Equation | Metric | Dataset IDs | Tier | Notes |
+|---|---|---|---|---|
+| **ECO-1** | Transport CO₂e Δ | `SUMO-NET` (VKT), `WHO-EMEP` | **H** | Established emission factors (WHO/EMEP 2023) |
+| **ECO-2** | Air-quality delta (PM₂.5) | `EMB`, `S5P-NO2` | **M** | Satellite proxy (S5P-NO2) caps tier; EMB is H but method is literature-calibrated |
+| **ECO-3** | Green-cover loss | `CCHAIN` (`esa_worldcover`), `WORLDCOVER` | **H** | Land-cover class-change detection |
+| **ECO-4** | Flood-exposure Δ | `CCHAIN` (`project_noah_hazards`), `LIPAD`, `DEM` | **M** | Inputs are H; population-redistribution method is literature-calibrated → `method_capped_confidence` caps at M |
+
+---
+
+### Social Module
+
+| Equation | Metric | Dataset IDs | Tier | Notes |
+|---|---|---|---|---|
+| **SOC-1** | Equity-weighted access | `CCHAIN` (RWI + health isochrones), `NHFR` | **M** | Inputs are H; equity-weighted access method is literature-calibrated → `method_capped_confidence` caps at M |
+| **SOC-2** | Displacement risk count | `CCHAIN` (`osm_poi_*`), `OSM-ILO` | **M** | `_VENDORS_PER_CLOSED_LANE = 12` proxy — PROVISIONAL (§3.6) |
+| **SOC-3** | Distributional split | `CCHAIN` (RWI), `WorldPop` | **M** | Per-decile split by barangay (`PRD-F17`) |
+
+---
+
+### Economic Module
+
+| Equation | Metric | Dataset IDs | Tier | Notes |
+|---|---|---|---|---|
+| **ECON-1** | Land-value Δ (≤ 1 km) | `BIR-ZV`, `CCHAIN` (RWI) | **M** | BIR DO17-2021 zonal schedule (5,680 priced entries); `_PHP_PER_TRIP_PROXY = ₱50` PROVISIONAL (§3.6) |
+| **ECON-2** | Footfall Δ per zone | `PERSONA-POOL`, `OVERTURE` (places) | **M** | Dwell/pass counts from trajectories |
+| **ECON-3** | Employment Δ | `PSA-ASPBI`, `PSA-OpenStat` | **M** | ADB/NEDA multiplier + PSA ASPBI 2022 |
+
+---
+
+### Societal Module
+
+| Equation | Metric | Dataset IDs | Tier | Notes |
+|---|---|---|---|---|
+| **SOCI-1** | Societal composite | *(all sub-scores below)* | **M** | Weighted average of SOCI-2..4 |
+| **SOCI-2** | Heritage proximity | `NHCP`, `OSM-ILO` (heritage tags) | **M** | 117 OSM heritage nodes + NHCP declared sites |
+| **SOCI-3** | Health-exposure proxy | *(ECO-2 output)*, `WorldPop` | **M** | `_GENERIC_POP_DENSITY` sourced PSA 2020 CPH: 5,843 persons/km² (CR-007 PR 7); method is proxy |
+| **SOCI-4** | Walkability Δ | `OSM-ILO` (bike/sidewalk), `TSSP-2019` | **M** | Macalalag/TSSP bike-infrastructure factors |
+
+---
+
+### Knowledge Base / RAG Corpus (GraphRAG, PRD-F9)
+
+| Corpus Document | Dataset / Source ID | Role in System | Tier |
+|---|---|---|---|
+| Calderon 2014 BRT study | `LIT-CALDERON` (`Calderon2014`) | Mode-share anchor + VAL-01 validation fixture + GraphRAG corpus | **M** |
+| TSSP 2019 bicycle study | `LIT-BIKE19` (`TSSP-2019`) | Walkability factors (SOCI-4) + GraphRAG corpus | **M** |
+| PSA Population GIS 2021 | `LIT-POPGIS` | Spatial population context for RAG disambiguation | **H** |
+| OSM Iloilo place context | `OSM-ILO` | Location disambiguation for orchestrator (Hiligaynon/colloquial terms) | **H** |
+| CCHAIN barangay summaries | `CCHAIN` | Socioeconomic context for orchestrator + synthesis grounding | **H** |
+
+---
+
+### Cross-Reference
+
+- **PRD-F14 (Glass-box traceability):** this appendix is the static read of what Inspect shows on click.
+- **DATASET_TIERS ledger (authoritative):** [`confidence.py`](../app/packages/kernel/matrix_kernel/confidence.py#L23-L50)
+- **Per-equation equations + inputs:** [§3 Equation Registry](#3-equation-registry-per-dimension) above
+- **Data manifest + confidence status:** [data/INVENTORY.md](../data/INVENTORY.md)
+- **PROVISIONAL constants:** [§3.6](#36-provisional-proxy-constants-milestone-a-ratified-cr-007-pr-6)
+

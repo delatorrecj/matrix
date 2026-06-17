@@ -52,7 +52,7 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 | PRD-F10 | **PWA companion (GPS traces)** | Mobile-first opt-in collection of cyclist/jeepney-rider traces to refine behavioral calibration. | Could-Have |
 | PRD-F11 | **Bilingual prompting** | Persona prompts in English + Filipino + Hiligaynon to surface vernacular decision logic. | Could-Have |
 | PRD-F12 | **Multi-city scaling demo** | Swap OSM bbox + reweight persona archetypes for one additional ASEAN city (Jakarta/Bangkok). | Could-Have |
-| PRD-F14 | **Glass-box traceability** | Every output drills down to its number, equation, data source, references, assumptions, and confidence — no black box. Backed by [methods-matrix.md](methods-matrix.md). | Must-Have |
+| PRD-F14 | **Glass-box traceability** | Every output drills down to its number, equation, data source, references, assumptions, and confidence — no black box. Backed by [methods-matrix.md](methods-matrix.md); consolidated module→data mapping in [methods-matrix.md Appendix A](methods-matrix.md#appendix-a--module--data-source-traceability-matrix) (CR-008 Item 8). | Must-Have |
 | PRD-F15 | **Earned-confidence ensemble** | Monte-Carlo / sensitivity over uncertain assumptions → the confidence *range* is computed, not just labeled. | Must-Have |
 | PRD-F16 | **Multi-alternative comparison & ranking** | Compare 2–3 candidate sites/designs and rank them — decision support, not single-scenario. | Should-Have |
 | PRD-F17 | **Distributional equity output** | Who gains/loses by income decile & barangay (CCHAIN Relative Wealth Index). | Should-Have |

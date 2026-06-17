@@ -18,6 +18,9 @@ dependencies = [
     "psycopg[binary]>=3.3.4",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "httpx", "anyio"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
