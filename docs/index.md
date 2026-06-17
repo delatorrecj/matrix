@@ -2,7 +2,7 @@
 
 **Project slug:** `matrix`
 **Maintained by:** Carlos Jerico Dela Torre (Team ATLAN)
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-17
 
 ---
 
@@ -63,7 +63,8 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 | CR ID | File | Title | Status | Date |
 |-------|------|-------|--------|------|
 | CR-006 | [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) | Beyond the Hackathon — product-hardening pivot (PRs #1–#17) | Applied | 2026-06-14 |
-| CR-007 | [cr-007-close-the-loop.md](cr-007-close-the-loop.md) | Close the loop — connect the shipped batch end-to-end (review + plan; PR 1 = scenario seam + geometry) | In progress | 2026-06-16 |
+| CR-007 | [cr-007-close-the-loop.md](cr-007-close-the-loop.md) | Close the loop — connect the shipped batch end-to-end (all 10 PRs P0–P4 merged) | Applied | 2026-06-17 |
+| CR-008 | [cr-008-judges-feedback.md](cr-008-judges-feedback.md) | ASEAN judges' feedback remediation — implementation plan for the 9 asks (ground-truth, informal sector, bias-auditor example, low-confidence, extreme events, CPDO feedback, Hiligaynon gazetteer, traceability table, RAG) | In progress | 2026-06-17 |
 
 ---
 
@@ -71,6 +72,7 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 
 | CR ID | Date | Summary | Trigger doc | Docs touched | File |
 |-------|------|---------|-------------|--------------|------|
+| CR-008 | 2026-06-17 | **ASEAN judges' feedback remediation — implementation plan.** Opened the `dev` branch and authored a file-level plan ([cr-008-judges-feedback.md](cr-008-judges-feedback.md)) addressing the 9 judge asks: (1) ground-truth comparison [VAL-01/02], (2) informal-sector modeling [tricycle routing + vendor economics], (3) bias-auditor worked example + **reweight math** (currently flags but does not rebalance — gap), (4) low-confidence trigger + alert protocol, (5) extreme-event resilience [flood/closure], (6) **new PRD-F20** CPDO feedback loop, (7) **Hiligaynon gazetteer** (colloquial→GIS node; none exists today), (8) module⇄data-source traceability appendix, (9) RAG setup/ingestion elaboration (no build script today). Maps 8/9 asks onto existing PRD features; flags Locked-doc edits (methods/prd/sdd) for governance. Branch audit: all 19 remaining remote branches confirmed merged into `main` (stale, undeleted). **No code/doc content shipped yet — plan only.** | ASEAN judges' feedback | cr-008 (new), this index | [cr-008-judges-feedback.md](cr-008-judges-feedback.md) |
 | CR-001 | 2026-06-03 | Phase 0: scaffolded `app/` (nested in this repo, not a separate monorepo); acquired BIR DO17-2021 + FIES 2023 + ASPBI 2022 economic data; **Locked PRD + SDD + methods-matrix**. | implementation-plan-matrix.md | prd, sdd, methods, build, README, CLAUDE, INVENTORY, READINESS, this index | (logged here) |
 | CR-002 | 2026-06-04 | Refreshed the gated plan for **solo-dev mode** (owners paused, Track B parallelism deferred, code-state + solo-dev capacity risk noted); added the **file-level critical-path plan**; improved root [CLAUDE.md](../CLAUDE.md) (accurate `uv` test commands + a "Working in `app/`" code-orientation section). | implementation-plan-matrix.md | implementation-plan-matrix, implementation-plan-critical-path, CLAUDE, this index | (logged here) |
 | CR-003 | 2026-06-04 | **Progress reconciliation:** synced gated plan + INVENTORY to on-disk reality (BIR ZV `.xls` downloaded + parsed → 5,680 entries; Phase 1 ~70% done; SUMO Stage 1 built). **Upgraded `ECON-1` confidence L→M** in [methods-matrix §3.4](methods-matrix.md) now that BIR-ZV is acquired — **Locked-doc edit applied.** | implementation-plan-matrix.md | implementation-plan-matrix, INVENTORY, methods, this index | (logged here) |
