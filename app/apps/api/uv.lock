@@ -1156,6 +1156,7 @@ dependencies = [
     { name = "matrix-kernel" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
 ]
@@ -1179,6 +1180,7 @@ requires-dist = [
     { name = "pydantic" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "websockets" },
 ]

@@ -106,14 +106,14 @@ Inputs reference [INVENTORY](../data/INVENTORY.md) IDs. Equations are versioned;
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
 | SOC-1 | Equity-weighted access | `A = Σ_b w_b · Δaccess_b`, `w_b = inverse income decile` | CCHAIN RWI + health isochrones, NHFR | index | M (`method_capped_confidence`: inputs CCHAIN/NHFR are H, but equity-weighted access method is literature-calibrated → caps at M; CR-007 PR 6) |
-| SOC-2 | Displacement risk count | informal workers/vendors within impact buffer | CCHAIN `osm_poi_*`, OSM-ILO | count | M |
+| SOC-2 | Displacement risk count | informal workers/vendors within impact buffer | CCHAIN `osm_poi_*`, OSM-ILO | count | M (Uses PROVISIONAL `_VENDORS_PER_CLOSED_LANE` proxy and `vendor_footfall_exposure` helper) |
 | SOC-3 | Distributional split (`PRD-F17`) | win/lose by income decile & barangay | CCHAIN RWI, WorldPop | per-decile | M |
 
 ### 3.4 Economic
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
 | ECON-1 | Land-value Δ (≤1 km) | `ΔLV = LV_base · uplift(Δaccessibility)` (range) | **BIR-ZV** (✅ manual XLS), CCHAIN RWI | PHP range | M |
-| ECON-2 | Footfall Δ per zone | dwell/pass counts from trajectories | persona pool, OVERTURE places | visits/day | M |
+| ECON-2 | Footfall Δ per zone | dwell/pass counts from trajectories | persona pool, OVERTURE places | visits/day | M (Tracks informal sector exposure via `tricycle` mode footfall and `vendor_footfall_exposure`) |
 | ECON-3 | Employment Δ | `direct + indirect(multiplier) − displaced` | PSA-ASPBI/OpenStat, ADB/NEDA multiplier | jobs | M |
 
 ### 3.5 Societal
@@ -138,6 +138,13 @@ a specific Iloilo measurement; they are order-of-magnitude placeholders declared
 | `_PHP_PER_TRIP_PROXY` | `modules/economic.py` | ₱50.0 / trip | ECON-1 land-value Δ | BIR-ZV zonal schedule uplift curve (`ΔLV = LV_base × uplift(Δaccessibility)`) |
 | `_VENDORS_PER_CLOSED_LANE` | `modules/social.py` | 12 vendors | SOC-2 displacement risk | CCHAIN `osm_poi_*` impact-buffer count |
 | `_GENERIC_POP_DENSITY` | `modules/societal.py` | 5,843 persons/km² (PSA 2020 CPH Iloilo City: 457,626 persons / 78.34 km²; city-wide average; updated CR-007 PR 7) | SOCI-3 health-exposure proxy | Per-zone WorldPop density wired into the kernel |
+
+### 3.7 Extreme-Event Resilience (CR-008 Item 5)
+
+When users specify extreme events (e.g., natural disasters like floods), MATRIX translates these GeoJSON hazard extents into physical network closures via a deterministic `flood_scenario` helper.
+- **Physical Effect:** Edges whose geometry intersects the hazard layer are closed. The SUMO baseline reroutes around the closed subset.
+- **Exposure Metric:** ECO-4 calculates the number of persons in the hazard footprint based on underlying CCHAIN/LIPAD/DEM grids.
+- **Ground-Truth Validation:** The system maintains a specific VAL-02 gate comparing simulated flood closures against actual satellite records (e.g., Copernicus GFM Sentinel-1 extents).
 | `FACILITY_PROFILES` | `demand_delta.py` | per-kind `trips_per_capacity`, `redirected_fraction`, `catchment_radius_m` | BEH-4 (all kinds) | Local travel-survey calibration per facility kind |
 
 ---
@@ -205,8 +212,8 @@ The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index 
 
 | Check | Method | Target | Status |
 |---|---|---|---|
-| Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | planned (QAD) |
-| Flood redistribution | back-test vs **2024 Iloilo flood** extent (Sentinel-1 GFM) | spatial overlap (IoU) | planned (QAD) |
+| Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | **WITHHELD** (Uncalibrated demand proxy vs ground-truth) |
+| Flood redistribution | back-test vs **2024 Iloilo flood** extent (Sentinel-1 GFM) | spatial overlap (IoU) | **PROVISIONAL** (Computed vs placeholder fixture) |
 | Mode-share anchor | generated vs ground-truth ±3% | within band | enforced (bias auditor) |
 
 ---

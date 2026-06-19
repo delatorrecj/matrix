@@ -66,7 +66,8 @@ KERNEL_DATA = Path(__file__).resolve().parent.parent / "data"
 #     in the process environment before starting the API. config.py validates the sum
 #     and rejects invalid anchors. The bias auditor will enforce the new anchor at ±3%.
 ILOILO_MODE_SHARE: dict[str, float] = {
-    "jeepney": 0.55,
+    "jeepney": 0.50,
+    "tricycle": 0.05,
     "private_car": 0.15,
     "motorcycle": 0.15,
     "walk": 0.10,

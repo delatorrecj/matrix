@@ -130,6 +130,17 @@ graph TD
 | `max_delta` | NUMERIC | No | — | — | ±3% threshold |
 | `reweighted` | BOOL | No | — | — | did it trigger reweighting |
 
+**Table: `planner_feedback`** *(CPDO iterative feedback loop — `PRD-F20`)*
+
+| Column | Type | Null? | Key / Index | Constraint |
+|--------|------|-------|-------------|------------|
+| `id` | UUID | No | PK | — |
+| `run_id` | TEXT | No | FK → `simulation_runs.id` | ON DELETE CASCADE |
+| `equation_id` | TEXT | No | — | the dimension equation |
+| `verdict` | TEXT | No | — | CHECK in ('plausible', 'implausible') |
+| `note` | TEXT | No | — | — |
+| `observed_value` | NUMERIC | Yes | — | optional ground-truth candidate |
+
 **Table: `run_trace`** *(decision/AI trace — glass-box `PRD-F14`; backs [methods-matrix.md](methods-matrix.md) §4)*
 
 | Column | Type | Null? | Key | Constraint |
@@ -171,6 +182,8 @@ graph TD
 | `GET` | `/baseline` | current nightly baseline metadata |
 | `GET` | `/audit/{run_id}` | public bias audit log (`PRD-F6`) |
 | `POST` | `/report/{run_id}` | generate PDF recommendation (`PRD-F7`) |
+| `POST` | `/feedback` | submit planner feedback for a dimension result (`PRD-F20`) |
+| `GET` | `/feedback` | retrieve planner feedback for a run (`PRD-F20`) |
 
 **External integrations:**
 

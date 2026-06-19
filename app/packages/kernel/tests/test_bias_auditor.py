@@ -73,17 +73,18 @@ def test_reweight_pool_brings_skew_within_tolerance():
             self.mode = mode
 
     # We must have at least one of every target mode so they can be sampled!
-    # Target: jeepney 0.55, private_car 0.15, motorcycle 0.15, walk 0.1, bicycle 0.05
+    # Target: jeepney 0.50, tricycle 0.05, private_car 0.15, motorcycle 0.15, walk 0.1, bicycle 0.05
     # Pool size = 1000
     pool = (
-        [MockPersona("private_car") for _ in range(500)] +
+        [MockPersona("private_car") for _ in range(450)] +
         [MockPersona("jeepney") for _ in range(250)] +
         [MockPersona("motorcycle") for _ in range(125)] +
         [MockPersona("walk") for _ in range(75)] +
-        [MockPersona("bicycle") for _ in range(50)]
+        [MockPersona("bicycle") for _ in range(50)] +
+        [MockPersona("tricycle") for _ in range(50)]
     )
     observed = observed_mode_share(pool)
-    assert observed["private_car"] == 0.50
+    assert observed["private_car"] == 0.45
 
     resampled, factors = reweight_pool(observed, ILOILO_MODE_SHARE, pool, seed=42)
     assert len(resampled) == 1000  # preserves size

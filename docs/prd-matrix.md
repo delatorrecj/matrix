@@ -58,6 +58,7 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 | PRD-F17 | **Distributional equity output** | Who gains/loses by income decile & barangay (CCHAIN Relative Wealth Index). | Should-Have |
 | PRD-F18 | **Validation & calibration** | Back-test vs Calderon 2014 BRT (RMSE) + 2024 Iloilo flood; surfaced in-product. | Should-Have |
 | PRD-F19 | **Compound-shock resilience scenarios** | "Project + 25-year flood" using NOAH/LiPAD hazard layers. | Could-Have |
+| PRD-F20 | **Planner feedback loop** | Iterative mechanism for CPDO staff to flag implausible results and provide observations (CR-008 Item 6). | Should-Have |
 | PRD-F13 | **Voice input · public read-only API · AI-suggested scenarios · federated learning** | Tier-3 stretch capabilities. | Won't-Have (v1) |
 
 ---
@@ -94,6 +95,17 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 
 **US-07 — Inspect the bias audit log** *(PRD-F6)*
 - Given a persona batch, when the bias auditor runs, then the resulting mode-share vs ground-truth comparison is recorded in a publicly viewable audit log; deviations beyond ±3% are shown as having triggered reweighting.
+
+**US-08 — Compound-shock resilience scenarios** *(PRD-F19)*
+> As an LGU planner, I want to simulate extreme natural events like a 25-year flood so that I can see the compound shocks to mobility and exposure.
+
+- Given a GeoJSON flood hazard layer, when I drop it on the map, then MATRIX closes the physical road segments within the extent, routes agents around it, and computes the population exposure via the Ecological module.
+
+**US-09 — Provide iterative planner feedback** *(PRD-F20)*
+> As a CPDO planner, I want to flag implausible results and provide ground-truth observations so that the model can be iteratively refined without losing traceability.
+
+- Given a completed scenario result, when I view a specific dimension, then I can submit a feedback rating (plausible/implausible), a note, and an optional observed value.
+- Given submitted feedback, when I view the scenario again, then my feedback is persisted and visible to operators for triage into candidate validation fixtures.
 
 ---
 

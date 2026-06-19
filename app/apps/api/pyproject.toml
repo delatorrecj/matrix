@@ -16,6 +16,9 @@ dependencies = [
     # Persistence (matrix_api/db.py): psycopg3. Lazy-imported -- the in-memory
     # fallback keeps the API running without it. Pin matches packages/kernel.
     "psycopg[binary]>=3.3.4",
+    # Auto-load .env files at startup so API keys and config are always available
+    # without manual `$env:VAR=...` exports. Searched from CWD upward.
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

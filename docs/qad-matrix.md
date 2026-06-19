@@ -56,6 +56,7 @@ python scripts/seed_reference_scenarios.py                              # 8 cann
 | H-08 | **Inspect any number** | drawer shows equation + inputs→datasets + assumptions + confidence + refs | PRD-F14 |
 | H-09 | Add + rank 3 alternatives | A/B/C ranked consistently | PRD-F16 |
 | H-10 | Equity view | winners/losers by decile & barangay | PRD-F17 |
+| H-11 | Extreme event / flood hazard | GeoJSON resolves to closures, 5-dim scores update correctly | PRD-F19 |
 
 ### Sad Paths
 
@@ -148,6 +149,15 @@ Tracking: GitHub Issues, `bug/P0`…`bug/P3`.
 ## 8. Simulation Validation & Traceability Gates *(MATRIX-specific, release-blocking)*
 
 These are the gates that make MATRIX defensible — *the* answer to a judge's "how do you know it's right, and how do I trace it?"
+
+### 8.1 Ground-Truth Comparison (CR-008 Item 1)
+To prove predictive reliability, the kernel runs automated back-tests against two historical Iloilo ground-truth benchmarks:
+- **VAL-01 (Calderon 2014):** Compares MATRIX passenger-flow proxies against the Calderon et al. BRT model for the Ungka-Iloilo corridors. *Status:* Currently **WITHHELD** (reporting `NOT_RUN` with an honest reason) because the current synthetic demand puts the corridor proxy ~an order of magnitude above the Calderon maxima. The gate code exists, but passing it requires the FOI'd LTFRB survey (CR-007 PR 9) to calibrate mode-share.
+- **VAL-02 (2024 Iloilo Flood):** Compares simulated flood closures against actual 2024 closed road segments using length-weighted IoU. *Status:* Currently **PROVISIONAL** (reporting a pass against a placeholder) until the Copernicus Sentinel-1 GFM extent is acquired.
+
+The status of these gates is constantly emitted in `validation_report.json` and served to the UI. We NEVER massage demand to force a pass. An honest withhold is preferred over fabricated validation.
+
+### 8.2 The Gates
 
 | ID | Gate | Method | Pass criterion |
 |----|------|--------|----------------|

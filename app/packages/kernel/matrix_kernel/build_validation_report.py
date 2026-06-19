@@ -8,8 +8,8 @@ validated — MATRIX produces edge passenger-flow proxies but models no route tr
 fixture's ``passenger_transfer_max`` points are out of the kernel's scope (not mapped to edge
 flows; PRD-F14).
 
-VAL-02 (2024 flood IoU) stays NOT_RUN: its fixture is PROVISIONAL (no sourced Sentinel-1 extent)
-and there is no live flood-closure run wired here.
+VAL-02 (2024 flood IoU): computed via the new `flood_closures_from_geojson` helper against a placeholder
+GeoJSON extent, keeping the gate PROVISIONAL but physically wired.
 
 Run (kernel venv, Redis up with a seeded baseline — `run_nightly_baseline()`):
     uv run python -m matrix_kernel.build_validation_report
@@ -34,6 +34,7 @@ from matrix_kernel.validation import (
     load_fixture,
     run_validation_gates,
     simulated_corridor_flows_from_baseline,
+    flood_closures_from_geojson,
     write_validation_report,
 )
 
@@ -86,6 +87,15 @@ def calderon_corridor_edges(
 def generate() -> dict:
     """Build the report dict: live VAL-01 if the net+baseline are available, else NOT_RUN.
     VAL-02 is always NOT_RUN here (PROVISIONAL fixture / no live flood run)."""
+    
+    # CR-008 Item 5: Wire VAL-02 flood helper
+    placeholder_flood = {
+        "type": "Polygon",
+        "coordinates": [[[122.54, 10.70], [122.58, 10.70], [122.58, 10.74], [122.54, 10.74], [122.54, 10.70]]]
+    }
+    flood_closures = flood_closures_from_geojson(placeholder_flood)
+    print(f"[val-02] simulated flood closures (placeholder extent): {len(flood_closures)} segments closed", file=sys.stderr)
+
     try:
         mapping = calderon_corridor_edges()
     except Exception as exc:  # net missing/unnamed, bad mapping — honest NOT_RUN
@@ -99,6 +109,7 @@ def generate() -> dict:
 
     print(f"[val-01] simulated corridor flows (live-baseline): "
           + ", ".join(f"{k}={v:.1f}" for k, v in flows.items()))
+
     return run_validation_gates(
         calderon_simulated=flows,
         calderon_source="live-baseline:redis (peak per-edge veh/h x 14 pax/veh proxy)",
@@ -106,15 +117,32 @@ def generate() -> dict:
     )
 
 
+def write_markdown_artifact(report: dict, md_path: Path):
+    lines = [
+        "# MATRIX Validation Ledger\n",
+        f"**Generated:** {report['generated_at']} | **Kernel:** {report['kernel']}\n",
+        "| Gate | Description | Status | Value | Threshold |",
+        "|---|---|---|---|---|"
+    ]
+    for g in report["gates"]:
+        status = f"**{g['status']}**" if g["status"] != "NOT_RUN" else "*WITHHELD/PROVISIONAL*"
+        val = f"{g['value']} {g['metric']}" if g["value"] is not None else "—"
+        lines.append(f"| {g['gate_id']} | {g['name']} | {status} | {val} | {g['comparator']} {g['threshold']} |")
+    
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+
 def main() -> int:
     report = generate()
     path = write_validation_report(report, REPORT_PATH)
+    md_path = REPORT_PATH.with_suffix(".md")
+    write_markdown_artifact(report, md_path)
+    
     for g in report["gates"]:
         line = f"  {g['gate_id']}: {g['status']}"
         if g["value"] is not None:
             line += f"  {g['metric']}={g['value']} (threshold {g['comparator']} {g['threshold']})"
         print(line)
-    print(f"[ok] wrote {path}")
+    print(f"[ok] wrote {path} and {md_path}")
     return 0
 
 
