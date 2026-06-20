@@ -11,7 +11,11 @@
 #   clone does not have. Expected kernel result in CI: ~20 passed, 3 skipped (the documented
 #   "SUMO up, Redis down" mode — see CLAUDE.md / docs/qad-matrix.md). If a CI-seedable
 #   fixture ever lands, add `services: redis: image: redis:7` back to the kernel job.
-# * No Playwright in CI — the e2e suite needs a live API + seeded data. Unit tests only.
+# * Playwright e2e runs against a MOCKED backend (page.route / page.routeWebSocket in
+#   tests/e2e/_mock-backend.ts) — hermetic, so it needs only the Next.js server, no API/
+#   Redis/SUMO. A *full-stack* e2e (live API + seeded data) still does not run here: it
+#   waits on a SUMO-free seed fixture (the same one that would un-skip the kernel/api
+#   integration tests). Until then, e2e covers the frontend render/stream path only.
 # * `uv sync --locked` is strict on purpose: PRs that change a pyproject.toml must also
 #   re-lock, or CI fails. Both lockfiles were verified fresh when this workflow landed.
 
@@ -134,3 +138,44 @@ jobs:
       # WS URL is currently hardcoded — see app/.env.example notes).
       - name: Build
         run: npm run build
+
+  e2e:
+    name: web e2e (playwright, mocked backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app/apps/web
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Node 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Browser binary + its OS libs. --with-deps runs apt for Chromium's shared libs.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config webServer runs `npm run start`, so build the prod server first.
+      - name: Build
+        run: npm run build
+
+      # Hermetic: the backend is mocked in-test (page.route / page.routeWebSocket).
+      - name: e2e (Playwright)
+        run: npm run test:e2e
+
+      # Keep the HTML report (and traces on first-retry) even when the suite fails.
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: app/apps/web/playwright-report/
+          retention-days: 7
