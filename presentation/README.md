@@ -1,47 +1,45 @@
 # MATRIX — Pitch presentation
 
-A self-contained HTML pitch deck for the **ASEAN AI Hackathon 2026** (Smart Cities track) and its
-PDF export path. No build step, no CDN, no `node_modules` to run the deck — open the HTML.
+The pitch deck for the **ASEAN AI Hackathon 2026** (Smart Cities track), built from code with
+[python-pptx](https://python-pptx.readthedocs.io/) so every slide is reproducible and version-controlled.
+
+> **History:** this folder previously held a self-contained HTML deck (`deck/index.html` +
+> `styles.css`, exported to PDF via Playwright). That pipeline was retired in favor of a native
+> `.pptx` so the deck opens and edits in PowerPoint/Google Slides like the judges expect. The old
+> HTML files are recoverable from git history if ever needed.
 
 ```
 presentation/
   deck/
-    index.html        # the deck (all slides inline; arrow-key / click nav; print-optimized)
-    styles.css        # MATRIX design system (dark pitch theme; DSD 5-dimension palette)
+    build_deck.py   # the generator (python-pptx) — builds all slides on the AAIH brand chrome
+    _assets/        # brand chrome consumed by the build: bg*.png + logo_*.png (tracked)
+    Smart Cities_PUP_ATLAN_PitchDeck.pptx   # generated output (tracked deliverable)
+    # PPT Template AAIH (student).pptx       # AAIH source template — git-ignored heavy reference
   assets/
-    README.md         # what screenshots to drop in (deck degrades to styled placeholders if absent)
-  scripts/
-    export-pdf.mjs    # Playwright (headless Chromium) → matrix-pitch.pdf (one slide per page)
-    capture-shots.mjs # optional: capture real-app screenshots from a running apps/web
-  walkthrough.md      # slide-by-slide narration + the 90-second live-demo run-of-show
+    README.md       # legacy screenshot drop-in notes (from the old HTML deck)
+  walkthrough.md    # slide-by-slide narration + the 90-second live-demo run-of-show
   CONTENT-OUTLINE.md  # the scrutinized/debunked/refined content rationale
+  DESIGN-NOTES.md     # design discipline (taste-skill dials, DSD palette, no fake precision)
 ```
 
-## View the deck
-Open `deck/index.html` in any modern browser. Navigation:
-- **→ / Space / click** next · **←** previous · **F** fullscreen · **P** or `Ctrl/Cmd+P` print.
-- Slide counter is bottom-right; a thin progress bar runs along the top.
+## Build the deck
+From this folder, regenerate `Smart Cities_PUP_ATLAN_PitchDeck.pptx` from source:
 
-## Export to PDF
-The deck's print stylesheet renders **one slide per page** (16:9), so any of these work:
-
-1. **Browser (simplest):** open `deck/index.html`, `Ctrl/Cmd+P`, "Save as PDF", layout **Landscape**, margins **None**, **enable "Background graphics."**
-2. **Scripted (deterministic):** from a place where Playwright's Chromium is installed (e.g. `app/apps/web`, which already depends on Playwright):
-   ```bash
-   node presentation/scripts/export-pdf.mjs            # writes presentation/matrix-pitch.pdf
-   # if playwright isn't found: cd app/apps/web && npx playwright install chromium, then re-run
-   ```
-
-## Real-app screenshots (recommended for the Proof slide)
-The deck shows real UI where possible. To capture from the running app:
 ```bash
-cd app && docker compose up -d            # datastores
-cd app/apps/api && uvicorn matrix_api.main:app --reload   # API + WS
-cd app/apps/web && npm install && npm run dev             # http://localhost:3000
-node presentation/scripts/capture-shots.mjs               # writes into presentation/assets/
+pip install python-pptx
+cd presentation/deck
+python build_deck.py        # writes Smart Cities_PUP_ATLAN_PitchDeck.pptx next to the script
 ```
-If a screenshot file is missing, the deck renders a labeled placeholder — nothing breaks.
+
+The canvas is 20in × 12.5in (16:10, matching the AAIH template). All content — text, shapes, the
+5-dimension palette, logos — is emitted programmatically from `build_deck.py` reading `_assets/`;
+there is no manual slide editing step.
 
 ## Editing
-All content lives in `deck/index.html` as `<section class="slide">` blocks; styling in `styles.css`.
-Keep the honesty discipline: every number on a slide is either sourced or labeled *directional / target / planned*. See [CONTENT-OUTLINE.md](CONTENT-OUTLINE.md).
+Edit slides in `build_deck.py` and re-run it, or open the generated `.pptx` directly in PowerPoint /
+Google Slides for last-mile tweaks. If you hand-edit the `.pptx`, fold the change back into
+`build_deck.py` so the source of truth stays runnable.
+
+Keep the honesty discipline: every number on a slide is either sourced or explicitly labeled
+*directional / target / planned*. See [CONTENT-OUTLINE.md](CONTENT-OUTLINE.md) for the rationale and
+[walkthrough.md](walkthrough.md) for the run-of-show.
