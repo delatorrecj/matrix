@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8099", "--directory", "presentation/deck"],
       "port": 8099
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "app/apps/web", "run", "dev"],
+      "port": 3000
     }
   ]
 }
