@@ -34,6 +34,7 @@ import secrets
 import threading
 import time
 from collections import deque
+from collections.abc import Callable
 
 from fastapi import HTTPException, status
 from starlette.requests import HTTPConnection
@@ -120,9 +121,18 @@ class SlidingWindowLimiter:
     """In-memory per-key sliding window. No external deps, process-local by design
     (one uvicorn process for the pilot; swap for Redis if the API ever scales out)."""
 
-    def __init__(self, window_seconds: float = RATE_WINDOW_SECONDS, max_buckets: int = 4096) -> None:
+    def __init__(
+        self,
+        window_seconds: float = RATE_WINDOW_SECONDS,
+        max_buckets: int = 4096,
+        time_func: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._window = window_seconds
         self._max_buckets = max_buckets
+        # Injectable clock so tests drive expiry deterministically. Default is
+        # time.monotonic (note: ~15.6ms resolution on Windows -- fine for a 60s
+        # production window, too coarse for a sub-second test window + sleep).
+        self._now = time_func
         self._hits: dict[str, deque[float]] = {}
         self._lock = threading.Lock()
 
@@ -130,7 +140,7 @@ class SlidingWindowLimiter:
         """Record one hit. Returns None if allowed, else whole seconds to wait (Retry-After)."""
         if limit <= 0:
             return None
-        now = time.monotonic()
+        now = self._now()
         with self._lock:
             bucket = self._hits.setdefault(key, deque())
             while bucket and now - bucket[0] >= self._window:

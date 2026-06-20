@@ -8,8 +8,6 @@ extraction, fail-closed key validation, and the sliding-window rate limiter
 """
 from __future__ import annotations
 
-import time
-
 import pytest
 
 from matrix_api import auth
@@ -131,10 +129,14 @@ def test_limiter_buckets_are_per_key():
 
 
 def test_limiter_window_expires():
-    limiter = auth.SlidingWindowLimiter(window_seconds=0.05)
+    # Drive an injected clock instead of sleeping: time.monotonic has ~15.6ms
+    # resolution on Windows, so a real 50ms window + 60ms sleep flaked when the
+    # measured delta quantized below the window. A fake clock makes it exact.
+    clock = {"t": 1000.0}
+    limiter = auth.SlidingWindowLimiter(window_seconds=0.05, time_func=lambda: clock["t"])
     assert limiter.hit("k", 1) is None
-    assert limiter.hit("k", 1) is not None
-    time.sleep(0.06)
+    assert limiter.hit("k", 1) is not None  # still inside the window
+    clock["t"] += 0.06  # advance past the window -> the first hit ages out
     assert limiter.hit("k", 1) is None
 
 
