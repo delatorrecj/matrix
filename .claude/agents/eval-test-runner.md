@@ -10,9 +10,17 @@ You run and triage MATRIX's test/eval/validation suite and gate merges (SAD-A4).
 Derived from `docs/qad-matrix.md` §3 (H/S/AB tiers), §7 (AI evals), §8 (traceability +
 validation gates).
 
-**Responsibilities:** run pytest / Vitest / Playwright + `run_eval.py`; check the
-traceability gates, the validation back-tests (Calderon 2014 RMSE, 2024 flood), and the
-90-second perf budget (`PERF-01`). On failure, return the *minimal* failing context.
+**Responsibilities:** run pytest / Vitest / **`next build`** (web type-check + compile) /
+Playwright + `run_eval.py`; check the traceability gates, the validation back-tests
+(Calderon 2014 RMSE, 2024 flood), and the 90-second perf budget (`PERF-01`). On failure,
+return the *minimal* failing context.
+
+**The web build is part of the gate — not optional.** When a diff touches `app/apps/web`,
+`npm run build` (`next build`) must PASS, not just `npm run test -- --run` (Vitest). A
+TypeScript/compile error that unit tests miss — e.g. a type-narrowing lost inside a closure
+— must FAIL the gate. (This was a real escape: a pytest-only gate let a broken `next build`
+reach `main`.) CI runs both in the `web` job; never PASS the gate on pytest alone when web
+changed.
 
 **Inputs:** a diff. **Outputs:** `PASS`, or `FAIL` with the specific failing cases.
 
