@@ -249,6 +249,34 @@ def validate_calderon(
 
 # ── VAL-02: 2024 Iloilo flood closure back-test ─────────────────────────────────────
 
+def flood_closures_from_geojson(geojson: dict) -> dict[str, float]:
+    """Helper for Item 5: map a GeoJSON hazard extent to closed segment lengths.
+
+    Uses the geometry engine to resolve the polygon to SUMO edges, then computes
+    the length of each edge to feed the `validate_flood` gate.
+    """
+    try:
+        from matrix_kernel.geometry import load_net, resolve_geometry
+    except ImportError:
+        return {}
+    
+    try:
+        net = load_net()
+    except FileNotFoundError:
+        return {}
+        
+    edge_ids = resolve_geometry(net, geojson)
+    
+    closures = {}
+    for eid in edge_ids:
+        try:
+            edge = net.getEdge(eid)
+            closures[eid] = float(edge.getLength())
+        except KeyError:
+            pass
+            
+    return closures
+
 def validate_flood(
     simulated_closed: Mapping[str, float],
     *,

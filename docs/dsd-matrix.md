@@ -151,6 +151,7 @@ VISUAL_DENSITY:     7   (cockpit — five dimensions + map + controls)
 | Metric values not using `next/font` **tabular-nums** (numbers jitter on update) | to-check | dimension cards, timeline scrubber | apply tabular-nums to all numeric displays |
 | Motion without a `prefers-reduced-motion` guard | to-check | TripsLayer playback, result enter animations | gate all non-essential motion on the reduced-motion query |
 | **False-precision point estimates** shown instead of confidence-anchored ranges | to-check | economic / societal result cards | render ranges (e.g. "−₱8M to −₱14M"), never a single false-precise number |
+| **Low-confidence result rendered without visible trigger reason** (CR-008 Item 4) | to-check | dimension cards (L-tier results), Inspect drawer | Inspect drawer must print the specific capping factor (e.g. "Capped by: PROVISIONAL constant `_PHP_PER_TRIP_PROXY`") — not just the L chip; see [methods-matrix.md §2 Low-Confidence Protocol](methods-matrix.md#low-confidence-protocol) |
 
 ---
 

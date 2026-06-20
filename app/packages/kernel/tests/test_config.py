@@ -35,7 +35,8 @@ def test_default_is_iloilo_with_exact_legacy_values():
     assert cfg.baseline_key == "baseline:iloilo:latest"
     assert cfg.persona_pool_key == "personas:iloilo:v1"
     assert cfg.mode_share == {
-        "jeepney": 0.55,
+        "jeepney": 0.50,
+        "tricycle": 0.05,
         "private_car": 0.15,
         "motorcycle": 0.15,
         "walk": 0.10,

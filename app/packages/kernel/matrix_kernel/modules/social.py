@@ -25,6 +25,15 @@ from matrix_kernel.trajectory import Trajectory
 # this stand-in stays until that buffer count is wired. No source backs the literal.
 _VENDORS_PER_CLOSED_LANE = 12
 
+def vendor_footfall_exposure(delta_trips: float) -> float:
+    """Helper for Item 2: Compute footfall exposure for street vendors.
+    
+    PROVISIONAL: assumes each delta trip exposes exactly 0.2 vendors along
+    the corridor. Pending survey calibration.
+    """
+    return delta_trips * 0.2
+
+
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts

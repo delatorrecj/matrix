@@ -16,6 +16,14 @@ Run locally:  uvicorn matrix_api.main:app
 """
 from __future__ import annotations
 
+# ── Load .env BEFORE any import reads os.environ (Gemini key, DB URL, etc.) ─────
+# Searches upward from CWD so `app/.env` is found whether you start from
+# `app/apps/api/` or `app/`. The local `apps/api/.env` loads as an override.
+from dotenv import find_dotenv, load_dotenv as _load_dotenv
+
+_load_dotenv(find_dotenv(usecwd=True))   # app/.env  (or wherever the first hit is)
+_load_dotenv()                            # apps/api/.env (override — closer wins)
+
 import asyncio
 import json
 import logging
@@ -157,6 +165,28 @@ def get_audit(run_id: str) -> dict:
     if not entries:
         payload["note"] = "no audit entries recorded for this run"
     return payload
+
+
+class FeedbackInput(BaseModel):
+    run_id: str
+    equation_id: str
+    verdict: str
+    note: str = ""
+    observed_value: float | None = None
+
+@app.post("/feedback")
+def submit_feedback(feedback: FeedbackInput) -> dict:
+    """Submit feedback for a specific dimension result (PRD-F20)."""
+    if feedback.verdict not in ("plausible", "implausible"):
+        return JSONResponse(status_code=400, content={"error": "verdict must be plausible or implausible"})
+    feedback_id = db.save_planner_feedback(feedback.run_id, feedback.model_dump())
+    return {"status": "success", "feedback_id": feedback_id}
+
+@app.get("/feedback")
+def get_feedback(run_id: str) -> dict:
+    """Retrieve all feedback for a run."""
+    entries = db.get_planner_feedback(run_id)
+    return {"run_id": run_id, "entries": entries}
 
 @app.get("/validation")
 def get_validation() -> dict:

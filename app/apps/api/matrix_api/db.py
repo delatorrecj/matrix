@@ -57,7 +57,7 @@ _mem_scenarios: dict[str, dict[str, Any]] = {}
 _mem_runs: dict[str, dict[str, Any]] = {}
 _mem_results: dict[str, list[dict[str, Any]]] = {}
 _mem_audit: dict[str, list[dict[str, Any]]] = {}
-
+_mem_feedback: dict[str, list[dict[str, Any]]] = {}
 
 def _dsn() -> str:
     return os.environ.get("DATABASE_URL") or os.environ.get("MATRIX_PG_DSN") or _DEFAULT_DSN
@@ -567,5 +567,78 @@ def _reset_for_tests() -> None:
         _backend = None
         _mem_scenarios.clear()
         _mem_runs.clear()
-        _mem_results.clear()
         _mem_audit.clear()
+        _mem_feedback.clear()
+
+
+# ─── planner feedback (PRD-F20) ──────────────────────────────────────────────────────────
+
+
+def save_planner_feedback(run_id: str, feedback: dict[str, Any]) -> str:
+    """Save feedback from CPDO staff. Returns the feedback id."""
+    _ensure_init()
+    feedback_id = str(uuid.uuid4())
+    record = {
+        "id": feedback_id,
+        "run_id": run_id,
+        "equation_id": feedback["equation_id"],
+        "verdict": feedback["verdict"],
+        "note": feedback.get("note", ""),
+        "observed_value": feedback.get("observed_value"),
+        "created_at": _now_iso(),
+    }
+    if _backend == "postgres":
+        try:
+            return _pg_save_planner_feedback(record)
+        except Exception as exc:
+            _flip_to_memory(exc)
+    with _lock:
+        _mem_feedback.setdefault(run_id, []).append(record)
+    return feedback_id
+
+
+def _pg_save_planner_feedback(record: dict[str, Any]) -> str:
+    with _connect() as conn:
+        row = conn.execute(
+            "INSERT INTO planner_feedback (id, run_id, equation_id, verdict, note, observed_value, created_at)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (record["id"], record["run_id"], record["equation_id"], record["verdict"],
+             record["note"], record["observed_value"], record["created_at"]),
+        ).fetchone()
+        conn.commit()
+    return str(row[0])
+
+
+def get_planner_feedback(run_id: str) -> list[dict[str, Any]]:
+    """Retrieve all feedback for a run."""
+    _ensure_init()
+    if _backend == "postgres":
+        try:
+            return _pg_get_planner_feedback(run_id)
+        except Exception as exc:
+            _flip_to_memory(exc)
+    with _lock:
+        return [dict(f) for f in _mem_feedback.get(run_id, [])]
+
+
+def _pg_get_planner_feedback(run_id: str) -> list[dict[str, Any]]:
+    from psycopg.rows import dict_row
+
+    with _connect() as conn:
+        rows = conn.cursor(row_factory=dict_row).execute(
+            "SELECT id, run_id, equation_id, verdict, note, observed_value, created_at"
+            " FROM planner_feedback WHERE run_id = %s ORDER BY created_at, id",
+            (run_id,),
+        ).fetchall()
+    return [
+        {
+            "id": str(r["id"]),
+            "run_id": r["run_id"],
+            "equation_id": r["equation_id"],
+            "verdict": r["verdict"],
+            "note": r["note"],
+            "observed_value": r["observed_value"] if r["observed_value"] is not None else None,
+            "created_at": _iso(r["created_at"]),
+        }
+        for r in rows
+    ]

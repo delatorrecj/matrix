@@ -326,6 +326,46 @@ def test_audit_never_fabricated(client):
     assert "note" in body
 
 
+# ─── planner feedback (PRD-F20) ──────────────────────────────────────────────────────────
+
+
+def test_feedback_roundtrip(client):
+    scenario_id = db.save_scenario(_fake_scenario("scn-feedback"), raw_input="q")
+    run_id = db.save_run(scenario_id, status="done")
+
+    payload = {
+        "run_id": run_id,
+        "equation_id": "ECO-2",
+        "verdict": "implausible",
+        "note": "Traffic seems too high",
+        "observed_value": 42.0,
+    }
+    resp = client.post("/feedback", json=payload)
+    assert resp.status_code == 200
+    feedback_id = resp.json()["feedback_id"]
+
+    body = client.get(f"/feedback?run_id={run_id}").json()
+    assert body["run_id"] == run_id
+    assert len(body["entries"]) == 1
+    entry = body["entries"][0]
+    assert entry["id"] == feedback_id
+    assert entry["equation_id"] == "ECO-2"
+    assert entry["verdict"] == "implausible"
+    assert entry["note"] == "Traffic seems too high"
+    assert entry["observed_value"] == 42.0
+
+
+def test_feedback_invalid_verdict(client):
+    payload = {
+        "run_id": "r-1",
+        "equation_id": "BEH-1",
+        "verdict": "kinda-plausible",
+    }
+    resp = client.post("/feedback", json=payload)
+    assert resp.status_code == 400
+    assert "plausible" in resp.json()["error"]
+
+
 # ─── GET /validation ────────────────────────────────────────────────────────────────────
 
 

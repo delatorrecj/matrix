@@ -88,3 +88,16 @@ CREATE TABLE IF NOT EXISTS bias_audit_log (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS bias_audit_log_run_idx ON bias_audit_log (run_id);
+
+-- ─── planner_feedback — CPDO iterative feedback loop (PRD-F20; SDD §3) ──────────────────
+-- Allows CPDO staff to rate dimensions and provide corrections.
+CREATE TABLE IF NOT EXISTS planner_feedback (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id         TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
+    equation_id    TEXT NOT NULL,
+    verdict        TEXT NOT NULL CHECK (verdict IN ('plausible', 'implausible')),
+    note           TEXT NOT NULL DEFAULT '',
+    observed_value DOUBLE PRECISION,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS planner_feedback_run_idx ON planner_feedback (run_id);

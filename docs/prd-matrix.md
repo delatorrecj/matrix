@@ -52,12 +52,13 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 | PRD-F10 | **PWA companion (GPS traces)** | Mobile-first opt-in collection of cyclist/jeepney-rider traces to refine behavioral calibration. | Could-Have |
 | PRD-F11 | **Bilingual prompting** | Persona prompts in English + Filipino + Hiligaynon to surface vernacular decision logic. | Could-Have |
 | PRD-F12 | **Multi-city scaling demo** | Swap OSM bbox + reweight persona archetypes for one additional ASEAN city (Jakarta/Bangkok). | Could-Have |
-| PRD-F14 | **Glass-box traceability** | Every output drills down to its number, equation, data source, references, assumptions, and confidence — no black box. Backed by [methods-matrix.md](methods-matrix.md). | Must-Have |
+| PRD-F14 | **Glass-box traceability** | Every output drills down to its number, equation, data source, references, assumptions, and confidence — no black box. Backed by [methods-matrix.md](methods-matrix.md); consolidated module→data mapping in [methods-matrix.md Appendix A](methods-matrix.md#appendix-a--module--data-source-traceability-matrix) (CR-008 Item 8). | Must-Have |
 | PRD-F15 | **Earned-confidence ensemble** | Monte-Carlo / sensitivity over uncertain assumptions → the confidence *range* is computed, not just labeled. | Must-Have |
 | PRD-F16 | **Multi-alternative comparison & ranking** | Compare 2–3 candidate sites/designs and rank them — decision support, not single-scenario. | Should-Have |
 | PRD-F17 | **Distributional equity output** | Who gains/loses by income decile & barangay (CCHAIN Relative Wealth Index). | Should-Have |
 | PRD-F18 | **Validation & calibration** | Back-test vs Calderon 2014 BRT (RMSE) + 2024 Iloilo flood; surfaced in-product. | Should-Have |
 | PRD-F19 | **Compound-shock resilience scenarios** | "Project + 25-year flood" using NOAH/LiPAD hazard layers. | Could-Have |
+| PRD-F20 | **Planner feedback loop** | Iterative mechanism for CPDO staff to flag implausible results and provide observations (CR-008 Item 6). | Should-Have |
 | PRD-F13 | **Voice input · public read-only API · AI-suggested scenarios · federated learning** | Tier-3 stretch capabilities. | Won't-Have (v1) |
 
 ---
@@ -94,6 +95,17 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 
 **US-07 — Inspect the bias audit log** *(PRD-F6)*
 - Given a persona batch, when the bias auditor runs, then the resulting mode-share vs ground-truth comparison is recorded in a publicly viewable audit log; deviations beyond ±3% are shown as having triggered reweighting.
+
+**US-08 — Compound-shock resilience scenarios** *(PRD-F19)*
+> As an LGU planner, I want to simulate extreme natural events like a 25-year flood so that I can see the compound shocks to mobility and exposure.
+
+- Given a GeoJSON flood hazard layer, when I drop it on the map, then MATRIX closes the physical road segments within the extent, routes agents around it, and computes the population exposure via the Ecological module.
+
+**US-09 — Provide iterative planner feedback** *(PRD-F20)*
+> As a CPDO planner, I want to flag implausible results and provide ground-truth observations so that the model can be iteratively refined without losing traceability.
+
+- Given a completed scenario result, when I view a specific dimension, then I can submit a feedback rating (plausible/implausible), a note, and an optional observed value.
+- Given submitted feedback, when I view the scenario again, then my feedback is persisted and visible to operators for triage into candidate validation fixtures.
 
 ---
 

@@ -65,7 +65,8 @@ export default function ScenarioSimulation() {
   const [runAttempt, setRunAttempt] = useState(0);
 
   const [results, setResults] = useState<ResultCard[]>([]);
-  const [tripsData, setTripsData] = useState<{ path: [number, number][], timestamps: number[] }[]>([]);
+  const [tripsData, setTripsData] = useState<{ id: string, path: [number, number][], timestamps: number[] }[]>([]);
+  const [maxTime, setMaxTime] = useState(1000);
 
   // Map data layers. `agents` toggles the page-owned TripsLayer; congestion/confidence/flood
   // are assembled by useMapLayers. Static files (edges/flood/confidence) load once; congestion
@@ -156,11 +157,32 @@ export default function ScenarioSimulation() {
       dispatch(msg as RunEvent);
 
       if (msg.type === "PLAYBACK_FRAME") {
-        // Accumulate playback frames for Deck.gl
-        // Note: For simplicity we expect the backend to stream agents with paths
+        // Accumulate playback frames for Deck.gl TripsLayer
+        const tick = typeof msg.tick === "number" ? msg.tick : 0;
+        setMaxTime((prev) => Math.max(prev, tick));
         if (Array.isArray(msg.agents)) {
-          const agents = msg.agents;
-          setTripsData((prev) => [...prev, ...agents]);
+          setTripsData((prev) => {
+            const next = [...prev];
+            for (const a of msg.agents) {
+              const idx = next.findIndex((t) => t.id === a.id);
+              if (idx >= 0) {
+                // Agent exists, append to path and timestamps
+                next[idx] = {
+                  ...next[idx],
+                  path: [...next[idx].path, [a.lon, a.lat]],
+                  timestamps: [...next[idx].timestamps, tick],
+                };
+              } else {
+                // New agent
+                next.push({
+                  id: a.id,
+                  path: [[a.lon, a.lat]],
+                  timestamps: [tick],
+                });
+              }
+            }
+            return next;
+          });
         }
       } else if (msg.type === "EDGE_COUNTS") {
         // Aggregate per-edge counts that drive the congestion choropleth.
@@ -263,14 +285,18 @@ export default function ScenarioSimulation() {
   useEffect(() => {
     let animationFrame: number;
     const animate = () => {
-      setTime(t => (t + 1) % 1000);
+      setTime(t => {
+        // Wrap around at maxTime if it's > 0, otherwise wrap at 1000
+        const loopTime = maxTime > 0 ? maxTime : 1000;
+        return (t + 1) % loopTime;
+      });
       animationFrame = requestAnimationFrame(animate);
     };
     if (isPlaying) {
       animationFrame = requestAnimationFrame(animate);
     }
     return () => cancelAnimationFrame(animationFrame);
-  }, [isPlaying]);
+  }, [isPlaying, maxTime]);
 
   const isRunActive = !isTerminal(runState.phase) && runState.phase !== "disconnected";
 
@@ -418,7 +444,7 @@ export default function ScenarioSimulation() {
           <input
             type="range"
             min="0"
-            max="1000"
+            max={maxTime > 0 ? maxTime : 1000}
             value={time}
             onChange={(e) => setTime(Number(e.target.value))}
             className="flex-1 accent-primary"

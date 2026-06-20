@@ -75,6 +75,19 @@ Severity ladder = QAD P0–P3. When an incident fires:
 - **Data refresh:** re-run `data/fetch/*` for live sources; re-stamp vintages in INVENTORY (owner: Rica/Russell — research — via `data-pipeline-runner`).
 - **Backup:** Supabase daily snapshots; raw data is reproducible via `data/fetch/*` (SDD §6 RTO ~2 h / RPO 24 h).
 
+### 5.1 Triage Runbook (Planner Feedback)
+
+*Applies to `PRD-F20`: converting CPDO feedback into validation fixtures.*
+
+**Trigger:** Weekly review by the Data/Validation Lead.
+**Steps:**
+1. **Query Feedback:** Retrieve all `implausible` verdicts via Postgres:
+   `SELECT * FROM planner_feedback WHERE verdict = 'implausible' ORDER BY created_at DESC;`
+2. **Review Notes & Ground Truth:** Assess the CPDO planner's `note` and `observed_value`. Verify if the underlying data source (INVENTORY) or module logic is at fault.
+3. **Draft a Fixture:** For valid corrections, formulate a scenario-to-target mapping and add it to `packages/kernel/validation_fixtures.json`.
+4. **Iterate Kernel:** Run `pytest tests/test_validation.py`. The kernel must pass the new fixture before merging.
+5. **Close Loop:** Notify the CPDO planner that their feedback is now an enforced validation gate.
+
 ---
 
 ## 6. Performance Tuning
