@@ -8,8 +8,10 @@ validated — MATRIX produces edge passenger-flow proxies but models no route tr
 fixture's ``passenger_transfer_max`` points are out of the kernel's scope (not mapped to edge
 flows; PRD-F14).
 
-VAL-02 (2024 flood IoU): computed via the new `flood_closures_from_geojson` helper against a placeholder
-GeoJSON extent, keeping the gate PROVISIONAL but physically wired.
+VAL-02 (2024 flood IoU): the `flood_closures_from_geojson` helper is exercised against a placeholder
+extent (closure count logged to stderr), but the gate itself stays **NOT_RUN** — there is no real
+Sentinel-1 GFM ground-truth extent wired yet, so no IoU is computed. We never fabricate an IoU from a
+placeholder-vs-placeholder comparison (PRD-F14); the helper is staged for when real flood data lands.
 
 Run (kernel venv, Redis up with a seeded baseline — `run_nightly_baseline()`):
     uv run python -m matrix_kernel.build_validation_report
@@ -88,13 +90,16 @@ def generate() -> dict:
     """Build the report dict: live VAL-01 if the net+baseline are available, else NOT_RUN.
     VAL-02 is always NOT_RUN here (PROVISIONAL fixture / no live flood run)."""
     
-    # CR-008 Item 5: Wire VAL-02 flood helper
+    # CR-008 Item 5: exercise the VAL-02 flood helper so the GeoJSON→closures path is staged and
+    # observable, but DO NOT feed it to run_validation_gates — there is no real Sentinel-1 GFM
+    # ground-truth extent to score against, so VAL-02 stays NOT_RUN (no fabricated IoU; PRD-F14).
     placeholder_flood = {
         "type": "Polygon",
         "coordinates": [[[122.54, 10.70], [122.58, 10.70], [122.58, 10.74], [122.54, 10.74], [122.54, 10.70]]]
     }
     flood_closures = flood_closures_from_geojson(placeholder_flood)
-    print(f"[val-02] simulated flood closures (placeholder extent): {len(flood_closures)} segments closed", file=sys.stderr)
+    print(f"[val-02] helper staged (placeholder extent): {len(flood_closures)} segments would close; "
+          "gate stays NOT_RUN until real flood ground-truth is wired", file=sys.stderr)
 
     try:
         mapping = calderon_corridor_edges()

@@ -85,8 +85,14 @@ CREATE TABLE IF NOT EXISTS bias_audit_log (
     ground_truth JSONB NOT NULL,                               -- Iloilo mode-share anchor
     max_delta    NUMERIC NOT NULL,                             -- vs ±3% tolerance
     reweighted   BOOLEAN NOT NULL,
+    adjustment_factors JSONB,                                  -- per-mode f_k from reweight_pool;
+                                                               -- NULL when no reweight. Inspect-
+                                                               -- resolvable (PRD-F6; methods §4.1)
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Idempotent add for DBs created before adjustment_factors existed (CR-008 Item 3 fix):
+-- CREATE TABLE IF NOT EXISTS above is a no-op on an existing table, so backfill the column here.
+ALTER TABLE bias_audit_log ADD COLUMN IF NOT EXISTS adjustment_factors JSONB;
 CREATE INDEX IF NOT EXISTS bias_audit_log_run_idx ON bias_audit_log (run_id);
 
 -- ─── planner_feedback — CPDO iterative feedback loop (PRD-F20; SDD §3) ──────────────────

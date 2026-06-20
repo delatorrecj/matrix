@@ -4,34 +4,39 @@
     "feature_type": "bridge",
     "osm_id": "way/12345678",
     "sumo_edge": "E_forbes_bridge",
-    "coordinates": [122.563, 10.702]
+    "coordinates": [122.563, 10.702],
+    "provisional": true
   },
   "merkado": {
     "canonical_name": "Iloilo Central Market",
     "feature_type": "market",
     "osm_id": "way/87654321",
     "sumo_edge": "E_central_mkt_front",
-    "coordinates": [122.568, 10.697]
+    "coordinates": [122.568, 10.697],
+    "provisional": true
   },
   "banwa": {
     "canonical_name": "Iloilo City Proper (Downtown)",
     "feature_type": "district",
     "osm_id": "node/1111111",
     "sumo_edge": "E_downtown_main",
-    "coordinates": [122.566, 10.695]
+    "coordinates": [122.566, 10.695],
+    "provisional": true
   },
   "plasa": {
     "canonical_name": "Plaza Libertad",
     "feature_type": "plaza",
     "osm_id": "way/2222222",
     "sumo_edge": "E_plaza_libertad",
-    "coordinates": [122.571, 10.693]
+    "coordinates": [122.571, 10.693],
+    "provisional": true
   },
   "super": {
     "canonical_name": "Iloilo Terminal Market (Super)",
     "feature_type": "market",
     "osm_id": "way/3333333",
     "sumo_edge": "E_terminal_mkt",
-    "coordinates": [122.561, 10.691]
+    "coordinates": [122.561, 10.691],
+    "provisional": true
   }
 }

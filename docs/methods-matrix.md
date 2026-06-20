@@ -106,14 +106,14 @@ Inputs reference [INVENTORY](../data/INVENTORY.md) IDs. Equations are versioned;
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
 | SOC-1 | Equity-weighted access | `A = Σ_b w_b · Δaccess_b`, `w_b = inverse income decile` | CCHAIN RWI + health isochrones, NHFR | index | M (`method_capped_confidence`: inputs CCHAIN/NHFR are H, but equity-weighted access method is literature-calibrated → caps at M; CR-007 PR 6) |
-| SOC-2 | Displacement risk count | informal workers/vendors within impact buffer | CCHAIN `osm_poi_*`, OSM-ILO | count | M (Uses PROVISIONAL `_VENDORS_PER_CLOSED_LANE` proxy and `vendor_footfall_exposure` helper) |
+| SOC-2 | Displacement risk count | `vendors = lanes_closed · _VENDORS_PER_CLOSED_LANE` (PROVISIONAL proxy) | CCHAIN `osm_poi_*`, OSM-ILO | count | M (PROVISIONAL `_VENDORS_PER_CLOSED_LANE` proxy, §3.6) |
 | SOC-3 | Distributional split (`PRD-F17`) | win/lose by income decile & barangay | CCHAIN RWI, WorldPop | per-decile | M |
 
 ### 3.4 Economic
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
 | ECON-1 | Land-value Δ (≤1 km) | `ΔLV = LV_base · uplift(Δaccessibility)` (range) | **BIR-ZV** (✅ manual XLS), CCHAIN RWI | PHP range | M |
-| ECON-2 | Footfall Δ per zone | dwell/pass counts from trajectories | persona pool, OVERTURE places | visits/day | M (Tracks informal sector exposure via `tricycle` mode footfall and `vendor_footfall_exposure`) |
+| ECON-2 | Footfall Δ per zone | `footfall = Δtrips · 1.2` (footfall ∝ trip delta) | persona pool, OVERTURE places | visits/day | M (`confidence_rubric` over PERSONA-POOL + OVERTURE) |
 | ECON-3 | Employment Δ | `direct + indirect(multiplier) − displaced` | PSA-ASPBI/OpenStat, ADB/NEDA multiplier | jobs | M |
 
 ### 3.5 Societal
@@ -138,14 +138,15 @@ a specific Iloilo measurement; they are order-of-magnitude placeholders declared
 | `_PHP_PER_TRIP_PROXY` | `modules/economic.py` | ₱50.0 / trip | ECON-1 land-value Δ | BIR-ZV zonal schedule uplift curve (`ΔLV = LV_base × uplift(Δaccessibility)`) |
 | `_VENDORS_PER_CLOSED_LANE` | `modules/social.py` | 12 vendors | SOC-2 displacement risk | CCHAIN `osm_poi_*` impact-buffer count |
 | `_GENERIC_POP_DENSITY` | `modules/societal.py` | 5,843 persons/km² (PSA 2020 CPH Iloilo City: 457,626 persons / 78.34 km²; city-wide average; updated CR-007 PR 7) | SOCI-3 health-exposure proxy | Per-zone WorldPop density wired into the kernel |
+| `FACILITY_PROFILES` | `demand_delta.py` | per-kind `trips_per_capacity`, `redirected_fraction`, `catchment_radius_m` | BEH-4 (all kinds) | Local travel-survey calibration per facility kind |
+| `_INJECTION_WEIGHT` | `bias_auditor.py` | 10.0 | `reweight_pool` weight for modes absent in the observed batch but present in the target (§4.1) | Heuristic; replace with a principled smoothing prior once anchor coverage is complete |
 
 ### 3.7 Extreme-Event Resilience (CR-008 Item 5)
 
 When users specify extreme events (e.g., natural disasters like floods), MATRIX translates these GeoJSON hazard extents into physical network closures via a deterministic `flood_scenario` helper.
 - **Physical Effect:** Edges whose geometry intersects the hazard layer are closed. The SUMO baseline reroutes around the closed subset.
 - **Exposure Metric:** ECO-4 calculates the number of persons in the hazard footprint based on underlying CCHAIN/LIPAD/DEM grids.
-- **Ground-Truth Validation:** The system maintains a specific VAL-02 gate comparing simulated flood closures against actual satellite records (e.g., Copernicus GFM Sentinel-1 extents).
-| `FACILITY_PROFILES` | `demand_delta.py` | per-kind `trips_per_capacity`, `redirected_fraction`, `catchment_radius_m` | BEH-4 (all kinds) | Local travel-survey calibration per facility kind |
+- **Ground-Truth Validation:** The system maintains a specific VAL-02 gate comparing simulated flood closures against actual satellite records (e.g., Copernicus GFM Sentinel-1 extents). It currently reports **NOT_RUN** — the closure helper is staged but no real Sentinel-1 extent is wired, so no IoU is computed (§6).
 
 ---
 
@@ -172,30 +173,35 @@ LLMs default to WEIRD/middle-class archetypes. If Flash-Lite generates a persona
 
 **Correction formula:** `f_k = target_k / observed_k` (modes absent in observed but present in target receive a `10.0` injection weight).
 
-**Example: Flash-Lite private-car over-generation**
-- **Trigger:** Observed `private_car` is 0.18 vs anchor 0.07 (a +11% delta, far beyond the ±3% `MODE_SHARE_TOLERANCE`).
+**Example: Flash-Lite private-car over-generation.** The **Target (Anchor)** column is the deployed
+`ILOILO_MODE_SHARE` (`config.py` / `personas.py` — jeepney 0.50, tricycle 0.05, private_car 0.15,
+motorcycle 0.15, walk 0.10, bicycle 0.05); the Observed column is one over-indexed batch.
+- **Trigger:** Observed `private_car` is 0.30 vs anchor 0.15 (a +15% delta, far beyond the ±3% `MODE_SHARE_TOLERANCE`).
 
 | Mode | Observed | Target (Anchor) | Factor (`f_k`) | Resampled Share |
 |---|---|---|---|---|
-| `jeepney` | 0.50 | 0.59 | 1.18 | ~0.59 |
-| `private_car` | 0.18 | 0.07 | 0.38 | ~0.07 |
-| `walk` | 0.12 | 0.19 | 1.58 | ~0.19 |
-| `motorcycle` | 0.15 | 0.12 | 0.80 | ~0.12 |
-| `bicycle` | 0.05 | 0.03 | 0.60 | ~0.03 |
+| `jeepney` | 0.40 | 0.50 | 1.25 | ~0.50 |
+| `private_car` | 0.30 | 0.15 | 0.50 | ~0.15 |
+| `motorcycle` | 0.15 | 0.15 | 1.00 | ~0.15 |
+| `walk` | 0.08 | 0.10 | 1.25 | ~0.10 |
+| `bicycle` | 0.04 | 0.05 | 1.25 | ~0.05 |
+| `tricycle` | 0.03 | 0.05 | 1.67 | ~0.05 |
 
-**Result:** The resampled pool preserves the exact original persona count, but archetypes are resampled with replacement proportional to `f_k`. The new pool matches the anchor within ±3%, and the exact `adjustment_factors` are emitted to `bias_audit_log` (and surfaced in the Inspect drawer) so the correction is completely glass-box.
+**Result:** The resampled pool preserves the exact original persona count, but archetypes are resampled with replacement proportional to `f_k`. The new pool matches the anchor within ±3%, and the exact `adjustment_factors` are persisted to `bias_audit_log.adjustment_factors` (the JSONB column added CR-008 Item 3) and surfaced in the Inspect drawer, so the correction is completely glass-box — never a silent black-box adjustment.
 
 ### 4.2 Hiligaynon Gazetteer & RAG Retrieval Example
 
 *(CR-008 Items 7 & 9 — added 2026-06-17. Deterministic colloquial mapping and semantic retrieval.)*
 
-The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index to understand local context and regional colloquialisms. **The LLM never invents GIS nodes.** If a query contains a regional colloquialism, it is mapped *before* the LLM extracts it.
+The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index to understand local context and regional colloquialisms. **The LLM never *originates* a GIS node id** — the id always comes from the curated map, not the model. If a query contains a regional colloquialism, it is mapped *before* the LLM extracts it.
+
+> **PROVISIONAL gazetteer data (CR-008).** The current `gazetteer_iloilo.json` entries carry **placeholder** `osm_id` / `sumo_edge` values (each flagged `"provisional": true`) that are **not yet verified** against the deployed OSM extract or SUMO net. Every hit is annotated `PROVISIONAL-id` so neither the model nor a reader treats the id as ground truth. The glass-box guarantee here is about *provenance of the id* (curated map, never the LLM) — **not** a claim that these placeholders resolve to real edges. A GIS verification pass replaces them before any sourced number depends on them.
 
 **Example: Hiligaynon Query**
 - **Query:** *"Ano matabo kung siraduhon ang merkado kag ang tulay sa forbes?"*
 - **Gazetteer Pre-processing:** The term "merkado" triggers a hit for `Iloilo Central Market`, and "tulay sa forbes" hits `Forbes Bridge`.
 - **Query Annotation:** The orchestrator annotates the query before sending it to the LLM:
-  `Ano matabo kung siraduhon ang merkado kag ang tulay sa forbes? [GAZETTEER HIT: 'Iloilo Central Market' (OSM: way/87654321, SUMO Edge: E_central_mkt_front)] [GAZETTEER HIT: 'Forbes Bridge' (OSM: way/12345678, SUMO Edge: E_forbes_bridge)]`
+  `Ano matabo kung siraduhon ang merkado kag ang tulay sa forbes? [GAZETTEER HIT PROVISIONAL-id: 'Iloilo Central Market' (OSM: way/87654321, SUMO Edge: E_central_mkt_front)] [GAZETTEER HIT PROVISIONAL-id: 'Forbes Bridge' (OSM: way/12345678, SUMO Edge: E_forbes_bridge)]`
 - **GraphRAG Retrieval:** The system retrieves top-k chunks from ChromaDB and injects them as `Relevant Local Context: [source]: text`.
 - **LLM Parse:** The Gemini model parses the annotated string, extracts the canonical location, and sets the structured geometry/SUMO edges based *only* on the explicitly provided gazetteer IDs.
 
@@ -213,7 +219,7 @@ The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index 
 | Check | Method | Target | Status |
 |---|---|---|---|
 | Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | **WITHHELD** (Uncalibrated demand proxy vs ground-truth) |
-| Flood redistribution | back-test vs **2024 Iloilo flood** extent (Sentinel-1 GFM) | spatial overlap (IoU) | **PROVISIONAL** (Computed vs placeholder fixture) |
+| Flood redistribution | back-test vs **2024 Iloilo flood** extent (Sentinel-1 GFM) | spatial overlap (IoU) | **NOT_RUN** (closure helper staged; no real Sentinel-1 extent wired → no IoU computed) |
 | Mode-share anchor | generated vs ground-truth ±3% | within band | enforced (bias auditor) |
 
 ---

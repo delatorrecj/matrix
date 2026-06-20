@@ -139,10 +139,14 @@ def persist_audit(entry: BiasAuditEntry, run_id: str | None = None, dsn: str = P
     with psycopg.connect(dsn) as conn, conn.cursor() as cur:
         cur.execute(
             "INSERT INTO bias_audit_log "
-            "  (run_id, batch_id, mode_share, ground_truth, max_delta, reweighted) "
-            "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            "  (run_id, batch_id, mode_share, ground_truth, max_delta, reweighted, "
+            "   adjustment_factors) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (run_id, entry.batch_id, Json(entry.observed_mode_share),
-             Json(entry.target_mode_share), entry.max_delta, entry.reweighted),
+             Json(entry.target_mode_share), entry.max_delta, entry.reweighted,
+             # SQL NULL (not JSON 'null') when no reweight was performed, so the log
+             # distinguishes "no correction" from "corrected with empty factors".
+             Json(entry.adjustment_factors) if entry.adjustment_factors is not None else None),
         )
         row_id = cur.fetchone()[0]
         conn.commit()
