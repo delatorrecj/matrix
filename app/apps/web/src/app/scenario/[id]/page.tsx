@@ -161,9 +161,13 @@ export default function ScenarioSimulation() {
         const tick = typeof msg.tick === "number" ? msg.tick : 0;
         setMaxTime((prev) => Math.max(prev, tick));
         if (Array.isArray(msg.agents)) {
+          // Hoist the narrowed array into a typed local: Array.isArray narrowing on
+          // `msg.agents` (an `unknown` field) does not survive into the setTripsData
+          // closure, so `next build` type-checks it as `unknown` without this.
+          const agents = msg.agents as Array<{ id: string; lon: number; lat: number }>;
           setTripsData((prev) => {
             const next = [...prev];
-            for (const a of msg.agents) {
+            for (const a of agents) {
               const idx = next.findIndex((t) => t.id === a.id);
               if (idx >= 0) {
                 // Agent exists, append to path and timestamps
