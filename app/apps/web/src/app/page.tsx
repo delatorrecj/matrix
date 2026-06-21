@@ -41,6 +41,9 @@ const ILOILO_BOUNDS = {
   minZoom: 11
 };
 
+// deck.gl onViewStateChange is generic over ViewStateT (TransitionProps | MapViewState),
+// so no concrete view-state shape is assignable; we mutate the live viewState to clamp it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleViewStateChange = ({ viewState }: any) => {
   viewState.longitude = Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng);
   viewState.latitude = Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat);

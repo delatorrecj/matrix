@@ -7,6 +7,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import { TripsLayer } from "@deck.gl/geo-layers";
+import type { Layer } from "@deck.gl/core";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
 import SynthesisNarrative, { SynthesisCitation } from "@/components/SynthesisNarrative";
 import ValidationPanel from "@/components/ValidationPanel";
@@ -51,6 +52,9 @@ const ILOILO_BOUNDS = {
   minZoom: 11
 };
 
+// deck.gl onViewStateChange is generic over ViewStateT (TransitionProps | MapViewState),
+// so no concrete view-state shape is assignable; we mutate the live viewState to clamp it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleViewStateChange = ({ viewState }: any) => {
   viewState.longitude = Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng);
   viewState.latitude = Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat);
@@ -154,7 +158,7 @@ export default function ScenarioSimulation() {
     currentTime: time,
   });
   
-  const layers = [...dataLayers, ...(activeLayers.agents ? [tripsLayer] : [])].map((layer: any) => {
+  const layers = [...dataLayers, ...(activeLayers.agents ? [tripsLayer] : [])].map((layer: Layer) => {
     if (!inspectingMetric || !isDrawerOpen) return layer;
     
     let isHighlighted = false;
