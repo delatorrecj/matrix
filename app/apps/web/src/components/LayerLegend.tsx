@@ -13,7 +13,7 @@ interface LayerLegendProps {
 
 export function LayerLegend({ layers, onToggleLayer }: LayerLegendProps) {
   return (
-    <div className="bg-surface/90 backdrop-blur shadow-md rounded-lg p-3 border border-border w-64 pointer-events-auto">
+    <div className="bg-surface/95 backdrop-blur-md shadow-lg rounded-xl p-3 border border-border w-64 pointer-events-auto">
       <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
         <Layers className="w-3.5 h-3.5" />
         Map Layers
@@ -26,10 +26,10 @@ export function LayerLegend({ layers, onToggleLayer }: LayerLegendProps) {
             <button
               key={layer.id}
               onClick={() => onToggleLayer(layer.id)}
-              className={`flex items-center justify-between px-2 py-1.5 rounded transition-colors text-sm ${
+              className={`flex items-center justify-between px-2.5 py-2 rounded-lg transition-all text-sm ${
                 layer.active 
                   ? "bg-primary/10 text-primary font-medium" 
-                  : "hover:bg-secondary text-text"
+                  : "hover:bg-surface-elevated text-text"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -38,8 +38,8 @@ export function LayerLegend({ layers, onToggleLayer }: LayerLegendProps) {
               </div>
               
               {/* Toggle switch visual */}
-              <div className={`w-7 h-4 rounded-full p-0.5 transition-colors ${layer.active ? "bg-primary" : "bg-border"}`}>
-                <div className={`bg-surface w-3 h-3 rounded-full shadow-sm transform transition-transform ${layer.active ? "translate-x-3" : "translate-x-0"}`} />
+              <div className={`w-8 h-[18px] rounded-full p-0.5 transition-colors ${layer.active ? "bg-primary" : "bg-border"}`}>
+                <div className={`bg-white w-3.5 h-3.5 rounded-full shadow-sm transform transition-transform ${layer.active ? "translate-x-3.5" : "translate-x-0"}`} />
               </div>
             </button>
           );

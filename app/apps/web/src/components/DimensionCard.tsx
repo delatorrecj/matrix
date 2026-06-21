@@ -35,7 +35,7 @@ export function DimensionCard({
 
   return (
     <div 
-      className={`bg-surface border border-border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer ${className}`}
+      className={`bg-surface-elevated/90 border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden group cursor-pointer ${className}`}
       onClick={() => onInspect(id)}
       role="button"
       tabIndex={0}
@@ -74,7 +74,7 @@ export function DimensionCard({
         </div>
 
         {/* Sparkline placeholder or trend indicator */}
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-surface">
           {isPositive ? (
             <TrendingUp className="w-4 h-4 text-success" />
           ) : isNegative ? (
@@ -86,8 +86,8 @@ export function DimensionCard({
       </div>
       
       {/* Inspect Affordance hover overlay */}
-      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-[1px]">
-        <span className="bg-surface text-primary border border-primary/20 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm flex items-center gap-1.5">
+      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+        <span className="bg-surface-elevated text-primary border border-primary/20 px-3 py-1.5 rounded-full text-xs font-medium shadow-md flex items-center gap-1.5">
           Inspect Metric
         </span>
       </div>

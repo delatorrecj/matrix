@@ -5,12 +5,14 @@
 @plugin "tailwindcss-animate";
 
 @theme {
+  /* ── Light-mode base tokens (also the fallback) ── */
   --color-bg: #FAFAFA;
   --color-surface: #FFFFFF;
+  --color-surface-elevated: #F4F4F5;
   --color-border: #E4E4E7;
-  --color-primary: #1D4ED8;
-  --color-primary-hover: #1E40AF;
-  --color-ring: #1D4ED8;
+  --color-primary: #3B6FE0;
+  --color-primary-hover: #2D5BC7;
+  --color-ring: #3B6FE0;
   --color-text: #18181B;
   --color-text-muted: #71717A;
   --color-success: #15803D;
@@ -45,6 +47,8 @@
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
   }
+
+  /* ── Light mode (default :root) ── */
   :root {
     --background: var(--color-bg);
     --foreground: var(--color-text);
@@ -66,11 +70,51 @@
     --ring: var(--color-primary);
     --radius: 0.5rem;
   }
+
+  /* ── Dark mode ── */
+  .dark {
+    --color-bg: #0A0E1A;
+    --color-surface: #111827;
+    --color-surface-elevated: #1A2235;
+    --color-border: #1E293B;
+    --color-primary: #3B6FE0;
+    --color-primary-hover: #5B8DEF;
+    --color-ring: #3B6FE0;
+    --color-text: #F1F5F9;
+    --color-text-muted: #94A3B8;
+    --color-success: #22C55E;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+
+    --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 16px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 12px 40px rgb(0 0 0 / 0.5);
+
+    --background: var(--color-bg);
+    --foreground: var(--color-text);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text);
+    --popover: var(--color-surface);
+    --popover-foreground: var(--color-text);
+    --primary: var(--color-primary);
+    --primary-foreground: #FFFFFF;
+    --secondary: var(--color-surface-elevated);
+    --secondary-foreground: var(--color-text);
+    --muted: var(--color-surface-elevated);
+    --muted-foreground: var(--color-text-muted);
+    --accent: var(--color-surface-elevated);
+    --accent-foreground: var(--color-text);
+    --destructive: var(--color-error);
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-primary);
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans antialiased;
+    @apply bg-bg text-text font-sans antialiased;
   }
   
   /* Apply tabular-nums globally to all numeric elements */
@@ -78,4 +122,86 @@
     @apply font-mono;
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* ── Custom range slider for dark theme ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+
+.dark input[type="range"]::-webkit-slider-runnable-track {
+  background: var(--color-surface-elevated);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-top: -5px;
+  box-shadow: 0 0 0 3px rgb(59 111 224 / 0.2);
+  transition: box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px rgb(59 111 224 / 0.3);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+
+.dark input[type="range"]::-moz-range-track {
+  background: var(--color-surface-elevated);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: none;
+  box-shadow: 0 0 0 3px rgb(59 111 224 / 0.2);
+  transition: box-shadow 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  box-shadow: 0 0 0 5px rgb(59 111 224 / 0.3);
+}
+
+/* ── Glow utility for water/accent elements ── */
+.glow-blue {
+  text-shadow: 0 0 8px rgb(59 111 224 / 0.6), 0 0 20px rgb(59 111 224 / 0.3);
+}
+
+/* ── Scrollbar styling for dark theme ── */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }

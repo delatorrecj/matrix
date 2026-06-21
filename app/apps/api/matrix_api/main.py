@@ -246,6 +246,7 @@ def _result_payload(r) -> dict:
         "input_dataset_ids": r.input_dataset_ids,
         "references": r.references,
         "assumptions": r.assumptions,
+        "focus_geometry": getattr(r, "focus_geometry", None),
     }
 
 

@@ -75,7 +75,7 @@ function MetaField({
       <dt className="text-[10px] uppercase tracking-wider text-text-muted">{label}</dt>
       <dd
         className={
-          value ? "text-xs font-mono text-foreground break-words" : "text-xs italic text-text-muted"
+          value ? "text-xs font-mono text-foreground wrap-break-word" : "text-xs italic text-text-muted"
         }
       >
         {value || "not provided"}
@@ -148,7 +148,7 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-background/20 backdrop-blur-sm z-40 transition-opacity"
+        className="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
         data-testid="inspect-backdrop"
@@ -166,10 +166,10 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
         data-testid="inspect-drawer"
       >
         {/* Header */}
-        <div className="p-6 border-b border-border flex items-start justify-between bg-secondary/30">
+        <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs px-2 py-0.5 bg-background border border-border rounded font-mono">
+              <span className="text-xs px-2 py-0.5 bg-surface border border-border rounded font-mono">
                 {data?.equationId || "..."}
               </span>
               <h3 id="inspect-drawer-title" className="text-lg font-bold text-foreground">
@@ -184,7 +184,7 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
           <button
             onClick={onClose}
             aria-label="Close inspector"
-            className="p-2 hover:bg-background rounded-md text-text-muted transition-colors"
+            className="p-2 hover:bg-surface rounded-md text-text-muted transition-colors"
           >
             ✕
           </button>
@@ -212,7 +212,7 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
             <h4 className="text-sm font-medium text-text-muted mb-3 uppercase tracking-wider">
               Equation
             </h4>
-            <div className="p-4 bg-background border border-border rounded-lg font-mono text-sm overflow-x-auto">
+            <div className="p-4 bg-surface-elevated border border-border rounded-lg font-mono text-sm overflow-x-auto">
               {data?.equationText || (
                 <span className="text-text-muted italic font-sans">
                   Equation text not provided over the stream — {data?.equationId || "this equation"}{" "}
@@ -237,14 +237,14 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
                 return (
                   <div
                     key={input.id}
-                    className="border border-border rounded-lg bg-background overflow-hidden"
+                    className="border border-border rounded-lg bg-surface-elevated overflow-hidden"
                   >
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : input.id)}
                       aria-expanded={isExpanded}
                       aria-controls={metaId}
-                      className="w-full p-3 flex justify-between items-center text-left group hover:bg-secondary/40 transition-colors"
+                      className="w-full p-3 flex justify-between items-center text-left group hover:bg-surface transition-colors"
                       data-testid={`dataset-row-${domSafe(input.id)}`}
                     >
                       <div className="min-w-0">

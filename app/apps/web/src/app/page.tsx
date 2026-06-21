@@ -1,28 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Map } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import { PolygonLayer } from "@deck.gl/layers";
-import { Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon, Layers, Play, Pause, SkipBack, SkipForward, Loader2, WifiOff, AlertTriangle, SlidersHorizontal } from "lucide-react";
+import {
+  Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon,
+  Layers, Play, Loader2, WifiOff, AlertTriangle, SlidersHorizontal,
+  GraduationCap, TrainFront, CloudRain, X, LayoutList
+} from "lucide-react";
 import Link from "next/link";
 
 import { DimensionCard } from "@/components/DimensionCard";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
 import { LayerLegend } from "@/components/LayerLegend";
+import { IconNavRail } from "@/components/IconNavRail";
+import { HeaderControls } from "@/components/HeaderControls";
+import { PlaybackBar } from "@/components/PlaybackBar";
+import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
-
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT } from "@/lib/mapStyles";
+import type { MapRef } from "react-map-gl/maplibre";
 
 const INITIAL_VIEW_STATE = {
   longitude: 122.56,
-  latitude: 10.71,
+  latitude: 10.72,
   zoom: 13,
   pitch: 45,
   bearing: 0
+};
+
+const ILOILO_BOUNDS = {
+  minLng: 122.48,
+  maxLng: 122.62,
+  minLat: 10.64,
+  maxLat: 10.79,
+  minZoom: 11
+};
+
+const handleViewStateChange = ({ viewState }: any) => {
+  viewState.longitude = Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng);
+  viewState.latitude = Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat);
+  viewState.zoom = Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom);
+  return viewState;
 };
 
 // Illustrative building footprints for the empty base map (visual placeholder
@@ -34,10 +57,10 @@ const BUILDINGS: Building[] = [
 ];
 
 // Preset reference scenarios — each submits a real NL query to POST /scenario.
-const PRESETS: { label: string; query: string }[] = [
-  { label: "School in Molo", query: "What if we build a 3,000-seat school in Molo?" },
-  { label: "BRT on Diversion Rd", query: "What if we run a BRT line along Diversion Road?" },
-  { label: "Flooding Closure", query: "What if flooding closes the Diversion Road corridor for a day?" },
+const PRESETS: { label: string; query: string; icon: React.ElementType }[] = [
+  { label: "School in Molo", query: "What if we build a 3,000-seat school in Molo?", icon: GraduationCap },
+  { label: "RDT on Diversion Rd", query: "What if we run a RDT line along Diversion Road?", icon: TrainFront },
+  { label: "Flooding Closure", query: "What if flooding closes the Diversion Road corridor for a day?", icon: CloudRain },
 ];
 
 // Shown ONLY in the explicitly-labeled "Sample mode — API offline" state.
@@ -64,6 +87,18 @@ const SAMPLE_PROVENANCE: ProvenanceData = {
 
 export default function MatrixCockpit() {
   const router = useRouter();
+  const mapRef = useRef<MapRef>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.getMap().setStyle(theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT);
+    }
+  }, [theme]);
+
+  const [showResultsPanel, setShowResultsPanel] = useState(true);
+
+
   const [query, setQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clarification, setClarification] = useState<string | null>(null);
@@ -71,6 +106,19 @@ export default function MatrixCockpit() {
   const [sampleMode, setSampleMode] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [inspectMetric, setInspectMetric] = useState<string | null>(null);
+  const [showLayers, setShowLayers] = useState(false);
+  const [activeNavId, setActiveNavId] = useState("home");
+
+  useEffect(() => {
+    if (inspectMetric && mapRef.current) {
+      mapRef.current.getMap().flyTo({
+        center: [122.56, 10.71],
+        zoom: 14.5,
+        duration: 800,
+        essential: true,
+      });
+    }
+  }, [inspectMetric]);
 
   // Layer Toggles
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
@@ -81,6 +129,13 @@ export default function MatrixCockpit() {
 
   const handleToggleLayer = (id: string) => {
     setActiveLayers(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleNavigation = (id: string) => {
+    setActiveNavId(id);
+    if (id === "layers") {
+      setShowLayers(prev => !prev);
+    }
   };
 
   const handleSimulate = async (overrideQuery?: string) => {
@@ -121,183 +176,223 @@ export default function MatrixCockpit() {
       wireframe: true,
       getPolygon: (d: Building) => d.polygon,
       getElevation: (d: Building) => d.height,
-      getFillColor: [200, 200, 200, 150],
-      getLineColor: [100, 100, 100, 200],
+      getFillColor: [30, 42, 71, 180],
+      getLineColor: [59, 111, 224, 100],
+      opacity: inspectMetric ? 0.05 : 1,
     })
   ].filter(Boolean);
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground flex">
+    <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex">
+
+      {/* ICON NAV RAIL */}
+      <IconNavRail activeId={activeNavId} onNavigate={handleNavigation} />
 
       {/* MAP STAGE (Background) */}
-      <div className="absolute inset-0 z-0">
-        <DeckGL
-          initialViewState={INITIAL_VIEW_STATE}
-          controller={true}
-          layers={layers}
-        >
-          <Map mapStyle={MAP_STYLE} mapLib={maplibregl} />
-        </DeckGL>
-      </div>
-
-      {/* LEFT RAIL: Scenario Bar */}
-      <div className="absolute left-4 top-4 bottom-24 w-[320px] bg-surface/95 backdrop-blur-md shadow-md rounded-lg border border-border flex flex-col z-10 pointer-events-auto overflow-hidden">
-        <div className="p-4 border-b border-border bg-primary/5">
-          <h1 className="text-xl font-bold tracking-tight">MATRIX</h1>
-          <p className="text-xs text-text-muted mt-1">Multi-Agent Twin for Routing & Infrastructure eXchange</p>
+      <div className="flex-1 relative">
+        <div className="absolute inset-0 z-0">
+          <DeckGL
+            initialViewState={INITIAL_VIEW_STATE}
+            controller={true}
+            onViewStateChange={handleViewStateChange}
+            layers={layers}
+          >
+            <Map 
+              ref={mapRef}
+              mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT} 
+              mapLib={maplibregl} 
+              reuseMaps 
+            />
+          </DeckGL>
         </div>
 
-        <div className="p-4 flex-1 overflow-y-auto">
-          <label htmlFor="scenario-query" className="text-sm font-semibold mb-2 block">Scenario Query</label>
-          <textarea
-            id="scenario-query"
-            className="w-full bg-background border border-border rounded-md p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px]"
-            placeholder="e.g., What if we build a 3,000-seat school in Molo?"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            disabled={isSubmitting}
-          />
-          <button
-            className="w-full mt-3 bg-primary text-primary-foreground font-medium py-2 rounded-md hover:bg-primary-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            onClick={() => handleSimulate()}
-            disabled={isSubmitting || !query.trim()}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                Parsing scenario…
-              </>
-            ) : (
-              "Simulate Scenario"
-            )}
-          </button>
-
-          {/* Secondary path: the structured builder (multi-step intervention composer). */}
-          <Link
-            href="/builder"
-            className="mt-2 flex items-center justify-center gap-1.5 text-sm text-text-muted hover:text-primary transition-colors"
-          >
-            <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
-            Build a structured scenario
-          </Link>
-
-          {clarification && (
-            <div role="alert" className="mt-3 p-3 rounded-md border border-warning/30 bg-warning/10 text-sm">
-              <div className="flex items-center gap-2 font-semibold text-warning mb-1">
-                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-                Clarification needed
-              </div>
-              <p className="text-text">{clarification}</p>
-            </div>
-          )}
-
-          {submitError && (
-            <div role="alert" className="mt-3 p-3 rounded-md border border-error/30 bg-error/10 text-sm">
-              <div className="flex items-center gap-2 font-semibold text-error mb-1">
-                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-                Scenario request failed
-              </div>
-              <p className="text-text">{submitError}</p>
-            </div>
-          )}
-
-          <div className="mt-8">
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Reference Scenarios</h3>
-            <div className="space-y-2">
-              {PRESETS.map((preset) => (
-                <button
-                  key={preset.label}
-                  className="w-full text-left text-sm p-2.5 rounded border border-border hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  onClick={() => handlePreset(preset.query)}
-                  disabled={isSubmitting}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* TOP RIGHT HEADER CONTROLS */}
+        <div className="absolute top-4 right-4 z-10">
+          <HeaderControls />
         </div>
-      </div>
 
-      {/* LAYER LEGEND */}
-      <div className="absolute left-[340px] top-4 z-10">
-        <LayerLegend
-          layers={[
-            { id: "buildings", label: "3D Buildings", icon: Layers, active: activeLayers.buildings },
-            { id: "agents", label: "Agent Trajectories", icon: Route, active: activeLayers.agents },
-            { id: "confidence", label: "Confidence Heatmap", icon: MapIcon, active: activeLayers.confidence },
-          ]}
-          onToggleLayer={handleToggleLayer}
-        />
-      </div>
-
-      {/* RIGHT PANEL: shown ONLY in explicitly-labeled sample mode.
-          Live results render on /scenario/[id] from the WebSocket stream. */}
-      {sampleMode && (
-        <div className="absolute right-4 top-4 bottom-24 w-[360px] flex flex-col gap-3 z-10 pointer-events-auto overflow-y-auto">
-          <div role="alert" className="bg-warning/10 border border-warning/40 border-dashed rounded-lg p-4 shadow-sm">
-            <div className="flex items-center gap-2 font-bold text-warning text-sm">
-              <WifiOff className="w-4 h-4" aria-hidden="true" />
-              Sample mode — API offline
-            </div>
-            <p className="text-xs text-text mt-2">
-              The MATRIX API could not be reached. The cards below show <strong>illustrative sample
-              values only</strong> — they are <strong>not</strong> simulation results. Start the API
-              and re-run the scenario for live, glass-box numbers.
+        {/* LEFT RAIL: Scenario Bar */}
+        <div className="absolute left-4 top-4 bottom-20 w-[320px] bg-surface/50 backdrop-blur-xl shadow-lg rounded-xl border border-white/10 flex flex-col z-10 pointer-events-auto overflow-hidden">
+          {/* Sidebar Header with Logo */}
+          <div className="p-4 border-b border-white/10 bg-transparent">
+            <h1 className="text-4xl font-black uppercase tracking-widest text-text">MATRIX</h1>
+            <p className="text-[10px] text-text-muted leading-tight mt-1">
+              Multi-Agent Twin for Routing <br className="hidden sm:block" />
+              & Infrastructure eXchange
             </p>
           </div>
-          <DimensionCard
-            id="dim-behavioral" name="Behavioral (sample)" icon={Route} colorVar="--color-dim-behavioral"
-            score={-12.4} rangeMin={-14} rangeMax={-10} unit="%" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-social" name="Social (sample)" icon={Users} colorVar="--color-dim-social"
-            score={4.2} rangeMin={2} rangeMax={6} unit="%" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-economic" name="Economic (sample)" icon={Briefcase} colorVar="--color-dim-economic"
-            score={12500000} rangeMin={8000000} rangeMax={15000000} unit="₱" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-ecological" name="Ecological (sample)" icon={Leaf} colorVar="--color-dim-ecological"
-            score={-840} rangeMin={-900} rangeMax={-750} unit=" tCO₂e" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-societal" name="Societal (sample)" icon={HeartHandshake} colorVar="--color-dim-societal"
-            score={8.1} rangeMin={6.5} rangeMax={9.2} unit=" index" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-        </div>
-      )}
 
-      {/* BOTTOM BAR: Timeline Scrubber */}
-      <div className="absolute bottom-4 left-4 right-4 h-16 bg-surface/90 backdrop-blur shadow-md border border-border rounded-lg z-10 pointer-events-auto flex items-center px-6 gap-6">
-        <div className="flex items-center gap-3">
-          <button className="p-2 hover:bg-secondary rounded-full text-text transition-colors"><SkipBack className="w-4 h-4" /></button>
-          <button
-            className="p-3 bg-primary text-primary-foreground hover:bg-primary-hover rounded-full transition-colors"
-            onClick={() => setIsPlaying(!isPlaying)}
-          >
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-          </button>
-          <button className="p-2 hover:bg-secondary rounded-full text-text transition-colors"><SkipForward className="w-4 h-4" /></button>
-        </div>
+          <div className="p-4 flex-1 overflow-y-auto">
+            <label htmlFor="scenario-query" className="text-sm font-semibold mb-2 block text-text">Scenario Query</label>
+            <textarea
+              id="scenario-query"
+              className="w-full bg-surface-elevated/90 border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
+              placeholder="e.g., What if we build a 3,000-seat school in Molo?"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              disabled={isSubmitting}
+            />
+            <button
+              className="w-full mt-3 bg-primary text-white font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+              onClick={() => handleSimulate()}
+              disabled={isSubmitting || !query.trim()}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  Parsing scenario…
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" aria-hidden="true" />
+                  Simulate Scenario
+                </>
+              )}
+            </button>
 
-        <div className="flex-1 flex items-center gap-4">
-          <span className="text-xs font-mono font-medium text-text-muted">06:00</span>
-          <div className="flex-1 h-2 bg-secondary rounded-full relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1/3 bg-primary rounded-full"></div>
+            {/* Secondary path: the structured builder (multi-step intervention composer). */}
+            <Link
+              href="/builder"
+              className="mt-2 flex items-center justify-center gap-1.5 text-sm text-text-muted hover:text-primary transition-colors"
+            >
+              <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+              Build a structured scenario
+            </Link>
+
+            {clarification && (
+              <div role="alert" className="mt-3 p-3 rounded-lg border border-warning/30 bg-warning/10 text-sm">
+                <div className="flex items-center gap-2 font-semibold text-warning mb-1">
+                  <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                  Clarification needed
+                </div>
+                <p className="text-text">{clarification}</p>
+              </div>
+            )}
+
+            {submitError && (
+              <div role="alert" className="mt-3 p-3 rounded-lg border border-error/30 bg-error/10 text-sm">
+                <div className="flex items-center gap-2 font-semibold text-error mb-1">
+                  <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                  Scenario request failed
+                </div>
+                <p className="text-text">{submitError}</p>
+              </div>
+            )}
+
+            {/* Reference Scenarios */}
+            <div className="mt-8">
+              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Reference Scenarios</h3>
+              <div className="space-y-2">
+                {PRESETS.map((preset) => {
+                  const Icon = preset.icon;
+                  return (
+                    <button
+                      key={preset.label}
+                      className="w-full text-left text-sm p-3 rounded-xl bg-surface-elevated/90 border border-border hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 group"
+                      onClick={() => handlePreset(preset.query)}
+                      disabled={isSubmitting}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-text font-medium">{preset.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <span className="text-xs font-mono font-medium text-text-muted">22:00</span>
+        </div>
+
+        {/* LAYER LEGEND — closed by default, toggle via Layers nav icon */}
+        {showLayers && (
+          <div className="absolute left-[340px] top-4 z-10">
+            <LayerLegend
+              layers={[
+                { id: "buildings", label: "3D Buildings", icon: Layers, active: activeLayers.buildings },
+                { id: "agents", label: "Agent Trajectories", icon: Route, active: activeLayers.agents },
+                { id: "confidence", label: "Confidence Heatmap", icon: MapIcon, active: activeLayers.confidence },
+              ]}
+              onToggleLayer={handleToggleLayer}
+            />
+          </div>
+        )}
+
+        {/* RIGHT PANEL: shown ONLY in explicitly-labeled sample mode.
+            Live results render on /scenario/[id] from the WebSocket stream. */}
+        {sampleMode && !showResultsPanel && (
+          <div className="absolute right-4 top-4 z-20 pointer-events-auto">
+            <button
+              onClick={() => setShowResultsPanel(true)}
+              className="flex items-center gap-2 bg-surface/95 backdrop-blur-md border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
+            >
+              <LayoutList className="w-4 h-4" />
+              Show Results
+            </button>
+          </div>
+        )}
+
+        {sampleMode && showResultsPanel && (
+          <div className="absolute right-4 top-4 bottom-20 w-[360px] flex flex-col gap-3 z-10 pointer-events-auto overflow-y-auto">
+            <div className="flex justify-end sticky top-0 bg-background/50 backdrop-blur-sm z-20 -mx-4 -mt-4 px-4 py-2 rounded-t-xl">
+              <button
+                onClick={() => setShowResultsPanel(false)}
+                className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors bg-surface/80 backdrop-blur-md border border-border"
+                aria-label="Close results panel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div role="alert" className="bg-warning/10 border border-warning/40 border-dashed rounded-xl p-4 shadow-sm mt-2">
+              <div className="flex items-center gap-2 font-bold text-warning text-sm">
+                <WifiOff className="w-4 h-4" aria-hidden="true" />
+                Sample mode — API offline
+              </div>
+              <p className="text-xs text-text mt-2">
+                The MATRIX API could not be reached. The cards below show <strong>illustrative sample
+                values only</strong> — they are <strong>not</strong> simulation results. Start the API
+                and re-run the scenario for live, glass-box numbers.
+              </p>
+            </div>
+            <DimensionCard
+              id="dim-behavioral" name="Behavioral (sample)" icon={Route} colorVar="--color-dim-behavioral"
+              score={-12.4} rangeMin={-14} rangeMax={-10} unit="%" confidence="Low"
+              confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+              onInspect={setInspectMetric}
+            />
+            <DimensionCard
+              id="dim-social" name="Social (sample)" icon={Users} colorVar="--color-dim-social"
+              score={4.2} rangeMin={2} rangeMax={6} unit="%" confidence="Low"
+              confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+              onInspect={setInspectMetric}
+            />
+            <DimensionCard
+              id="dim-economic" name="Economic (sample)" icon={Briefcase} colorVar="--color-dim-economic"
+              score={12500000} rangeMin={8000000} rangeMax={15000000} unit="₱" confidence="Low"
+              confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+              onInspect={setInspectMetric}
+            />
+            <DimensionCard
+              id="dim-ecological" name="Ecological (sample)" icon={Leaf} colorVar="--color-dim-ecological"
+              score={-840} rangeMin={-900} rangeMax={-750} unit=" tCO₂e" confidence="Low"
+              confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+              onInspect={setInspectMetric}
+            />
+            <DimensionCard
+              id="dim-societal" name="Societal (sample)" icon={HeartHandshake} colorVar="--color-dim-societal"
+              score={8.1} rangeMin={6.5} rangeMax={9.2} unit=" index" confidence="Low"
+              confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+              onInspect={setInspectMetric}
+            />
+          </div>
+        )}
+
+        {/* BOTTOM BAR: Enhanced Playback Bar */}
+        <div className="absolute bottom-4 left-4 right-4 z-10 pointer-events-auto">
+          <PlaybackBar
+            isPlaying={isPlaying}
+            onTogglePlay={() => setIsPlaying(!isPlaying)}
+          />
         </div>
       </div>
 

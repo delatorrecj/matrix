@@ -38,7 +38,25 @@ import type {
   FeatureCollection,
   MapLayerToggles,
 } from "@/components/map";
-import { Route, Activity, Gauge, Waves } from "lucide-react";
+import { Route, Activity, Gauge, Waves, X, LayoutList } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT } from "@/lib/mapStyles";
+import type { MapRef } from "react-map-gl/maplibre";
+
+const ILOILO_BOUNDS = {
+  minLng: 122.48,
+  maxLng: 122.62,
+  minLat: 10.64,
+  maxLat: 10.79,
+  minZoom: 11
+};
+
+const handleViewStateChange = ({ viewState }: any) => {
+  viewState.longitude = Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng);
+  viewState.latitude = Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat);
+  viewState.zoom = Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom);
+  return viewState;
+};
 
 /** One DIMENSION_RESULT rendered as a glass-box metric card. */
 interface ResultCard {
@@ -52,14 +70,27 @@ interface ResultCard {
   provData: ProvenanceData;
 }
 
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
 
 export default function ScenarioSimulation() {
   const params = useParams();
   const scenarioId = params.id as string;
+  const mapRef = useRef<MapRef>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.getMap().setStyle(theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT);
+    }
+  }, [theme]);
 
   const [time, setTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+
+  const [showResultsPanel, setShowResultsPanel] = useState(true);
+  const [inspectingMetric, setInspectingMetric] = useState<string | null>(null);
+
+
 
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [runAttempt, setRunAttempt] = useState(0);
@@ -84,6 +115,17 @@ export default function ScenarioSimulation() {
   } | null>(null);
   const [inspectData, setInspectData] = useState<ProvenanceData | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (inspectingMetric && isDrawerOpen && mapRef.current) {
+      mapRef.current.getMap().flyTo({
+        center: [122.56, 10.71],
+        zoom: 14.5,
+        duration: 800,
+        essential: true,
+      });
+    }
+  }, [inspectingMetric, isDrawerOpen]);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -111,7 +153,19 @@ export default function ScenarioSimulation() {
     trailLength: 100,
     currentTime: time,
   });
-  const layers = [...dataLayers, ...(activeLayers.agents ? [tripsLayer] : [])];
+  
+  const layers = [...dataLayers, ...(activeLayers.agents ? [tripsLayer] : [])].map((layer: any) => {
+    if (!inspectingMetric || !isDrawerOpen) return layer;
+    
+    let isHighlighted = false;
+    const dim = inspectingMetric.toLowerCase();
+    
+    if (dim === "ecological" && layer.id === "flood-layer") isHighlighted = true;
+    if (dim === "behavioral" && (layer.id === "trips-layer" || layer.id === "congestion-layer")) isHighlighted = true;
+    if (["social", "economic", "societal"].includes(dim) && layer.id === "confidence-layer") isHighlighted = true;
+
+    return layer.clone({ opacity: isHighlighted ? (layer.props.opacity ?? 1) : 0.05 });
+  });
 
   const handleToggleLayer = useCallback((id: string) => {
     setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -307,28 +361,49 @@ export default function ScenarioSimulation() {
   return (
     <div className="flex h-screen w-full flex-col md:flex-row overflow-hidden bg-background">
 
+      {/* Floating Restore Button when panel is dismissed */}
+      {!showResultsPanel && (
+        <div className="absolute top-4 right-4 z-20 pointer-events-auto">
+          <button
+            onClick={() => setShowResultsPanel(true)}
+            className="flex items-center gap-2 bg-surface/95 backdrop-blur-md border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
+          >
+            <LayoutList className="w-4 h-4" />
+            Show Results
+          </button>
+        </div>
+      )}
+
       {/* 5-Dimension Impact Panel (Right Side, normally overlay but docked here) */}
-      <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface shadow-md z-10 flex flex-col border-l border-border order-2 md:order-1 overflow-y-auto">
-        <div className="p-4 border-b border-border flex justify-between items-center gap-2">
-          <div className="min-w-0">
+      {showResultsPanel && (
+        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/50 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-white/10 order-2 md:order-1 overflow-y-auto relative">
+          <div className="p-4 border-b border-white/10 bg-transparent flex justify-between items-center gap-2">
+            <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground">Scenario Results</h2>
             <p className="text-xs text-text-muted font-mono truncate">{scenarioId}</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-mono bg-secondary px-2 py-1 rounded" data-testid="ws-status">
-              {statusLabel(runState)}
-            </span>
-            {isRunActive && (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-mono bg-secondary px-2 py-1 rounded" data-testid="ws-status">
+                {statusLabel(runState)}
+              </span>
+              {isRunActive && (
+                <button
+                  onClick={cancelRun}
+                  className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-error hover:text-error transition-colors"
+                  data-testid="cancel-run"
+                >
+                  Cancel
+                </button>
+              )}
               <button
-                onClick={cancelRun}
-                className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-error hover:text-error transition-colors"
-                data-testid="cancel-run"
+                onClick={() => setShowResultsPanel(false)}
+                className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
+                aria-label="Close results panel"
               >
-                Cancel
+                <X className="w-4 h-4" />
               </button>
-            )}
+            </div>
           </div>
-        </div>
 
         <div className="p-4 flex-1 flex flex-col gap-4">
           <RunProgress runState={runState} />
@@ -362,8 +437,8 @@ export default function ScenarioSimulation() {
                 {dimResults.map((card) => (
                   <div
                     key={card.key}
-                    className="border border-border rounded-lg p-4 bg-surface hover:border-primary transition-colors cursor-pointer group"
-                    onClick={() => { setInspectData(card.provData); setIsDrawerOpen(true); }}
+                    className="border border-border rounded-xl p-4 bg-surface-elevated hover:border-primary/50 transition-all cursor-pointer group"
+                    onClick={() => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">{card.metric}</span>
@@ -403,22 +478,25 @@ export default function ScenarioSimulation() {
           <BiasAuditLog runId={scenarioId} />
         </div>
       </div>
+      )}
 
       {/* Map Area */}
       <div className="flex-1 relative order-1 md:order-2">
         <DeckGL
           initialViewState={{
             longitude: 122.56,
-            latitude: 10.71,
+            latitude: 10.72,
             zoom: 13,
             pitch: 45,
             bearing: 0
           }}
           controller={true}
+          onViewStateChange={handleViewStateChange}
           layers={layers}
         >
           <Map
-            mapStyle={MAP_STYLE}
+            ref={mapRef}
+            mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
             mapLib={maplibregl}
             reuseMaps
           />
@@ -438,7 +516,7 @@ export default function ScenarioSimulation() {
         </div>
 
         {/* Timeline Scrubber */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface px-6 py-3 rounded-full shadow-lg border border-border flex items-center gap-4 min-w-[300px]">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md px-6 py-3 rounded-xl shadow-lg border border-border flex items-center gap-4 min-w-[300px]">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
@@ -459,7 +537,7 @@ export default function ScenarioSimulation() {
 
       <InspectDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+        onClose={() => { setIsDrawerOpen(false); setInspectingMetric(null); }}
         metricId={inspectData?.equationId || null}
         data={inspectData}
       />

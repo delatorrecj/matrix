@@ -33,6 +33,7 @@ class DimensionResult:
     input_dataset_ids: list[str]      # INVENTORY ids, e.g. ["OSM-ILO", "OVERTURE"]
     references: list[str] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
+    focus_geometry: dict | None = None # GeoJSON dict for map-synced inspection
 
     @property
     def directional(self) -> bool:
