@@ -105,7 +105,8 @@
 - **Timeline Scrubber** — playback control for agent trajectories.
 - **Comparison/Ranking** — slider (baseline↔scenario) + A/B/C rank table (`PRD-F16`).
 - **Equity Chart** — distributional bars by decile/barangay (`PRD-F17`).
-- **Audit Log Table** — mode-share vs ground truth (`PRD-F6`).
+- **Synthesis Narrative** — Text blocks with interactive **Glossary Tooltips** (dashed underline, plain English definitions) and **Trend Indicators** (inline ↑/↓ arrows on citation chips based on text context).
+- **Report Export** — Exportable PDF styled strictly for black-and-white printing using `@media print` utilities (hides navigation/tooltips, forces black text/borders).
 
 All interactive components define **empty / loading (skeleton) / streaming / error / success** states — never just the happy path.
 

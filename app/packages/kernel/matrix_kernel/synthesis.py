@@ -43,7 +43,7 @@ def synthesize(results: list[DimensionResult], client: openai.AzureOpenAI | None
         "ACTIONABLE RECOMMENDATIONS\n"
         "(2-3 concrete interventions based on the data)\n\n"
         "PERSONA PERSPECTIVES\n"
-        "(How 1-2 specific stakeholders, e.g. a commuter or business owner, view these results)\n\n"
+        "(How 1-2 specific stakeholders, e.g. a commuter or business owner, view these results. This section MUST be written primarily in Hiligaynon, representing the local Ilonggo voice, with English translations provided in parentheses)\n\n"
         "CRITICAL RULE: Every time you state a number, you MUST include its Equation ID "
         "in brackets immediately after, for example: 'Trips increased by 450 [BEH-1].' "
         "Do not invent any numbers. Only use the numbers provided."

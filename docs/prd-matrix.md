@@ -46,7 +46,7 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 | PRD-F4 | **Real-time interactive visualization** | Next.js + Deck.gl TripsLayer animated agent playback on a Mapbox base, end-to-end within a 90-second budget. | Must-Have |
 | PRD-F5 | **Confidence-anchored outputs** | Every dimension reports a High/Medium/Low confidence and ranges (not point estimates); a translucent confidence layer shows where data is weaker. | Must-Have |
 | PRD-F6 | **Bias auditor** | Persona generation constrained to Iloilo ground-truth mode share (±3% triggers reweight); runs after every persona batch; public audit log. | Must-Have |
-| PRD-F7 | **Synthesis + recommendation report** | Azure OpenAI GPT-5.4 generates per-dimension narratives and an exportable PDF report with assumptions and confidence intervals. | Should-Have |
+| PRD-F7 | **Synthesis + recommendation report** | Azure OpenAI GPT-5.4 generates per-dimension narratives, featuring bilingual personas (Hiligaynon/English), glossary tooltips, trend indicators, and an exportable black-and-white PDF report. | Should-Have |
 | PRD-F8 | **Comparison slider** | Drag to compare baseline vs scenario states. | Should-Have |
 | PRD-F9 | **GraphRAG knowledge base** | ChromaDB + GraphRAG over OSM/PSA/CLUP/literature for retrieval-grounded orchestration and synthesis. | Should-Have |
 | PRD-F10 | **PWA companion (GPS traces)** | Mobile-first opt-in collection of cyclist/jeepney-rider traces to refine behavioral calibration. | Could-Have |
@@ -91,7 +91,7 @@ Feature IDs are permanent. Priorities mirror MATRIX.md §9 feature tiers (Tier 1
 - Given a baseline and a scenario, when I drag the comparison slider, then the map and per-dimension deltas update in sync.
 
 **US-06 — Export a recommendation report** *(PRD-F7)*
-- Given a completed run, when I export, then I receive a PDF with the five-dimension results, confidence intervals, assumptions, and data sources.
+- Given a completed run, when I export, then I receive a PDF perfectly styled for white-paper printing, containing the five-dimension results, confidence intervals, interactive glossary definitions, and bilingual persona perspectives.
 
 **US-07 — Inspect the bias audit log** *(PRD-F6)*
 - Given a persona batch, when the bias auditor runs, then the resulting mode-share vs ground-truth comparison is recorded in a publicly viewable audit log; deviations beyond ±3% are shown as having triggered reweighting.

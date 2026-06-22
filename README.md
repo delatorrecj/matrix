@@ -14,7 +14,7 @@ Urban development in fast-growing ASEAN cities like Iloilo City often faces a cr
 
 In the ASEAN context, rapid urbanization often outpaces infrastructure development. This leads to congestion, pollution, and economic bottlenecks. Our stakeholders include urban planners, local government units, and citizens who are affected by these changes. We considered various data factors such as road networks, historical traffic patterns, business locations, and environmental baselines. 
 
-Our AI system's core functionality allows users to input a proposed infrastructure change in plain language (for example, "Build a new school in Molo"). The system then runs a simulation to model how people and traffic will adapt to this change. It scores the outcomes across five dimensions: Behavioral, Ecological, Social, Economic, and Societal. This provides planners with a complete view of the project's potential impact.
+Our AI system's core functionality allows users to input a proposed infrastructure change in plain language (for example, "Build a new school in Molo"). The system then runs a simulation to model how people and traffic will adapt to this change. It scores the outcomes across five dimensions: Behavioral, Ecological, Social, Economic, and Societal. This provides planners with a complete view of the project's potential impact. The results are synthesized into an exportable **Executive Brief** (PDF), complete with **bilingual persona perspectives (Hiligaynon & English)**, interactive **glossary tooltips** for complex planning terms, and inline **trend indicators** connecting numbers directly to textual impacts.
 
 ## 3. AI TOOLS & METHODS USED
 

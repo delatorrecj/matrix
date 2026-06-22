@@ -374,20 +374,22 @@ export default function ScenarioSimulation() {
   const isRunActive = !isTerminal(runState.phase) && runState.phase !== "disconnected";
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex">
+    <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex print:h-auto print:block print:bg-white">
       {/* ICON NAV RAIL */}
-      <IconNavRail activeId="trajectories" onNavigate={(id) => {
-        if (id === "home") {
-          router.push("/");
-        }
-      }} />
+      <div className="print:hidden">
+        <IconNavRail activeId="trajectories" onNavigate={(id) => {
+          if (id === "home") {
+            router.push("/");
+          }
+        }} />
+      </div>
 
       {/* Main layout contents */}
-      <div className="flex-1 flex h-screen w-full flex-col md:flex-row overflow-hidden relative">
+      <div className="flex-1 flex h-screen w-full flex-col md:flex-row overflow-hidden relative print:h-auto print:block">
 
       {/* Floating Restore Button when panel is dismissed */}
       {!showResultsPanel && (
-        <div className="absolute top-24 right-4 z-20 pointer-events-auto">
+        <div className="absolute top-24 right-4 z-20 pointer-events-auto print:hidden">
           <button
             onClick={() => setShowResultsPanel(true)}
             className="flex items-center gap-2 bg-surface/60 backdrop-blur-xl border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
@@ -400,13 +402,21 @@ export default function ScenarioSimulation() {
 
       {/* 5-Dimension Impact Panel (Right Side, normally overlay but docked here) */}
       {showResultsPanel && (
-        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/50 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-white/10 order-2 md:order-1 overflow-hidden relative">
-          <div className="p-4 border-b border-white/10 bg-transparent flex justify-between items-center gap-2">
+        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/50 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-white/10 order-2 md:order-1 overflow-hidden relative print:w-full print:border-none print:shadow-none print:bg-white print:overflow-visible print:h-auto">
+          <div className="p-4 border-b border-white/10 bg-transparent flex justify-between items-center gap-2 print:border-black">
             <div className="min-w-0">
-            <h2 className="text-lg font-bold text-foreground">Scenario Results</h2>
-            <p className="text-xs text-text-muted font-mono truncate">{scenarioId}</p>
+            <h2 className="text-lg font-bold text-foreground print:text-black">Scenario Results</h2>
+            <p className="text-xs text-text-muted font-mono truncate print:text-black">{scenarioId}</p>
           </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 print:hidden">
+              <button
+                onClick={() => window.print()}
+                className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-primary hover:text-primary transition-colors"
+                title="Download Executive Brief (PDF)"
+                aria-label="Download Executive Brief"
+              >
+                Download Brief
+              </button>
               <span className="text-xs font-mono bg-secondary px-2 py-1 rounded" data-testid="ws-status">
                 {statusLabel(runState)}
               </span>
@@ -429,31 +439,34 @@ export default function ScenarioSimulation() {
             </div>
           </div>
 
-        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
-          <RunProgress runState={runState} />
-          <RunStatusBanner runState={runState} onRetry={retryRun} />
+        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto print:overflow-visible">
+          <div className="print:hidden">
+            <RunProgress runState={runState} />
+            <RunStatusBanner runState={runState} onRetry={retryRun} />
+          </div>
 
           {!isDrawerOpen && DIMENSIONS.map((dim) => {
             const dimResults = results.filter((r) => r.dimension === dim);
             if (dimResults.length === 0) {
               return (
-                <DimensionCardSkeleton
-                  key={dim}
-                  name={dim}
-                  colorClass={getDimensionColor(dim)}
-                  expectedResults={EXPECTED_RESULTS[dim]}
-                  active={isRunActive}
-                />
+                <div className="print:hidden" key={dim}>
+                  <DimensionCardSkeleton
+                    name={dim}
+                    colorClass={getDimensionColor(dim)}
+                    expectedResults={EXPECTED_RESULTS[dim]}
+                    active={isRunActive}
+                  />
+                </div>
               );
             }
             return (
               <div key={dim} className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${getDimensionColor(dim)}`} />
-                    <span className="text-sm font-semibold capitalize">{dim}</span>
+                    <div className={`w-3 h-3 rounded-full ${getDimensionColor(dim)} print:border print:border-black print:bg-black`} />
+                    <span className="text-sm font-semibold capitalize print:text-black">{dim}</span>
                   </div>
-                  <span className="text-xs font-mono text-text-muted">
+                  <span className="text-xs font-mono text-text-muted print:text-black">
                     {dimResults.length}/{EXPECTED_RESULTS[dim]} results
                   </span>
                 </div>
@@ -461,27 +474,27 @@ export default function ScenarioSimulation() {
                 {dimResults.map((card) => (
                   <div
                     key={card.key}
-                    className="border border-border rounded-xl p-4 bg-surface-elevated hover:border-primary/50 transition-all cursor-pointer group"
+                    className="border border-border rounded-xl p-4 bg-surface-elevated hover:border-primary/50 transition-all cursor-pointer group print:border-black print:bg-white print:break-inside-avoid"
                     onClick={() => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{card.metric}</span>
+                      <span className="text-sm font-medium print:text-black">{card.metric}</span>
                       {/* Confidence Chip */}
                       <div className={`text-xs px-2 py-0.5 border rounded-full font-mono ${
                         card.conf === 'H' ? 'bg-success/10 text-success border-success/20' :
                         card.conf === 'M' ? 'bg-warning/10 text-warning border-warning/20' :
                         'bg-destructive/10 text-destructive border-destructive/20 border-dashed'
-                      }`}>
+                      } print:bg-white print:text-black print:border-black print:border-solid`}>
                         {card.conf}
                       </div>
                     </div>
                     <div className="flex items-end gap-2 mb-1">
-                      <span className="text-2xl font-bold font-mono tracking-tight">{card.value}</span>
-                      <span className="text-xs text-text-muted mb-1">{card.unit}</span>
+                      <span className="text-2xl font-bold font-mono tracking-tight print:text-black">{card.value}</span>
+                      <span className="text-xs text-text-muted mb-1 print:text-black">{card.unit}</span>
                     </div>
-                    <div className="text-xs text-text-muted font-mono flex justify-between">
+                    <div className="text-xs text-text-muted font-mono flex justify-between print:text-black">
                       <span>R: {card.range}</span>
-                      <span className="opacity-0 group-hover:opacity-100 text-primary transition-opacity">Inspect →</span>
+                      <span className="opacity-0 group-hover:opacity-100 text-primary transition-opacity print:hidden">Inspect →</span>
                     </div>
                   </div>
                 ))}
@@ -572,7 +585,7 @@ export default function ScenarioSimulation() {
       )}
 
       {/* Map Area */}
-      <div className="flex-1 relative order-1 md:order-2">
+      <div className="flex-1 relative order-1 md:order-2 print:h-[600px] print:w-full print:block">
         <DeckGL
           viewState={{
             ...viewState,
@@ -592,7 +605,7 @@ export default function ScenarioSimulation() {
         </DeckGL>
 
         {/* Map layer toggles — drives useMapLayers + the page-owned TripsLayer */}
-        <div className="absolute left-4 top-4 z-10">
+        <div className="absolute left-4 top-4 z-10 print:hidden">
           <LayerLegend
             layers={[
               { id: "agents", label: "Agent Trajectories", icon: Route, active: !!activeLayers.agents },
@@ -605,7 +618,7 @@ export default function ScenarioSimulation() {
         </div>
 
         {/* Timeline Scrubber */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface/60 backdrop-blur-xl px-6 py-3 rounded-xl shadow-lg border border-border flex items-center gap-4 min-w-[300px]">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface/60 backdrop-blur-xl px-6 py-3 rounded-xl shadow-lg border border-border flex items-center gap-4 min-w-[300px] print:hidden">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
