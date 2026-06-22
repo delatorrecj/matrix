@@ -9,6 +9,7 @@ The MATRIX architecture originally mandated Azure OpenAI GPT-5.4 for orchestrati
 
 ## Decision
 - Replace `openai` with the Azure OpenAI Python SDK (`openai`).
+  - *Note: See [CR-009](cr-009-azure-foundry-client.md) — the client class was later adjusted to `openai.OpenAI` for Azure AI Foundry v1 endpoint compatibility.*
 - Use the provided Azure OpenAI GPT-5.4 deployment (`gpt-5.4`) for **both** orchestration/synthesis and high-volume persona generation.
 - The glass-box citation guard mechanism remains identical. The LLM acts solely as a parser and synthesizer; all raw numbers and metrics remain strictly deterministic from the kernel.
 

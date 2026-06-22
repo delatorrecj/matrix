@@ -42,6 +42,8 @@ desktop.ini
 # Editor / IDE
 .vscode/
 .idea/
+.gemini/
+.antigravityignore
 *.code-workspace
 *.swp
 *~

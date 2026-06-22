@@ -76,9 +76,15 @@ def _backoff_delay(attempt: int, base_s: float, cap_s: float,
     """Full-jitter exponential backoff: uniform(0, min(cap, base * 2**(attempt-1)))."""
     return max(0.0, rng.uniform(0.0, min(cap_s, base_s * (2 ** (attempt - 1)))))
 
-def make_client(timeout_s: float | None = None) -> openai.AzureOpenAI:
-    """Construct an `openai.AzureOpenAI` client, converting construction failure
-    into the typed `LLMUnavailable` so fallbacks engage."""
+def make_client(timeout_s: float | None = None) -> openai.OpenAI:
+    """Construct the OpenAI client for the Azure AI Foundry OpenAI-COMPATIBLE v1 endpoint,
+    converting construction failure into the typed `LLMUnavailable` so fallbacks engage.
+
+    Foundry exposes `https://<resource>.services.ai.azure.com/openai/v1`, which is driven by
+    the *standard* `openai.OpenAI(base_url=…, api_key=…)` client (the `model` arg is the
+    deployment name) — NOT `openai.AzureOpenAI`, whose classic
+    `/openai/deployments/{name}/…?api-version=…` routing 404s against this surface.
+    """
     if timeout_s is None:
         timeout_s = _env_float("MATRIX_LLM_TIMEOUT_S", DEFAULT_TIMEOUT_S)
     try:
@@ -88,27 +94,25 @@ def make_client(timeout_s: float | None = None) -> openai.AzureOpenAI:
         if not api_key or not endpoint:
             raise ValueError("AZURE_OPENAI_API_KEY or AZURE_OPENAI_ENDPOINT missing")
 
-        # api_version gates feature availability. The orchestrator + persona generation use
-        # structured outputs (response_format=json_schema via beta.chat.completions.parse),
-        # which Azure only supports on 2024-08-01-preview or later — so the default is a
-        # current GA that includes them. Override per-resource with AZURE_OPENAI_API_VERSION
-        # if your deployment needs a different one.
-        api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-10-21")
+        # Accept either the bare resource URL or the full v1 URL and normalize to the
+        # OpenAI-compatible base: https://<resource>.services.ai.azure.com/openai/v1
+        base = endpoint.rstrip("/")
+        if base.endswith("/openai/v1"):
+            base_url = base
+        elif base.endswith("/openai"):
+            base_url = base + "/v1"
+        else:
+            base_url = base + "/openai/v1"
 
-        return openai.AzureOpenAI(
-            api_key=api_key,
-            api_version=api_version,
-            azure_endpoint=endpoint,
-            timeout=timeout_s,
-        )
+        return openai.OpenAI(base_url=base_url, api_key=api_key, timeout=timeout_s)
     except Exception as exc:
         raise LLMUnavailable(
-            f"could not construct Azure OpenAI client: {exc}",
+            f"could not construct Azure OpenAI (v1) client: {exc}",
             attempts=0, last_error=exc,
         ) from exc
 
 def generate_chat_completion(
-    client: openai.AzureOpenAI,
+    client: openai.OpenAI,
     *,
     model: str,
     messages: list[dict[str, Any]],

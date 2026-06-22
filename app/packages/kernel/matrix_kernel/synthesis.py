@@ -18,7 +18,7 @@ from matrix_kernel.llm import LLMUnavailable, generate_chat_completion, make_cli
 logger = logging.getLogger(__name__)
 
 
-def synthesize(results: list[DimensionResult], client: openai.AzureOpenAI | None = None) -> tuple[str, list[dict[str, Any]]]:
+def synthesize(results: list[DimensionResult], client: openai.OpenAI | None = None) -> tuple[str, list[dict[str, Any]]]:
     """Generate a narrative from results, enforcing citations."""
     if not results:
         return "No results produced.", []

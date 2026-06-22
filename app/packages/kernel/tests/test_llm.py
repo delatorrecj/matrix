@@ -207,7 +207,7 @@ def test_max_attempts_env_knob(monkeypatch):
 def test_make_client_failure_is_typed(monkeypatch):
     def _boom():
         raise ValueError("Missing key inputs argument!")
-    monkeypatch.setattr(openai, "AzureOpenAI", _boom)
+    monkeypatch.setattr(openai, "OpenAI", _boom)
     with pytest.raises(LLMUnavailable):
         llm.make_client()
 

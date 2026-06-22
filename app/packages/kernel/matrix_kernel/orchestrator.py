@@ -43,7 +43,7 @@ class ScenarioSchema(BaseModel):
 
 def parse_scenario(
     query: str,
-    client: Optional[openai.AzureOpenAI] = None,
+    client: Optional[openai.OpenAI] = None,
     geometry: Optional[dict] = None,
 ) -> Scenario:
     """Parse an NL query into a structured Scenario.
