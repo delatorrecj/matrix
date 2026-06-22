@@ -46,7 +46,7 @@
  * splits on the literal token `Geometry (GeoJSON):`.
  */
 
-import { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -304,11 +304,21 @@ export default function ScenarioBuilder() {
       {/* Header + stepper */}
       <header className="border-b border-border bg-surface px-6 py-4">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Scenario Builder</h1>
-            <p className="text-xs text-text-muted mt-0.5">
-              Compose an intervention, then submit it as a precise query.
-            </p>
+          <div className="flex items-start gap-3">
+            <button
+              onClick={() => router.push("/")}
+              className="mt-1 flex items-center justify-center p-1.5 rounded-md text-text-muted hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Back to main interface"
+              title="Back to main interface"
+            >
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Scenario Builder</h1>
+              <p className="text-xs text-text-muted mt-0.5">
+                Compose an intervention, then submit it as a precise query.
+              </p>
+            </div>
           </div>
           <ol className="hidden sm:flex items-center gap-2" aria-label="Builder progress">
             {STEPS.map((label, i) => (
@@ -339,7 +349,7 @@ export default function ScenarioBuilder() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-6">
         <div className="mx-auto max-w-3xl">
           {/* STEP 0 — Intervention type */}
           <section
@@ -700,7 +710,9 @@ function CustomSelect<T extends string | number>({
   ariaLabel,
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -712,11 +724,36 @@ function CustomSelect<T extends string | number>({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+
+    const updateMenuPosition = () => {
+      const rect = buttonRef.current!.getBoundingClientRect();
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 200,
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isOpen]);
+
   const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={`relative w-full ${isOpen ? "z-20" : ""}`}>
       <button
+        ref={buttonRef}
         id={id}
         type="button"
         aria-haspopup="listbox"
@@ -732,7 +769,8 @@ function CustomSelect<T extends string | number>({
       {isOpen && (
         <ul
           role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-md border border-border bg-surface-elevated shadow-lg max-h-60 overflow-y-auto py-1 outline-none animate-in fade-in slide-in-from-top-1 duration-100"
+          style={menuStyle}
+          className="rounded-md border border-border bg-surface-elevated shadow-lg max-h-60 overflow-y-auto py-1 outline-none animate-in fade-in slide-in-from-top-1 duration-100"
         >
           {options.map((opt) => (
             <li

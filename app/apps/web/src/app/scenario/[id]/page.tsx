@@ -42,7 +42,7 @@ import type {
 } from "@/components/map";
 import { Route, Activity, Gauge, Waves, X, LayoutList } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
-import { MAP_STYLE_DARK, MAP_STYLE_LIGHT } from "@/lib/mapStyles";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
 
 const ILOILO_BOUNDS = {
@@ -95,21 +95,7 @@ export default function ScenarioSimulation() {
     if (!map) return;
 
     const ensureBuilding3D = () => {
-      if (theme === "dark" && !map.getLayer("building-3d")) {
-        map.addLayer({
-          id: "building-3d",
-          source: "openmaptiles",
-          "source-layer": "building",
-          type: "fill-extrusion",
-          minzoom: 14,
-          paint: {
-            "fill-extrusion-base": ["get", "render_min_height"],
-            "fill-extrusion-color": "rgb(40,40,40)",
-            "fill-extrusion-height": ["get", "render_height"],
-            "fill-extrusion-opacity": 0.8,
-          },
-        });
-      }
+      syncBuilding3dLayer(map, theme, true);
     };
 
     if (map.isStyleLoaded()) {

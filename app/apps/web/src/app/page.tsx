@@ -6,7 +6,6 @@ import { Map } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
-import { PolygonLayer } from "@deck.gl/layers";
 import {
   Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon,
   Layers, Play, Loader2, WifiOff, AlertTriangle, SlidersHorizontal,
@@ -22,7 +21,7 @@ import { HeaderControls } from "@/components/HeaderControls";
 import { PlaybackBar } from "@/components/PlaybackBar";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
-import { MAP_STYLE_DARK, MAP_STYLE_LIGHT } from "@/lib/mapStyles";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
 
 const INITIAL_VIEW_STATE = {
@@ -50,14 +49,6 @@ const handleViewStateChange = ({ viewState }: any) => {
   viewState.zoom = Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom);
   return viewState;
 };
-
-// Illustrative building footprints for the empty base map (visual placeholder
-// only — real building extrusions stream with the simulation on /scenario/[id]).
-type Building = { polygon: [number, number][]; height: number };
-const BUILDINGS: Building[] = [
-  { polygon: [[122.56, 10.71], [122.561, 10.71], [122.561, 10.711], [122.56, 10.711]], height: 20 },
-  { polygon: [[122.562, 10.712], [122.563, 10.712], [122.563, 10.713], [122.562, 10.713]], height: 45 },
-];
 
 // Preset reference scenarios — each submits a real NL query to POST /scenario.
 const PRESETS: { label: string; query: string; icon: React.ElementType }[] = [
@@ -141,29 +132,7 @@ export default function MatrixCockpit() {
     if (!map) return;
 
     const updateBuildingVisibility = () => {
-      if (theme === "dark" && !map.getLayer("building-3d")) {
-        map.addLayer({
-          id: "building-3d",
-          source: "openmaptiles",
-          "source-layer": "building",
-          type: "fill-extrusion",
-          minzoom: 14,
-          paint: {
-            "fill-extrusion-base": ["get", "render_min_height"],
-            "fill-extrusion-color": "rgb(40,40,40)",
-            "fill-extrusion-height": ["get", "render_height"],
-            "fill-extrusion-opacity": 0.8,
-          },
-        });
-      }
-
-      if (map.getLayer("building-3d")) {
-        map.setLayoutProperty(
-          "building-3d",
-          "visibility",
-          activeLayers.buildings ? "visible" : "none"
-        );
-      }
+      syncBuilding3dLayer(map, theme, activeLayers.buildings);
     };
 
     if (map.isStyleLoaded()) {
@@ -214,20 +183,6 @@ export default function MatrixCockpit() {
     void handleSimulate(presetQuery);
   };
 
-  const layers = [
-    activeLayers.buildings && new PolygonLayer({
-      id: "buildings-layer",
-      data: BUILDINGS,
-      extruded: true,
-      wireframe: true,
-      getPolygon: (d: Building) => d.polygon,
-      getElevation: (d: Building) => d.height,
-      getFillColor: [30, 42, 71, 180],
-      getLineColor: [59, 111, 224, 100],
-      opacity: inspectMetric ? 0.05 : 1,
-    })
-  ].filter(Boolean);
-
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex">
 
@@ -248,7 +203,7 @@ export default function MatrixCockpit() {
             } as any}
             controller={true}
             onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
-            layers={layers}
+            layers={[]}
           >
             <Map 
               ref={mapRef}
