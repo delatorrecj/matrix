@@ -90,6 +90,39 @@ export default function ScenarioSimulation() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const ensureBuilding3D = () => {
+      if (theme === "dark" && !map.getLayer("building-3d")) {
+        map.addLayer({
+          id: "building-3d",
+          source: "openmaptiles",
+          "source-layer": "building",
+          type: "fill-extrusion",
+          minzoom: 14,
+          paint: {
+            "fill-extrusion-base": ["get", "render_min_height"],
+            "fill-extrusion-color": "rgb(40,40,40)",
+            "fill-extrusion-height": ["get", "render_height"],
+            "fill-extrusion-opacity": 0.8,
+          },
+        });
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      ensureBuilding3D();
+    }
+
+    map.on("style.load", ensureBuilding3D);
+
+    return () => {
+      map.off("style.load", ensureBuilding3D);
+    };
+  }, [theme]);
+
   const [time, setTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
 
@@ -439,7 +472,7 @@ export default function ScenarioSimulation() {
             </div>
           </div>
 
-        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto print:overflow-visible">
+        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto overflow-x-hidden print:overflow-visible">
           <div className="print:hidden">
             <RunProgress runState={runState} />
             <RunStatusBanner runState={runState} onRetry={retryRun} />

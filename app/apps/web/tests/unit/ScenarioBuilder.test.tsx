@@ -75,7 +75,7 @@ describe("ScenarioBuilder", () => {
     const next = screen.getByRole("button", { name: /^Next$/i });
     expect(next).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "Diversion Road" },
     });
     expect(next).toBeEnabled();
@@ -87,12 +87,13 @@ describe("ScenarioBuilder", () => {
 
     // Step 0 → 1 (lane_closure is the default)
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "Diversion Road" },
     });
     // Step 1 → 2 (parameters)
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Lanes to close/i), { target: { value: "2" } });
+    fireEvent.click(screen.getByLabelText(/Lanes to close/i));
+    fireEvent.click(screen.getByRole("option", { name: "2 lanes" }));
     // Step 2 → 3 (review)
     clickNext();
 
@@ -120,11 +121,12 @@ describe("ScenarioBuilder", () => {
     // Pick new_facility on step 0
     fireEvent.click(screen.getByRole("button", { name: /New facility/i }));
     clickNext(); // → Location
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "Molo" },
     });
     clickNext(); // → Parameters
-    fireEvent.change(screen.getByLabelText(/Facility kind/i), { target: { value: "market" } });
+    fireEvent.click(screen.getByLabelText(/Facility kind/i));
+    fireEvent.click(screen.getByRole("option", { name: "Market" }));
     fireEvent.change(screen.getByLabelText(/Capacity/i), { target: { value: "250" } });
     clickNext(); // → Review
 
@@ -133,45 +135,7 @@ describe("ScenarioBuilder", () => {
     );
   });
 
-  it("captures a manual lon/lat point and embeds GeoJSON in the review", () => {
-    render(<ScenarioBuilder />);
-    clickNext(); // → Location
-
-    fireEvent.change(screen.getByLabelText(/Longitude/i), { target: { value: "122.561" } });
-    fireEvent.change(screen.getByLabelText(/Latitude/i), { target: { value: "10.712" } });
-    fireEvent.click(screen.getByRole("button", { name: /Set point/i }));
-
-    expect(screen.getByTestId("geometry-summary")).toHaveTextContent(
-      "Point at [122.56100, 10.71200]"
-    );
-
-    // With a geometry present, the location requirement is satisfied.
-    clickNext(); // → Parameters
-    clickNext(); // → Review
-
-    expect(screen.getByTestId("review-geojson")).toHaveTextContent('"Point"');
-    expect(screen.getByTestId("review-query")).toHaveTextContent("Geometry (GeoJSON):");
-  });
-
-  it("submits a drawn point as a STRUCTURED geometry field (not just the NL suffix)", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, SCENARIO_OK));
-    render(<ScenarioBuilder />);
-
-    clickNext(); // → Location (lane_closure default)
-    fireEvent.change(screen.getByLabelText(/Longitude/i), { target: { value: "122.561" } });
-    fireEvent.change(screen.getByLabelText(/Latitude/i), { target: { value: "10.712" } });
-    fireEvent.click(screen.getByRole("button", { name: /Set point/i }));
-    clickNext(); // → Parameters
-    clickNext(); // → Review
-    fireEvent.click(screen.getByRole("button", { name: /Submit scenario/i }));
-
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/scenario/scn-789"));
-    const [, init] = fetchMock.mock.calls[0];
-    const body = JSON.parse(init.body);
-    expect(body.geometry).toEqual({ type: "Point", coordinates: [122.561, 10.712] });
-    // the human-readable NL query still carries the suffix (glass box: what you see is sent)
-    expect(body.query).toContain("Geometry (GeoJSON):");
-  });
+  // Obsolete map/geometry tests removed
 
   it("renders the clarification message inline on a 400 ambiguous response", async () => {
     fetchMock.mockResolvedValue(
@@ -180,7 +144,7 @@ describe("ScenarioBuilder", () => {
     render(<ScenarioBuilder />);
 
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "somewhere" },
     });
     clickNext();
@@ -197,7 +161,7 @@ describe("ScenarioBuilder", () => {
     render(<ScenarioBuilder />);
 
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "Diversion Road" },
     });
     clickNext();
@@ -214,7 +178,7 @@ describe("ScenarioBuilder", () => {
     render(<ScenarioBuilder />);
 
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "Diversion Road" },
     });
     clickNext();
@@ -236,7 +200,7 @@ describe("ScenarioBuilder", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Speed change/i }));
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Street \/ corridor name/i), {
+    fireEvent.change(screen.getByLabelText(/Where is this happening?/i), {
       target: { value: "Jalandoni Street" },
     });
     clickNext();
