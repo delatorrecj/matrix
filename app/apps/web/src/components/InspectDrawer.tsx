@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfidenceChip, ConfidenceLevel } from "@/components/ConfidenceChip";
+import { X } from "lucide-react";
 
 interface InspectDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   metricId: string | null;
   data: ProvenanceData | null;
+  children?: React.ReactNode;
 }
 
 /**
@@ -84,14 +86,17 @@ function MetaField({
   );
 }
 
-export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerProps) {
+export default function InspectDrawer({ isOpen, onClose, data, children }: InspectDrawerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // A fresh inspection starts with all dataset rows collapsed.
   useEffect(() => {
     setExpandedId(null);
+    setIsExpanded(false);
   }, [data]);
 
   // Focus management: move focus into the dialog on open, restore it on close.
@@ -145,52 +150,53 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
   const level = toConfidenceLevel(data?.confidence);
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-        data-testid="inspect-backdrop"
-      />
-
-      {/* Drawer */}
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="inspect-drawer-title"
-        tabIndex={-1}
-        onKeyDown={handleKeyDown}
-        className="fixed right-0 top-0 h-full w-full max-w-[420px] bg-surface shadow-lg z-50 flex flex-col border-l border-border transform transition-transform duration-200 ease-out outline-none"
-        data-testid="inspect-drawer"
-      >
-        {/* Header */}
-        <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs px-2 py-0.5 bg-surface border border-border rounded font-mono">
-                {data?.equationId || "..."}
-              </span>
-              <h3 id="inspect-drawer-title" className="text-lg font-bold text-foreground">
-                {data?.metric || "Loading..."}
-              </h3>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-mono font-bold tracking-tight">{data?.value}</span>
+    <div
+      ref={dialogRef}
+      role="region"
+      aria-labelledby="inspect-drawer-title"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      className="absolute right-6 top-24 w-[360px] md:w-[400px] z-30 flex flex-col bg-surface shadow-2xl border border-border rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
+      style={{
+        maxHeight: isExpanded ? 'calc(100vh - 8rem)' : 'var(--panel-peek-height, 220px)'
+      }}
+      data-testid="inspect-drawer"
+    >
+      {/* Header */}
+      <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated shrink-0">
+        <div className="flex-1 pr-4">
+          <div className="flex items-start gap-3 mb-3">
+            <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono shrink-0 mt-1">
+              {data?.equationId || "..."}
+            </span>
+            <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
+              {data?.metric || "Loading..."}
+            </h3>
+          </div>
+            <div className="flex items-baseline gap-2 mt-4">
+              <span className="text-4xl font-mono font-bold tracking-tight">{data?.value}</span>
               <span className="text-sm font-mono text-text-muted">range: {data?.range}</span>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close inspector"
-            className="p-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+            className="p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all shrink-0"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8">
+        {!isExpanded && (
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="w-full py-2 bg-surface hover:bg-surface-elevated text-xs font-semibold text-primary transition-colors flex items-center justify-center gap-2 mt-auto"
+          >
+            Show details
+          </button>
+        )}
+
+        <div className={`flex-1 overflow-y-auto p-6 flex flex-col gap-8 transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 invisible'}`}>
           {/* Confidence */}
           <section>
             <h4 className="text-sm font-medium text-text-muted mb-3 uppercase tracking-wider">
@@ -232,7 +238,7 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
                 <p className="text-sm italic text-text-muted">No input datasets reported.</p>
               )}
               {data?.inputs?.map((input: InputDataset) => {
-                const isExpanded = expandedId === input.id;
+                const isItemExpanded = expandedId === input.id;
                 const metaId = `dataset-meta-${domSafe(input.id)}`;
                 return (
                   <div
@@ -241,8 +247,8 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
                   >
                     <button
                       type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : input.id)}
-                      aria-expanded={isExpanded}
+                      onClick={() => setExpandedId(isItemExpanded ? null : input.id)}
+                      aria-expanded={isItemExpanded}
                       aria-controls={metaId}
                       className="w-full p-3 flex justify-between items-center text-left group hover:bg-surface transition-colors"
                       data-testid={`dataset-row-${domSafe(input.id)}`}
@@ -256,10 +262,10 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
                         )}
                       </div>
                       <span className="text-text-muted text-xs shrink-0 ml-2" aria-hidden="true">
-                        {isExpanded ? "▲" : "▼"}
+                        {isItemExpanded ? "▲" : "▼"}
                       </span>
                     </button>
-                    {isExpanded && (
+                    {isItemExpanded && (
                       <dl
                         id={metaId}
                         className="px-3 pb-3 pt-2 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60"
@@ -311,8 +317,22 @@ export default function InspectDrawer({ isOpen, onClose, data }: InspectDrawerPr
               </ul>
             </section>
           )}
+
+          {children && (
+            <div className="pt-2 border-t border-border/50">
+              {children}
+            </div>
+          )}
         </div>
+
+        {isExpanded && (
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="w-full py-3 bg-surface hover:bg-surface-elevated text-xs font-semibold text-text-muted border-t border-border transition-colors flex items-center justify-center gap-2"
+          >
+            Collapse details
+          </button>
+        )}
       </div>
-    </>
   );
 }

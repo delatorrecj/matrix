@@ -14,6 +14,9 @@ import {
 //     (same pattern as HomeCockpit.test.tsx). ---
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "scn-test" }),
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 vi.mock("react-map-gl/maplibre", () => ({
   Map: () => null,

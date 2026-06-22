@@ -6,6 +6,9 @@ import ScenarioSimulation from "@/app/scenario/[id]/page";
 //     (same pattern as ProgressiveRunUi.test.tsx / HomeCockpit.test.tsx). ---
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "scn-test" }),
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 vi.mock("react-map-gl/maplibre", () => ({
   Map: () => null,
@@ -108,11 +111,11 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
 
   it("clicking a citation chip opens the InspectDrawer on the matching result", () => {
     streamRun();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("cite-BEH-1"));
 
-    const dialog = screen.getByRole("dialog");
+    const dialog = screen.getByRole("region");
     expect(within(dialog).getByText("BEH-1")).toBeInTheDocument();
     expect(within(dialog).getByText("Mode shift")).toBeInTheDocument();
     // The streamed dataset id resolves as a clickable row inside the drawer.
@@ -122,15 +125,15 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
   it("Escape closes the drawer opened from a citation chip", () => {
     streamRun();
     fireEvent.click(screen.getByTestId("cite-BEH-1"));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("region")).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
   it("a disabled chip never opens a drawer", () => {
     streamRun();
     fireEvent.click(screen.getByTestId("cite-ECO-1"));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 });

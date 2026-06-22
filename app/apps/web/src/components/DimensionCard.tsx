@@ -35,7 +35,7 @@ export function DimensionCard({
 
   return (
     <div 
-      className={`bg-surface-elevated/90 border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden group cursor-pointer ${className}`}
+      className={`bg-surface-elevated/60 backdrop-blur-xl border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group cursor-pointer ${className}`}
       onClick={() => onInspect(id)}
       role="button"
       tabIndex={0}
@@ -62,7 +62,7 @@ export function DimensionCard({
       <div className="flex items-end justify-between mt-4">
         <div>
           <div className="flex items-baseline gap-1">
-            <span className="mono-tabular text-2xl font-bold tracking-tight">
+            <span className="mono-tabular text-xl font-bold tracking-tight">
               {score > 0 ? "+" : ""}{score.toLocaleString()}
             </span>
             <span className="text-text-muted text-xs mono-tabular">{unit}</span>

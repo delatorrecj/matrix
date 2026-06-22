@@ -100,6 +100,7 @@ export default function MatrixCockpit() {
   }, [theme]);
 
   const [showResultsPanel, setShowResultsPanel] = useState(true);
+  const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
 
   const [query, setQuery] = useState("");
@@ -114,12 +115,13 @@ export default function MatrixCockpit() {
 
   useEffect(() => {
     if (inspectMetric && mapRef.current) {
-      mapRef.current.getMap().flyTo({
-        center: [122.56, 10.71],
+      setViewState(prev => ({
+        ...prev,
+        longitude: 122.56,
+        latitude: 10.71,
         zoom: 14.5,
-        duration: 800,
-        essential: true,
-      });
+        transitionDuration: 800,
+      }));
     }
   }, [inspectMetric]);
 
@@ -195,9 +197,16 @@ export default function MatrixCockpit() {
       <div className="flex-1 relative">
         <div className="absolute inset-0 z-0">
           <DeckGL
-            initialViewState={INITIAL_VIEW_STATE}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            viewState={{
+              ...viewState,
+              padding: { 
+                right: ((sampleMode && showResultsPanel) || !!inspectMetric) ? 424 : 0, 
+                left: 64, top: 0, bottom: 0 
+              }
+            } as any}
             controller={true}
-            onViewStateChange={handleViewStateChange}
+            onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
             layers={layers}
           >
             <Map 
@@ -229,14 +238,14 @@ export default function MatrixCockpit() {
             <label htmlFor="scenario-query" className="text-sm font-semibold mb-2 block text-text">Scenario Query</label>
             <textarea
               id="scenario-query"
-              className="w-full bg-surface-elevated/90 border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
+              className="w-full bg-surface-elevated/50 backdrop-blur-md border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
               placeholder="e.g., What if we build a 3,000-seat school in Molo?"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               disabled={isSubmitting}
             />
             <button
-              className="w-full mt-3 bg-primary text-white font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+              className="w-full mt-3 bg-primary/80 backdrop-blur-xl text-white font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md shadow-primary/20"
               onClick={() => handleSimulate()}
               disabled={isSubmitting || !query.trim()}
             >
@@ -291,7 +300,7 @@ export default function MatrixCockpit() {
                   return (
                     <button
                       key={preset.label}
-                      className="w-full text-left text-sm p-3 rounded-xl bg-surface-elevated/90 border border-border hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 group"
+                      className="w-full text-left text-sm p-3 rounded-xl bg-surface-elevated/50 backdrop-blur-md border border-border hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 group"
                       onClick={() => handlePreset(preset.query)}
                       disabled={isSubmitting}
                     >
@@ -324,23 +333,22 @@ export default function MatrixCockpit() {
         {/* RIGHT PANEL: shown ONLY in explicitly-labeled sample mode.
             Live results render on /scenario/[id] from the WebSocket stream. */}
         {sampleMode && !showResultsPanel && (
-          <div className="absolute right-4 top-4 z-20 pointer-events-auto">
+          <div className="absolute right-4 top-24 z-20 pointer-events-auto">
             <button
               onClick={() => setShowResultsPanel(true)}
-              className="flex items-center gap-2 bg-surface/95 backdrop-blur-md border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
+              className="flex items-center gap-2 bg-surface/60 backdrop-blur-xl border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
             >
               <LayoutList className="w-4 h-4" />
               Show Results
             </button>
           </div>
         )}
-
-        {sampleMode && showResultsPanel && (
-          <div className="absolute right-4 top-4 bottom-20 w-[360px] flex flex-col gap-3 z-10 pointer-events-auto overflow-y-auto">
-            <div className="flex justify-end sticky top-0 bg-background/50 backdrop-blur-sm z-20 -mx-4 -mt-4 px-4 py-2 rounded-t-xl">
+        {sampleMode && showResultsPanel && !inspectMetric && (
+          <div className="absolute right-6 top-24 bottom-20 w-[360px] flex flex-col gap-4 z-10 pointer-events-auto overflow-y-auto pb-6">
+            <div className="flex justify-end sticky top-0 bg-background/40 backdrop-blur-xl z-20 -mx-4 -mt-4 px-4 py-2 rounded-t-xl">
               <button
                 onClick={() => setShowResultsPanel(false)}
-                className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors bg-surface/80 backdrop-blur-md border border-border"
+                className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors bg-surface/60 backdrop-blur-xl border border-border"
                 aria-label="Close results panel"
               >
                 <X className="w-4 h-4" />
@@ -405,7 +413,43 @@ export default function MatrixCockpit() {
         onClose={() => setInspectMetric(null)}
         metricId={inspectMetric}
         data={SAMPLE_PROVENANCE}
-      />
+      >
+        <div className="flex flex-col gap-4 mt-2">
+          <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
+            Category Breakdown
+          </h4>
+          <DimensionCard
+            id="dim-behavioral" name="Behavioral (sample)" icon={Route} colorVar="--color-dim-behavioral"
+            score={-12.4} rangeMin={-14} rangeMax={-10} unit="%" confidence="Low"
+            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+            onInspect={setInspectMetric}
+          />
+          <DimensionCard
+            id="dim-social" name="Social (sample)" icon={Users} colorVar="--color-dim-social"
+            score={4.2} rangeMin={2} rangeMax={6} unit="%" confidence="Low"
+            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+            onInspect={setInspectMetric}
+          />
+          <DimensionCard
+            id="dim-economic" name="Economic (sample)" icon={Briefcase} colorVar="--color-dim-economic"
+            score={12500000} rangeMin={8000000} rangeMax={15000000} unit="₱" confidence="Low"
+            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+            onInspect={setInspectMetric}
+          />
+          <DimensionCard
+            id="dim-ecological" name="Ecological (sample)" icon={Leaf} colorVar="--color-dim-ecological"
+            score={-840} rangeMin={-900} rangeMax={-750} unit=" tCO₂e" confidence="Low"
+            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+            onInspect={setInspectMetric}
+          />
+          <DimensionCard
+            id="dim-societal" name="Societal (sample)" icon={HeartHandshake} colorVar="--color-dim-societal"
+            score={8.1} rangeMin={6.5} rangeMax={9.2} unit=" index" confidence="Low"
+            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+            onInspect={setInspectMetric}
+          />
+        </div>
+      </InspectDrawer>
 
     </div>
   );

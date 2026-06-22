@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Map } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -15,6 +15,7 @@ import BiasAuditLog from "@/components/BiasAuditLog";
 import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
 import RunProgress from "@/components/RunProgress";
 import RunStatusBanner from "@/components/RunStatusBanner";
+import { IconNavRail } from "@/components/IconNavRail";
 import {
   DIMENSIONS,
   EXPECTED_RESULTS,
@@ -77,6 +78,7 @@ interface ResultCard {
 
 
 export default function ScenarioSimulation() {
+  const router = useRouter();
   const params = useParams();
   const scenarioId = params.id as string;
   const mapRef = useRef<MapRef>(null);
@@ -93,6 +95,14 @@ export default function ScenarioSimulation() {
 
   const [showResultsPanel, setShowResultsPanel] = useState(true);
   const [inspectingMetric, setInspectingMetric] = useState<string | null>(null);
+
+  const [viewState, setViewState] = useState({
+    longitude: 122.56,
+    latitude: 10.72,
+    zoom: 13,
+    pitch: 45,
+    bearing: 0
+  });
 
 
 
@@ -122,12 +132,13 @@ export default function ScenarioSimulation() {
 
   useEffect(() => {
     if (inspectingMetric && isDrawerOpen && mapRef.current) {
-      mapRef.current.getMap().flyTo({
-        center: [122.56, 10.71],
+      setViewState(prev => ({
+        ...prev,
+        longitude: 122.56,
+        latitude: 10.71,
         zoom: 14.5,
-        duration: 800,
-        essential: true,
-      });
+        transitionDuration: 800,
+      }));
     }
   }, [inspectingMetric, isDrawerOpen]);
 
@@ -363,14 +374,23 @@ export default function ScenarioSimulation() {
   const isRunActive = !isTerminal(runState.phase) && runState.phase !== "disconnected";
 
   return (
-    <div className="flex h-screen w-full flex-col md:flex-row overflow-hidden bg-background">
+    <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex">
+      {/* ICON NAV RAIL */}
+      <IconNavRail activeId="trajectories" onNavigate={(id) => {
+        if (id === "home") {
+          router.push("/");
+        }
+      }} />
+
+      {/* Main layout contents */}
+      <div className="flex-1 flex h-screen w-full flex-col md:flex-row overflow-hidden relative">
 
       {/* Floating Restore Button when panel is dismissed */}
       {!showResultsPanel && (
-        <div className="absolute top-4 right-4 z-20 pointer-events-auto">
+        <div className="absolute top-24 right-4 z-20 pointer-events-auto">
           <button
             onClick={() => setShowResultsPanel(true)}
-            className="flex items-center gap-2 bg-surface/95 backdrop-blur-md border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
+            className="flex items-center gap-2 bg-surface/60 backdrop-blur-xl border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
           >
             <LayoutList className="w-4 h-4" />
             Show Results
@@ -380,7 +400,7 @@ export default function ScenarioSimulation() {
 
       {/* 5-Dimension Impact Panel (Right Side, normally overlay but docked here) */}
       {showResultsPanel && (
-        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/50 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-white/10 order-2 md:order-1 overflow-y-auto relative">
+        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/50 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-white/10 order-2 md:order-1 overflow-hidden relative">
           <div className="p-4 border-b border-white/10 bg-transparent flex justify-between items-center gap-2">
             <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground">Scenario Results</h2>
@@ -409,11 +429,11 @@ export default function ScenarioSimulation() {
             </div>
           </div>
 
-        <div className="p-4 flex-1 flex flex-col gap-4">
+        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
           <RunProgress runState={runState} />
           <RunStatusBanner runState={runState} onRetry={retryRun} />
 
-          {DIMENSIONS.map((dim) => {
+          {!isDrawerOpen && DIMENSIONS.map((dim) => {
             const dimResults = results.filter((r) => r.dimension === dim);
             if (dimResults.length === 0) {
               return (
@@ -478,24 +498,89 @@ export default function ScenarioSimulation() {
             />
           )}
 
-          <ValidationPanel />
-          <BiasAuditLog runId={scenarioId} />
+          {!isDrawerOpen && (
+            <>
+              <ValidationPanel />
+              <BiasAuditLog runId={scenarioId} />
+            </>
+          )}
         </div>
+
+        <InspectDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => { setIsDrawerOpen(false); setInspectingMetric(null); }}
+          metricId={inspectData?.equationId || null}
+          data={inspectData}
+        >
+          <div className="flex flex-col gap-4 mt-2">
+            <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
+              Category Breakdown
+            </h4>
+            {DIMENSIONS.map((dim) => {
+              const dimResults = results.filter((r) => r.dimension === dim);
+              if (dimResults.length === 0) {
+                return (
+                  <DimensionCardSkeleton
+                    key={dim}
+                    name={dim}
+                    colorClass={getDimensionColor(dim)}
+                    expectedResults={EXPECTED_RESULTS[dim]}
+                    active={isRunActive}
+                  />
+                );
+              }
+              return (
+                <div key={dim} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${getDimensionColor(dim)}`} />
+                      <span className="text-sm font-semibold capitalize">{dim}</span>
+                    </div>
+                    <span className="text-xs font-mono text-text-muted">
+                      {dimResults.length}/{EXPECTED_RESULTS[dim]} results
+                    </span>
+                  </div>
+
+                  {dimResults.map((card) => (
+                    <div
+                      key={card.key}
+                      className="border border-border rounded-xl p-4 bg-surface-elevated hover:border-primary/50 transition-all cursor-pointer group"
+                      onClick={() => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">{card.metric}</span>
+                        <div className={`text-xs px-2 py-0.5 border rounded-full font-mono ${
+                          card.conf === 'H' ? 'bg-success/10 text-success border-success/20' :
+                          card.conf === 'M' ? 'bg-warning/10 text-warning border-warning/20' :
+                          'bg-destructive/10 text-destructive border-destructive/20 border-dashed'
+                        }`}>
+                          {card.conf}
+                        </div>
+                      </div>
+                      <div className="flex items-end gap-2 mb-1">
+                        <span className="text-2xl font-bold font-mono tracking-tight">{card.value}</span>
+                        <span className="text-xs text-text-muted mb-1">{card.unit}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </InspectDrawer>
       </div>
       )}
 
       {/* Map Area */}
       <div className="flex-1 relative order-1 md:order-2">
         <DeckGL
-          initialViewState={{
-            longitude: 122.56,
-            latitude: 10.72,
-            zoom: 13,
-            pitch: 45,
-            bearing: 0
-          }}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          viewState={{
+            ...viewState,
+            padding: { right: (showResultsPanel || isDrawerOpen) ? 424 : 0, left: 64, top: 0, bottom: 0 }
+          } as any}
           controller={true}
-          onViewStateChange={handleViewStateChange}
+          onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
           layers={layers}
         >
           <Map
@@ -520,7 +605,7 @@ export default function ScenarioSimulation() {
         </div>
 
         {/* Timeline Scrubber */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur-md px-6 py-3 rounded-xl shadow-lg border border-border flex items-center gap-4 min-w-[300px]">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface/60 backdrop-blur-xl px-6 py-3 rounded-xl shadow-lg border border-border flex items-center gap-4 min-w-[300px]">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
@@ -538,13 +623,7 @@ export default function ScenarioSimulation() {
           <span className="text-xs font-mono w-12">{time}</span>
         </div>
       </div>
-
-      <InspectDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => { setIsDrawerOpen(false); setInspectingMetric(null); }}
-        metricId={inspectData?.equationId || null}
-        data={inspectData}
-      />
+      </div>
     </div>
   );
 }
