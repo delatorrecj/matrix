@@ -340,7 +340,6 @@ def check_database(timeout_s: float = 0.5) -> dict[str, Any]:
     url = (
         os.environ.get("MATRIX_DATABASE_URL")
         or os.environ.get("DATABASE_URL")
-        or os.environ.get("SUPABASE_DB_URL")
     )
     if not url:
         return {"status": "unconfigured", "detail": "no MATRIX_DATABASE_URL / DATABASE_URL set"}
@@ -360,10 +359,43 @@ def check_database(timeout_s: float = 0.5) -> dict[str, Any]:
 
 def check_llm() -> dict[str, Any]:
     """Key presence only (no live call -- /health must stay fast and budget-free).
+    'ok' means *configured*, not *verified*: a wrong key/endpoint still reads ok here.
     Azure OpenAI reads AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT."""
     if os.environ.get("AZURE_OPENAI_API_KEY") and os.environ.get("AZURE_OPENAI_ENDPOINT"):
-        return {"status": "ok", "detail": None}
+        return {"status": "ok", "detail": "configured (presence only; not verified)"}
     return {"status": "missing", "detail": "AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT must be set"}
+
+
+def check_baseline(redis_url: str, timeout_s: float = 0.5) -> dict[str, Any]:
+    """Is the SUMO baseline seeded in Redis? `/simulate` fails without it
+    (`baseline:{slug}:latest`, seeded by start.sh / run_nightly_baseline at boot). This is
+    the #1 reason a healthy-looking API still can't run a single simulation, so it is
+    surfaced explicitly. The key is derived from MATRIX_CITY_SLUG to keep runtime kernel-free.
+    'unknown' (Redis unreachable) is not counted as a failure here -- the redis check owns that.
+    """
+    slug = os.environ.get("MATRIX_CITY_SLUG", "iloilo")
+    key = f"baseline:{slug}:latest"
+    try:
+        import redis  # lazy: keep runtime importable without the client
+    except ImportError:
+        return {"status": "unknown", "detail": "redis client not installed"}
+    try:
+        client = redis.from_url(
+            redis_url, socket_connect_timeout=timeout_s, socket_timeout=timeout_s
+        )
+        try:
+            present = bool(client.exists(key))
+        finally:
+            with suppress(Exception):
+                client.close()
+    except Exception as exc:
+        return {"status": "unknown", "detail": str(exc)[:200]}
+    if present:
+        return {"status": "ok", "detail": None}
+    return {
+        "status": "missing",
+        "detail": f"{key} not seeded — baseline seed failed at boot; /simulate will error",
+    }
 
 
 def health_report(redis_url: str) -> dict[str, Any]:
@@ -373,18 +405,21 @@ def health_report(redis_url: str) -> dict[str, Any]:
     not their sum (redis worst case is ~2x timeout_s: localhost resolves to
     ::1 then 127.0.0.1).
     """
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=3) as pool:
         f_redis = pool.submit(check_redis, redis_url)
         f_db = pool.submit(check_database)
+        f_baseline = pool.submit(check_baseline, redis_url)
         deps = {
             "redis": f_redis.result(),
             "database": f_db.result(),
             "llm": check_llm(),
+            "baseline": f_baseline.result(),
         }
     degraded = (
         deps["redis"]["status"] != "ok"
         or deps["llm"]["status"] != "ok"
         or deps["database"]["status"] == "down"
+        or deps["baseline"]["status"] == "missing"
     )
     return {"status": "degraded" if degraded else "ok", "dependencies": deps}
 

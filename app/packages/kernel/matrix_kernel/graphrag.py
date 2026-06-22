@@ -5,9 +5,12 @@ Embedded with bge-small-en to provide grounding for the orchestrator and synthes
 """
 from __future__ import annotations
 
+import logging
 import os
 from functools import lru_cache
 from typing import TypedDict
+
+logger = logging.getLogger(__name__)
 
 try:
     import chromadb
@@ -60,30 +63,27 @@ def get_collection():
 
 
 def retrieve(query: str, top_k: int = 5) -> list[RetrievedChunk]:
-    """Retrieve relevant chunks from the knowledge base for a given query."""
+    """Retrieve relevant chunks from the knowledge base for a given query.
+
+    Never raises. GraphRAG is *grounding*, not a number source (glass box, PRD-F14):
+    if Chroma is unreachable (e.g. CHROMA_URL points at no running server), the embedding
+    model can't load, or the corpus was never ingested, we degrade to empty context so the
+    orchestrator and synthesis still run instead of 500-ing the whole request.
+    """
     try:
         collection = get_collection()
-    except ImportError:
-        # If not installed/built, return empty context
-        print("Warning: ChromaDB not available. Returning empty GraphRAG context.")
+        if collection.count() == 0:
+            return []
+        results = collection.query(query_texts=[query], n_results=top_k)
+    except Exception as exc:  # ImportError, Chroma HttpClient connect, embedding load, query
+        logger.warning(
+            "GraphRAG retrieve degraded to empty context (%s: %s)", type(exc).__name__, exc
+        )
         return []
-        
-    # If the collection is empty, return empty
-    if collection.count() == 0:
-        return []
-        
-    results = collection.query(
-        query_texts=[query],
-        n_results=top_k
-    )
-    
-    chunks = []
-    if results and results['documents'] and results['documents'][0]:
-        for i, doc in enumerate(results['documents'][0]):
-            meta = results['metadatas'][0][i] if results['metadatas'] else {}
-            chunks.append({
-                "text": doc,
-                "source": meta.get("source", "unknown")
-            })
-            
+
+    chunks: list[RetrievedChunk] = []
+    if results and results.get("documents") and results["documents"][0]:
+        for i, doc in enumerate(results["documents"][0]):
+            meta = results["metadatas"][0][i] if results.get("metadatas") else {}
+            chunks.append({"text": doc, "source": meta.get("source", "unknown")})
     return chunks

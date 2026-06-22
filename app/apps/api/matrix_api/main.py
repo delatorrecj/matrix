@@ -162,6 +162,15 @@ def create_scenario(input_data: ScenarioInput) -> dict:
     except ValueError as e:
         # LLM flagged as ambiguous
         return JSONResponse(status_code=400, content={"error": str(e), "is_ambiguous": True})
+    except Exception as e:
+        # Orchestrator failure (LLMUnavailable, Chroma/RAG, structured-parse) — surface the
+        # real cause with a logged traceback instead of an opaque 500 (mirrors the WS ERROR
+        # contract). The kernel never originates a number, so there is nothing to fabricate.
+        logging.getLogger("matrix_api").exception("scenario parse failed for query=%r", input_data.query)
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"scenario parse failed: {type(e).__name__}: {e}"},
+        )
     db.save_scenario(scenario, raw_input=input_data.query, input_type=input_data.input_type)
     # v1 fields stay top-level for the existing frontend; Scenario-v2 fields are read
     # defensively (they appear once the orchestrator upgrade lands) and ride along.

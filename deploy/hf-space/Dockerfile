@@ -8,10 +8,15 @@
 # The only things you supply are the Azure OpenAI secrets (Space Settings → Secrets).
 FROM python:3.12-slim
 
-# System libs: build tools + GDAL/PROJ/libxml2 for the eclipse-sumo wheel, redis-server
-# (bundled), git+curl to clone the app at build time.
+# System libs for the eclipse-sumo wheel's headless `sumo` binary:
+#   • libxerces-c-dev — XML parsing; SUMO HARD-depends on it to read the .net.xml. Without
+#     it the binary aborts with "error while loading shared libraries: libxerces-c..." and
+#     run_nightly_baseline() fails at boot (the baseline never seeds → /simulate KeyErrors).
+#   • libgdal/libproj — geo-projection used by netconvert/sumolib.
+# Plus redis-server (bundled) and git+curl to clone the app at build time.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libxerces-c-dev \
     libgdal-dev \
     libproj-dev \
     libxml2 \

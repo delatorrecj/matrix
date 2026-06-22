@@ -319,7 +319,7 @@ def test_health_degraded_when_redis_down(client, monkeypatch):
     assert body["status"] == "degraded"
     assert body["service"] == "matrix-api"
     assert body["dependencies"]["redis"]["status"] == "down"
-    assert set(body["dependencies"]) == {"redis", "database", "llm"}
+    assert set(body["dependencies"]) == {"redis", "database", "llm", "baseline"}
     assert elapsed < 2.5  # never blocks > ~2 s, even with deps down
 
 
