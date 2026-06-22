@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **planning and documentation workspace for MATRIX** (Multi-Agent Twin for Routing & Infrastructure eXchange) — a pre-construction infrastructure impact simulator built by **Team ATLAN** (Polytechnic University of the Philippines) for the **ASEAN AI Hackathon 2026**, Smart Cities track, piloting in **Iloilo City**.
 
-**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. The code is **substantially built through Milestone B** (CR-004, 2026-06-07): the glass-box kernel, all five impact modules, the WebSocket API, the Gemini orchestrator + synthesis, and the Next.js + Deck.gl frontend are implemented end-to-end. See **["Working in `app/`" below](#working-in-app-the-code)** for the code's actual state, the commands, and the guardrails.
+**Application code now lives in the nested [`app/`](app/) monorepo** (scaffolded 2026-06-03 per [docs/implementation-plan-matrix.md](docs/implementation-plan-matrix.md) Phase 0) — **nested in this repo** (one clone, data co-located), *not* a separate repo despite the earlier plan. The repo root still holds the spec, the data-source catalog, and the `docs/` suite. The code is **substantially built through Milestone B** (CR-004, 2026-06-07): the glass-box kernel, all five impact modules, the WebSocket API, the Azure OpenAI orchestrator + synthesis, and the Next.js + Deck.gl frontend are implemented end-to-end. See **["Working in `app/`" below](#working-in-app-the-code)** for the code's actual state, the commands, and the guardrails.
 
 ## Read this first
 
@@ -18,14 +18,14 @@ This is the **planning and documentation workspace for MATRIX** (Multi-Agent Twi
 - [`docs/index.md`](docs/index.md) — the **FMD documentation suite** (PRD, SDD, DSD, Methods/glass-box ledger, QAD, SAD, BUILD, CLR, GTM, OPS, plus RFC-001 on the real-time pipeline) and its **§0 source-of-truth map**. For *what / how / test / comply* detail the `docs/` suite is canonical and de-duplicated; **MATRIX.md owns vision + business case (it serves the BRD role)**. Read §0 first to know which doc owns which fact.
 - [`data/READINESS.md`](data/READINESS.md) — per-dimension data confidence map (what's in hand vs. scripted vs. outreach-only). The bridge between INVENTORY and the spec: it declares the confidence floor each impact module must advertise.
 
-> **The filled roadmap predates the current vision.** It still describes the older "ATLAN" framing (transit-only simulator, Gemini 1.5 Pro, reactive "behavioral nudges"). MATRIX.md **supersedes** it — see MATRIX.md Appendix A for the full list of pivots. When the two disagree, MATRIX.md wins. Do not reintroduce the older framing.
+> **The filled roadmap predates the current vision.** It still describes the older "ATLAN" framing (transit-only simulator, Azure OpenAI 1.5 Pro, reactive "behavioral nudges"). MATRIX.md **supersedes** it — see MATRIX.md Appendix A for the full list of pivots. When the two disagree, MATRIX.md wins. Do not reintroduce the older framing.
 
 ## Product architecture (the big picture)
 
 MATRIX is **one simulation kernel feeding five impact modules** — this is the central architectural commitment and the reason results stay internally consistent. A single SUMO + LLM-persona run produces one unified per-agent trajectory dataset; all five impact modules score *that same simulated reality*:
 
 ```
-NL query / map drop → Gemini orchestrator → UNIFIED SIMULATION KERNEL (SUMO + persona pool + bias auditor)
+NL query / map drop → Azure OpenAI orchestrator → UNIFIED SIMULATION KERNEL (SUMO + persona pool + bias auditor)
   → one trajectory dataset → [Behavioral | Social | Economic | Ecological | Societal] modules run in parallel
   → synthesis agent → Next.js + Deck.gl real-time visualization
 ```
@@ -38,7 +38,7 @@ Every dimension carries an **explicit confidence level (High/Medium/Low)**. Conf
 
 **Current state — built end-to-end through CR-009 (all merged to `main`, 2026-06-22).** The build went well past the CR-004 "Milestone A+B" snapshot: **CR-006** ("Beyond the Hackathon", PRs #1–#17) hardened it into a real product, **CR-007** ("close the loop", all 10 PRs) wired the pieces together, **CR-008** implemented the 9 ASEAN-judges asks (ground-truth, informal sector, bias reweight, low-confidence protocol, extreme events, CPDO feedback PRD-F20, Hiligaynon gazetteer, traceability appendix, RAG ingestion), and **CR-009** was the QA/frontend hardening pass + UI redesign. As-built:
 - **Kernel** (`packages/kernel/matrix_kernel`): glass-box contract (`results.py`, `DimensionResult`), baseline caching, demand generation + `demand_delta.py`, persona pool, TraCI delta runner (`runner.py` + `sumo_env.py`), `Trajectory` schema, all five `modules/*.py` (Behavioral/Ecological/Social/Economic/Societal) on Phase 3 equations, plus `bias_auditor.py`, `citation_guard.py`, `confidence.py`, `geometry.py`, `graphrag.py`, `scenario.py` (Scenario v2), and the validation gates (`validation.py` + `build_validation_report.py`). **City-agnostic config** lives in `config.py` (env-driven; e.g. `MATRIX_SIM_HORIZON`, mode-share overrides).
-- **API** (`apps/api/matrix_api`): WebSocket progressive stream (`/health`, `/scenario`, `/simulate/{id}` → `ACCEPTED→PLAYBACK_FRAME→DIMENSION_RESULT×5→SYNTHESIS→DONE`) wired to the Gemini 3.1 Pro orchestrator + synthesis (`google-genai`) and citation guard, plus **auth** (`auth.py`) and **scenario persistence** (`db.py`).
+- **API** (`apps/api/matrix_api`): WebSocket progressive stream (`/health`, `/scenario`, `/simulate/{id}` → `ACCEPTED→PLAYBACK_FRAME→DIMENSION_RESULT×5→SYNTHESIS→DONE`) wired to the Azure OpenAI (gpt-5.4) orchestrator + synthesis (`google-genai`) and citation guard, plus **auth** (`auth.py`) and **scenario persistence** (`db.py`).
 - **Frontend** (`apps/web`): Next.js 14 + Deck.gl `TripsLayer`, glass-box `InspectDrawer`, `ScenarioBuilder` (picker + map placement), bias-audit log, validation panel, real GeoJSON map layers (congestion/confidence/flood), and Playwright e2e (provenance in [`app/apps/web/SCAFFOLD.md`](app/apps/web/SCAFFOLD.md)).
 
 Validation **machinery** is shipped and tested, but the headline **VAL-01 ground-truth result is deliberately withheld** pending mode-share/demand calibration (uncalibrated demand → no honest RMSE yet). The 90 s end-to-end budget is still over (perf work in CR-007 PR 8 added the trajectory Redis cache so *repeated* runs are <1s; first cold run is the constraint). **Wired into the live pipeline 2026-06-22** (these had been implemented-but-disconnected): the **bias auditor now runs per simulation** — the API startup warms the persona pool through the full `generate→audit→reweight` loop (`personas.warm_persona_pool`), and each run logs a public audit entry keyed to `scenario_id` (`GET /audit/{scenario_id}`, surfacing `adjustment_factors`); the **GraphRAG/Chroma corpus is ingested at API startup** so `retrieve()` grounds the orchestrator instead of returning `[]`; and `BiasAuditLog.tsx` now fetches via `NEXT_PUBLIC_API_URL`, not a hardcoded localhost. Honest remaining gaps: the reweight only fires on the LLM-generated pool (the deployed default static pool is on-anchor by construction → no correction needed); the gazetteer's GIS node ids are provisional placeholders.
@@ -47,7 +47,7 @@ Validation **machinery** is shipped and tested, but the headline **VAL-01 ground
 
 **Two guardrails govern any code here** (full text in [`app/AGENTS.md`](app/AGENTS.md)):
 1. **Glass box (PRD-F14).** No number ships without `equation_id` + `input_dataset_ids` + a *computed* confidence (never a guessed label), and it must resolve under the UI's Inspect drawer. The LLM narrates and cites — it **never originates a number**. Equations live in [`docs/methods-matrix.md`](docs/methods-matrix.md) (**Locked**); read it before coding any module. The `glass-box-auditor` agent blocks violations.
-2. **Verify-live-before-coding.** Confirm framework conventions against the **pinned version's** official docs before writing — do **not** emit framework code from training memory. Known traps: `google-genai` (not `google-generativeai`), `motion/react` (not `framer-motion`), Tailwind v4 `@tailwindcss/postcss`, `next/font` (not `<link>`). Never Gemini 1.5/2.0.
+2. **Verify-live-before-coding.** Confirm framework conventions against the **pinned version's** official docs before writing — do **not** emit framework code from training memory. Known traps: `google-genai` (not `google-generativeai`), `motion/react` (not `framer-motion`), Tailwind v4 `@tailwindcss/postcss`, `next/font` (not `<link>`). Never Azure OpenAI 1.5/2.0.
 
 **Build agents** live at the repo root [`.claude/agents/`](.claude/agents) so they're discoverable from `D:\PROJECTS\matrix`: `module-kernel-builder`, `glass-box-auditor` (gate), `frontend-3d-builder`, `eval-test-runner` (gate), `data-pipeline-runner`. Both gating agents must PASS before a merge.
 
@@ -68,7 +68,7 @@ cd app/apps/api && python -m pytest -q   # ~60 pass bare (test_limiter_window_ex
 uv run python -c "from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())"
 uv run --directory packages/kernel python -X utf8 -u packages/data/build_demand.py
 
-# API — FastAPI + WS, kernel + Gemini wired
+# API — FastAPI + WS, kernel + Azure OpenAI wired
 cd app/apps/api && uvicorn matrix_api.main:app --reload      # GET /health -> {"status":"ok",...}
 
 # Local datastores — Postgres+PostGIS :5432, Redis :6379, Chroma :8001
@@ -85,10 +85,10 @@ No Python linter/formatter is wired yet, and `apps/web` brings its own ESLint �
 These were chosen deliberately with documented justification (MATRIX.md §6). Treat them as invariants unless the user explicitly reopens the decision:
 
 - **Simulation engine: Eclipse SUMO** (via TraCI Python API) — *not* OASIS or MiroFish (those simulate social-media dynamics, not physical urban agents).
-- **LLMs: Gemini 3.1 Pro** (orchestration/synthesis) + **Gemini 3.1 Flash-Lite** (high-volume persona generation). **Never** Gemini 1.5 (shut down) or 2.0 (shut down June 1, 2026). The PUP-ATLAN roadmap's "Gemini 1.5 Pro" is stale.
+- **LLMs: Azure OpenAI (gpt-5.4)** (orchestration/synthesis) + **Azure OpenAI (gpt-5.4)** (high-volume persona generation). **Never** Azure OpenAI 1.5 (shut down) or 2.0 (shut down June 1, 2026). The PUP-ATLAN roadmap's "Gemini 1.5 Pro" is stale.
 - **Unified kernel → five modules**, not five independent simulators (avoids cross-dimension contradictions).
 - **Real-time interactive visualization** with a hard **90-second end-to-end latency budget** (Option C). Hit it via pre-warmed persona pool, delta simulations against a nightly baseline, parallel modules, and streaming/progressive UI.
-- **Planned stack:** Next.js 14 (App Router) + Tailwind + shadcn/ui frontend; Mapbox GL JS + Deck.gl (TripsLayer) for animated playback; FastAPI + WebSocket backend; Supabase Postgres + ChromaDB (GraphRAG/LightRAG) + Redis; XGBoost baseline forecaster. Deploy targets: Vercel + Fly.io.
+- **Planned stack:** Next.js 14 (App Router) + Tailwind + shadcn/ui frontend; Mapbox GL JS + Deck.gl (TripsLayer) for animated playback; FastAPI + WebSocket backend; Supabase Postgres + ChromaDB (GraphRAG/LightRAG) + Redis; XGBoost baseline forecaster. Deploy targets: Vercel + Hugging Face Spaces.
 - **Pilot city is Iloilo.** Geographic scaling is intended to be API-level (swap OSM bbox) and behavioral scaling prompt-level (reweight persona archetypes) — keep the engine city-agnostic.
 
 ## The FMD framework (`FMD/` — a separate, nested repository)

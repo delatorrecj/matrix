@@ -18,9 +18,9 @@
 |-----|-----|-------------|---------------|
 | **End-to-end scenario latency (p95, single-user)** | **≤ 90 s** | `simulation_runs.duration_ms` | investigate the slow stage (RFC budget); if persistent, serve reference scenarios |
 | First dimension streamed | ≤ ~65 s | `dimension_results` timestamps | check delta/persona-pool warmth |
-| Availability (demo windows) | best-effort; green during judged sessions | uptime check | restart Fly app; fail over to reference scenarios |
-| Error rate | < 2% of runs | API logs | check SUMO/Gemini health |
-| Gemini cost per run | < 2× baseline | run_trace cost | throttle; persona pool cached, Pro low-call |
+| Availability (demo windows) | best-effort; green during judged sessions | uptime check | restart Hugging Face Space; fail over to reference scenarios |
+| Error rate | < 2% of runs | API logs | check SUMO/Azure OpenAI health |
+| Azure OpenAI cost per run | < 2× baseline | run_trace cost | throttle; persona pool cached |
 | **Glass-box completeness** | **100% of emitted numbers carry provenance** | `glass-box-auditor` / TRACE-01 scan | block release — a number without provenance is a P0 |
 
 ---
@@ -29,11 +29,11 @@
 
 | Pillar | Tool | What's captured | Retention |
 |--------|------|-----------------|-----------|
-| Logs | FastAPI structured JSON (Fly) | request/run_id on every line; stage timings; **no PII** | 30 days |
+| Logs | FastAPI structured JSON (Hugging Face) | request/run_id on every line; stage timings; **no PII** | 30 days |
 | Metrics | Supabase events (PRD §5.5) + SLIs | `simulation_completed` (duration), `dimension_streamed` (latency), `bias_audit_logged` | rolling |
-| Traces | **`run_trace`** (glass-box) + Gemini tracing (Langfuse-style) | prompt + retrieved chunks + params + seed per run; per-call cost | per run history |
+| Traces | **`run_trace`** (glass-box) + AI tracing (Langfuse-style) | prompt + retrieved chunks + params + seed per run; per-call cost | per run history |
 
-**Dashboards:** (1) health — the 90 s SLO + error rate; (2) AI cost — Gemini spend/run; (3) fairness — bias-audit deltas. **Correlation ID:** `run_id` propagated client → WS → kernel → modules → `run_trace`, so one scenario is traceable end-to-end (this *is* the glass-box, operationalized). **No-PII rule:** open/aggregated data only; PWA traces anonymized at device (reconcile with [CLR §1](clr-matrix.md)).
+**Dashboards:** (1) health — the 90 s SLO + error rate; (2) AI cost — Azure OpenAI spend/run; (3) fairness — bias-audit deltas. **Correlation ID:** `run_id` propagated client → WS → kernel → modules → `run_trace`, so one scenario is traceable end-to-end (this *is* the glass-box, operationalized). **No-PII rule:** open/aggregated data only; PWA traces anonymized at device (reconcile with [CLR §1](clr-matrix.md)).
 
 ---
 
@@ -42,7 +42,7 @@
 | Alert | Condition | Severity | Notified |
 |-------|-----------|----------|----------|
 | Latency budget breach | p95 > 90 s over 10 runs | P1 | team chat → Yushin |
-| Gemini outage / 429 storm | error spike on Gemini calls | P1 | Jerico (AI) |
+| Azure OpenAI outage / 429 storm | error spike on AI calls | P1 | Jerico (AI) |
 | Sim failure | SUMO/kernel errors > 5% | P1 | Jerico/Yushin (dev) |
 | Provenance gap | any output missing `equation_id`/`dataset_ids` | **P0** | Jerico — block ship |
 | RA 10173 data event | suspected exposure of PWA trace data | **P0** | Jerico + DPO — see §4 |
@@ -63,15 +63,15 @@ Severity ladder = QAD P0–P3. When an incident fires:
 
 **RA 10173 breach runbook (PWA trace data — the one personal-data surface):** on suspected exposure, **notify the NPC and affected data subjects within 72 hours** of knowledge if there is real risk of serious harm (CLR §2); the **DPO** (designate per CLR) leads. Disable the PWA trace endpoint immediately (kill switch below).
 
-**Rollback:** redeploy the last-good tagged build serving pre-computed reference scenarios (PRD §9). **Kill switches / flags:** `USE_BASELINE_DELTA` (fall back to cold/cached), `ENABLE_PWA_TRACES` (disable trace collection instantly), `ENABLE_GEMINI` (serve cached parses for reference scenarios).
+**Rollback:** redeploy the last-good tagged build serving pre-computed reference scenarios (PRD §9). **Kill switches / flags:** `USE_BASELINE_DELTA` (fall back to cold/cached), `ENABLE_PWA_TRACES` (disable trace collection instantly), `ENABLE_LLM` (serve cached parses for reference scenarios).
 
 ---
 
 ## 5. Routine Operations
 
-- **Secret rotation:** Gemini/TomTom/OpenWeather keys in gitignored `.env` / host secrets; rotate if exposed.
-- **Dependency / stack currency:** re-verify the BUILD §3 pins (esp. Gemini SDK, Next.js, Deck.gl) before each sprint; patch promptly.
-- **Cost review:** weekly Gemini spend vs free-tier; confirm persona pool stays cached.
+- **Secret rotation:** Azure OpenAI/TomTom/OpenWeather keys in gitignored `.env` / host secrets; rotate if exposed.
+- **Dependency / stack currency:** re-verify the BUILD §3 pins (esp. Azure OpenAI SDK, Next.js, Deck.gl) before each sprint; patch promptly.
+- **Cost review:** weekly Azure OpenAI spend vs budget; confirm persona pool stays cached.
 - **Data refresh:** re-run `data/fetch/*` for live sources; re-stamp vintages in INVENTORY (owner: Rica/Russell — research — via `data-pipeline-runner`).
 - **Backup:** Supabase daily snapshots; raw data is reproducible via `data/fetch/*` (SDD §6 RTO ~2 h / RPO 24 h).
 
@@ -92,62 +92,47 @@ Severity ladder = QAD P0–P3. When an incident fires:
 
 ## 6. Performance Tuning
 
-**Observed baseline latency (warm, no trajectory cache hit):** SUMO ≈ 44 s · modules ≈ 89 ms · Gemini ≈ 3.8 s · total ≈ 48 s. With a trajectory cache hit (Redis has `scenario:{id}:latest`) the SUMO stage is skipped entirely → total < 5 s. The 90 s budget (SLO §1) is met comfortably for warm runs; cold-start latency above 90 s signals a cache miss + slow Gemini call.
+**Observed baseline latency (warm, no trajectory cache hit):** SUMO ≈ 44 s · modules ≈ 89 ms · AI ≈ 3.8 s · total ≈ 48 s. With a trajectory cache hit (Redis has `scenario:{id}:latest`) the SUMO stage is skipped entirely → total < 5 s. The 90 s budget (SLO §1) is met comfortably for warm runs; cold-start latency above 90 s signals a cache miss + slow AI call.
 
 | Knob | Env var | Default | Effect | Constraint |
 |------|---------|---------|--------|------------|
 | Sim horizon | `MATRIX_SIM_HORIZON` | `900` s | 600 s saves ~8 s of SUMO wall time | Baseline + scenario must share the same value — **always re-run `run_nightly_baseline()` after changing** |
 | Trajectory cache TTL | `MATRIX_TRAJ_CACHE_TTL_S` | `7200` s (2 h) | Repeated runs of the same scenario hit Redis, skipping SUMO | Set `0` to disable caching (forces live SUMO every run) |
-| Concurrent sim cap | `MATRIX_MAX_CONCURRENT_SIMS` | `2` | More → more parallel users; fewer → less memory pressure | Each SUMO run needs ~600 MB; a 2 GB Fly machine → cap 2 |
+| Concurrent sim cap | `MATRIX_MAX_CONCURRENT_SIMS` | `2` | More → more parallel users; fewer → less memory pressure | Each SUMO run needs ~600 MB; a 16 GB Space → cap 20 |
 | Rerouting period | `--device.rerouting.period` in `runner.py` | `120` s | Cut to 60 s for higher realism; increase to 180 s to save CPU | Hardcoded in source; a future PR may expose via env var |
 
-**The biggest single win is the trajectory cache.** For a hackathon demo where judges re-run the same scenarios, the first run costs ~48 s; every subsequent run < 1 s. Pre-warm the cache with `fly ssh console -C "python -m matrix_kernel.prewarm"` (stub — see §7) before a judged session.
+**The biggest single win is the trajectory cache.** For a hackathon demo where judges re-run the same scenarios, the first run costs ~48 s; every subsequent run < 1 s. Pre-warm the cache via the frontend or API before a judged session.
 
 ---
 
-## 7. Deploy Runbook (Fly.io + Vercel)
+## 7. Deploy Runbook (Hugging Face Spaces + Vercel)
 
-**Status as of CR-007 PR 10:** configs fixed and documented; deploy not yet executed
-(requires user credentials + net files pre-loaded into a Fly persistent volume).
+**Status as of CR-009:** Migrated backend to Hugging Face Spaces (Docker).
 
 ### 7.1 Prerequisites
 
-- `fly` CLI installed and authenticated (`fly auth login`).
+- Hugging Face account and a created Docker Space.
 - `vercel` CLI installed and authenticated (`vercel login`).
-- `GOOGLE_API_KEY` with billing enabled (free-tier key has limit 0 for Pro models).
+- `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` provisioned.
+- Redis instance provisioned (e.g., Upstash) and URL available.
 - Net + demand files built locally: `cd app/packages/kernel && uv run python ../../packages/data/build_network.py` + `build_demand.py`.
 
-### 7.2 First-time API deploy (Fly.io)
+### 7.2 First-time API deploy (Hugging Face Spaces)
 
-```bash
-# 1. Create the app (if new)
-fly apps create matrix-api-backend --region sin
-
-# 2. Create Redis (Upstash managed Redis on Fly)
-fly ext redis create --name matrix-redis --region sin
-# note the redis URL — it will be matrix-redis.internal:6379 if Fly-native
-
-# 3. Create persistent volume for net + demand files (5 GB is ample)
-fly volumes create matrix_data --region sin --size 5
-
-# 4. Set secrets
-fly secrets set GOOGLE_API_KEY=<your_key>
-fly secrets set DATABASE_URL=<supabase_pooled_url>       # port 6543
-fly secrets set SUPABASE_KEY=<supabase_anon_key>
-
-# 5. Deploy
-cd app && fly deploy
-
-# 6. Upload net + demand files (do this BEFORE seeding the baseline)
-fly ssh sftp put packages/kernel/data/iloilo.net.xml /data/iloilo.net.xml
-fly ssh sftp put packages/kernel/data/iloilo.rou.xml /data/iloilo.rou.xml
-
-# 7. Seed the nightly baseline into Redis
-fly ssh console -C "python -c \"from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())\""
-
-# 8. Verify
-curl https://matrix-api-backend.fly.dev/health
-```
+1. Create a new Docker Space on Hugging Face (e.g., `matrix-api-backend`).
+2. Navigate to **Settings > Variables and secrets** in your Space.
+3. Add the following secrets:
+   - `AZURE_OPENAI_API_KEY`
+   - `AZURE_OPENAI_ENDPOINT`
+   - `DATABASE_URL` (Supabase pooled URL, port 6543)
+   - `SUPABASE_KEY`
+   - `MATRIX_REDIS_URL`
+4. Deploy the code by pushing to the Hugging Face git remote:
+   ```bash
+   git remote add hf https://huggingface.co/spaces/<your-username>/<your-space-name>
+   git push hf main
+   ```
+5. Ensure that the `app/packages/kernel/data` folder containing `iloilo.net.xml` and `iloilo.rou.xml` is pushed along with the repository, or downloaded during the Docker build process, as Hugging Face Spaces do not use Fly.io's persistent volumes in the same way.
 
 ### 7.3 First-time web deploy (Vercel)
 
@@ -160,39 +145,28 @@ vercel --prod
 #   NEXT_PUBLIC_MAPBOX_TOKEN    — Mapbox public token
 #   NEXT_PUBLIC_SUPABASE_URL    — Supabase project URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY — Supabase anon key
-# NEXT_PUBLIC_API_WS_URL is already set in vercel.json (wss://matrix-api-backend.fly.dev)
+# NEXT_PUBLIC_API_WS_URL should point to your Hugging Face space: wss://<your-username>-<your-space-name>.hf.space
 ```
 
 ### 7.4 Nightly baseline refresh
 
-The SUMO baseline (`baseline:iloilo:latest`) expires from Redis when the TTL runs out or Redis restarts. Set a cron to re-seed it:
-
+The SUMO baseline (`baseline:iloilo:latest`) expires from Redis when the TTL runs out or Redis restarts. Set a cron script in a separate environment or GitHub Action to trigger the baseline refresh via a secure API endpoint:
 ```bash
-# On Fly (run once, or set up a Fly Machine cron):
-fly ssh console -C "python -c \"from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())\""
+curl -X POST https://<your-username>-<your-space-name>.hf.space/admin/baseline -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
 
 ### 7.5 Pre-warm trajectory cache before a demo session
 
+Similarly, trigger the pre-warm via an API call to the backend:
 ```bash
-# SSH in and run the demo scenario once to populate scenario:demo:latest
-fly ssh console -C "python -c \"\
-from matrix_kernel.baseline import load_baseline; \
-from matrix_kernel.scenario import Scenario; \
-from matrix_kernel.runner import simulate; \
-import redis, os; \
-sc = Scenario('demo','Demo: Diversion Road closure','Benigno S. Aquino Jr. Avenue',1); \
-t = simulate(sc); \
-redis.from_url(os.environ.get('MATRIX_REDIS_URL','redis://localhost:6379/0')).set('scenario:demo:latest', t.to_json(), ex=7200); \
-print('pre-warmed', len(t.frames), 'frames') \
-\""
+curl -X POST https://<your-username>-<your-space-name>.hf.space/admin/prewarm -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
 
 ### 7.6 Rollback
 
+Use `git revert` or revert to a previous commit on the Hugging Face remote:
 ```bash
-fly releases list              # list available releases
-fly deploy --image <image-id>  # redeploy a specific release
+git push hf <previous-commit-hash>:main --force
 ```
 
 ---

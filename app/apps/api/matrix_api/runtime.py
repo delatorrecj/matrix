@@ -350,12 +350,12 @@ def check_database(timeout_s: float = 0.5) -> dict[str, Any]:
         return {"status": "down", "detail": str(exc)[:200]}
 
 
-def check_gemini() -> dict[str, Any]:
+def check_llm() -> dict[str, Any]:
     """Key presence only (no live call -- /health must stay fast and budget-free).
-    google-genai reads GEMINI_API_KEY / GOOGLE_API_KEY."""
-    if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
+    Azure OpenAI reads AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT."""
+    if os.environ.get("AZURE_OPENAI_API_KEY") and os.environ.get("AZURE_OPENAI_ENDPOINT"):
         return {"status": "ok", "detail": None}
-    return {"status": "missing", "detail": "GEMINI_API_KEY / GOOGLE_API_KEY not set"}
+    return {"status": "missing", "detail": "AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT must be set"}
 
 
 def health_report(redis_url: str) -> dict[str, Any]:
@@ -371,11 +371,11 @@ def health_report(redis_url: str) -> dict[str, Any]:
         deps = {
             "redis": f_redis.result(),
             "database": f_db.result(),
-            "gemini": check_gemini(),
+            "llm": check_llm(),
         }
     degraded = (
         deps["redis"]["status"] != "ok"
-        or deps["gemini"]["status"] != "ok"
+        or deps["llm"]["status"] != "ok"
         or deps["database"]["status"] == "down"
     )
     return {"status": "degraded" if degraded else "ok", "dependencies": deps}

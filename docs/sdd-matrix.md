@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record per [index.md](index.md) §2)
-**Last reconciled:** 2026-06-07 — reconciled with Fly.io + Vercel deployment configuration.
+**Last reconciled:** 2026-06-07 — reconciled with Hugging Face Spaces + Vercel deployment configuration.
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
 > Architecture for the PRD's features (`PRD-F#`). Locked technical decisions come from [MATRIX.md](../MATRIX.md) §5–6; data availability/confidence from [../data/READINESS.md](../data/READINESS.md). Treat the locked stack as invariant unless explicitly reopened.
@@ -19,7 +19,7 @@
 **Guiding principles:**
 - **One kernel, one trajectory dataset (`PRD-F1`).** All five modules score the *same* simulated reality — this is the architectural reason results never contradict across dimensions. Never fork into five independent simulators.
 - **Confidence is first-class (`PRD-F5`).** Every output carries High/Medium/Low + a range; anything below the floor renders "directional only," never as precision.
-- **Deterministic where it counts.** SUMO + Python do the physics and scoring; Gemini orchestrates and narrates, constrained by the bias auditor (`PRD-F6`). LLMs decide and describe; they do not invent the numbers.
+- **Deterministic where it counts.** SUMO + Python do the physics and scoring; Azure OpenAI orchestrates and narrates, constrained by the bias auditor (`PRD-F6`). LLMs decide and describe; they do not invent the numbers.
 - **Pre-warm + delta to hit 90 s.** Cached persona pool + nightly baseline + parallel modules + streaming/progressive UI (MATRIX.md §5.2).
 - **Glass box, not black box.** Every output traces to an equation + named data + a computed confidence; the LLM narrates and cites but **never originates a number**. Canonical ledger: [methods-matrix.md](methods-matrix.md) (`PRD-F14`).
 
@@ -36,17 +36,17 @@
 graph TD
     UI["Next.js 14 + Deck.gl / Mapbox<br/>(query, playback, 5-dim panel, confidence layer)"]
     GW["FastAPI + WebSocket gateway"]
-    ORC["Gemini 3.1 Pro orchestrator<br/>(NL/map → sim plan)"]
+    ORC["Azure OpenAI (gpt-5.4) orchestrator<br/>(NL/map → sim plan)"]
     RAG["GraphRAG / ChromaDB<br/>(OSM, PSA/CCHAIN, CLUP, literature)"]
     KERNEL["UNIFIED SIMULATION KERNEL<br/>SUMO/TraCI + persona pool + bias auditor"]
-    PERS["Gemini 3.1 Flash-Lite<br/>persona generation (cached)"]
+    PERS["Azure OpenAI (gpt-5.4)<br/>persona generation (cached)"]
     TRAJ[("Trajectory dataset<br/>per-agent, per-tick")]
     MB["Behavioral"]
     MS["Social"]
     ME["Economic"]
     MC["Ecological"]
     MZ["Societal"]
-    SYN["Gemini 3.1 Pro synthesis<br/>(narratives + report)"]
+    SYN["Azure OpenAI (gpt-5.4) synthesis<br/>(narratives + report)"]
     DB[("Supabase Postgres")]
     REDIS[("Redis: persona pool + baseline + delta cache")]
 
@@ -67,9 +67,9 @@ graph TD
 |-------|------------|----------------|
 | Client | Next.js 14 (App Router) + Tailwind + shadcn/ui; Mapbox GL JS + Deck.gl (TripsLayer) | Scenario input (`PRD-F2`), animated playback (`PRD-F4`), 5-dim panel + confidence layer (`PRD-F5`), comparison slider (`PRD-F8`) |
 | API / Gateway | FastAPI + WebSocket | Accept scenarios, stream simulation + per-dimension results progressively |
-| Service / Compute | Python: SUMO via TraCI (kernel, `PRD-F1`); persona generator (Gemini Flash-Lite); 5 impact modules (`PRD-F3`); bias auditor (`PRD-F6`); XGBoost baseline forecaster | Run the physics, generate/score the trajectory dataset, audit bias |
+| Service / Compute | Python: SUMO via TraCI (kernel, `PRD-F1`); persona generator (Azure OpenAI Flash-Lite); 5 impact modules (`PRD-F3`); bias auditor (`PRD-F6`); XGBoost baseline forecaster | Run the physics, generate/score the trajectory dataset, audit bias |
 | Data | Supabase Postgres (run metadata/results/audit), ChromaDB (vectors, `PRD-F9`), Redis (persona pool + baseline + delta cache) | Persistence, retrieval, hot caches |
-| Infrastructure | Vercel (frontend) + Fly.io (FastAPI + SUMO Docker + workers) + Redis + Supabase | Hosting, scaling, the SUMO container |
+| Infrastructure | Vercel (frontend) + Hugging Face Spaces (FastAPI + SUMO Docker + workers) + Redis + Supabase | Hosting, scaling, the SUMO container |
 
 ---
 
@@ -148,7 +148,7 @@ graph TD
 | `id` | UUID | No | PK | — |
 | `run_id` | UUID | No | FK → `simulation_runs.id` | ON DELETE CASCADE |
 | `step` | TEXT | No | — | parse / retrieve / plan / synthesize |
-| `prompt` | JSONB | No | — | the prompt + params sent to Gemini |
+| `prompt` | JSONB | No | — | the prompt + params sent to Azure OpenAI |
 | `retrieved` | JSONB | Yes | — | GraphRAG chunks + citations used |
 | `seed` | BIGINT | Yes | — | RNG seed (reproducibility) |
 
@@ -189,8 +189,8 @@ graph TD
 
 | Service | Purpose | Rate Limits / Fallback |
 |---------|---------|------------------------|
-| Gemini 3.1 Pro | orchestration + synthesis | 429 → backoff + queue; cached parse for reference scenarios; degrade to baseline + delta |
-| Gemini 3.1 Flash-Lite | persona generation (high volume) | free-tier quota → persona pool cached & reused, not regenerated per run |
+| Azure OpenAI (gpt-5.4) | orchestration + synthesis | 429 → backoff + queue; cached parse for reference scenarios; degrade to baseline + delta |
+| Azure OpenAI (gpt-5.4) | persona generation (high volume) | free-tier quota → persona pool cached & reused, not regenerated per run |
 | OSM / Overpass, Overture, ESA/Copernicus, PSA-CCHAIN | build-time data ingestion | fetched offline into `data/` (idempotent scripts); not on the hot path |
 | OpenWeather / TomTom (Tier B) | real-time weather/traffic triggers | keyed; on failure fall back to cached/last-known baseline conditions |
 
@@ -200,7 +200,7 @@ graph TD
 
 **Authentication:** none required for the public demo (v1). Optional Supabase Auth later for saving/sharing scenarios.
 **Session management:** stateless demo; WebSocket session keyed by scenario_id.
-**Authorization model:** public read (results + audit log are meant to be inspectable); scenario submission is rate-limited per IP to protect the Gemini budget.
+**Authorization model:** public read (results + audit log are meant to be inspectable); scenario submission is rate-limited per IP to protect the Azure OpenAI budget.
 
 **Data protection:**
 - **No PII in the core simulation** — it runs on aggregated open data (census/CCHAIN at barangay level, OSM, Overture). Personas are synthetic.
@@ -212,14 +212,14 @@ graph TD
 
 ## 6. Infrastructure, CI/CD & Deployment
 
-**Hosting:** Vercel (Next.js frontend), Fly.io (FastAPI + **SUMO Docker** + Python workers), Redis (cache), Supabase (Postgres + PostGIS), ChromaDB (alongside workers).
+**Hosting:** Vercel (Next.js frontend), Hugging Face Spaces (FastAPI + **SUMO Docker** + Python workers), Redis (cache), Supabase (Postgres + PostGIS), ChromaDB (alongside workers).
 
 **Environments:**
 - `dev`: docker-compose locally (SUMO + FastAPI + Redis + Chroma); data via `data/fetch/*` scripts.
-- `staging`: Vercel preview deploys on PRs + a Fly staging app.
-- `prod`: Vercel production + Fly production.
+- `staging`: Vercel preview deploys on PRs + a Hugging Face staging Space.
+- `prod`: Vercel production + Hugging Face production Space.
 
-**CI/CD:** GitHub Actions — lint → type-check → test → deploy (frontend to Vercel, backend to Fly). Preview per PR; prod on tagged release. *(A tagged "last-good" build is the demo rollback target — see PRD §9.)*
+**CI/CD:** GitHub Actions — lint → type-check → test → deploy (frontend to Vercel, backend to Hugging Face). Preview per PR; prod on tagged release. *(A tagged "last-good" build is the demo rollback target — see PRD §9.)*
 
 **Backup & disaster recovery:**
 - Backup cadence: Supabase daily snapshots (run metadata/results). Raw input data is reproducible from `data/fetch/*` + INVENTORY, so it is regenerable rather than backed up.
@@ -243,14 +243,14 @@ graph TD
 
 ## 8. AI / Agent Architecture
 
-**AI approach:** Gemini 3.1 **Pro** orchestrates (NL/map → simulation plan) and synthesizes (per-dimension narratives + report), grounded by **GraphRAG/ChromaDB** retrieval; Gemini 3.1 **Flash-Lite** generates the commuter-persona pool at volume; **SUMO** is the deterministic physical kernel (not an LLM); **XGBoost** forecasts corridor baselines. Narratives are grounded in the actual trajectory dataset + cited data — the LLM never fabricates the scores.
+**AI approach:** Azure OpenAI (gpt-5.4) **Pro** orchestrates (NL/map → simulation plan) and synthesizes (per-dimension narratives + report), grounded by **GraphRAG/ChromaDB** retrieval; Azure OpenAI (gpt-5.4) **Flash-Lite** generates the commuter-persona pool at volume; **SUMO** is the deterministic physical kernel (not an LLM); **XGBoost** forecasts corridor baselines. Narratives are grounded in the actual trajectory dataset + cited data — the LLM never fabricates the scores.
 
 **Model selection:**
 
 | Agent / Task | Model | Reason |
 |-------------|-------|--------|
-| Orchestrator + Synthesis | Gemini 3.1 Pro | current-gen reasoning for NL→plan and grounded narrative; low call count |
-| Persona generation | Gemini 3.1 Flash-Lite | free-tier covers high-volume persona batches |
+| Orchestrator + Synthesis | Azure OpenAI (gpt-5.4) | current-gen reasoning for NL→plan and grounded narrative; low call count |
+| Persona generation | Azure OpenAI (gpt-5.4) | free-tier covers high-volume persona batches |
 | Embeddings | `bge-small-en` (Sentence Transformers) | lightweight ChromaDB vectors |
 | Corridor baseline | XGBoost | fast, accurate time-series baseline; not generative |
 | Physical kernel | Eclipse SUMO (TraCI) | the open urban-mobility standard; **not** OASIS/MiroFish (those simulate social media, not city agents) |
@@ -282,7 +282,7 @@ graph TD
 | Persona batch (Flash-Lite) | high volume | **free tier** | pool cached, reused across scenarios |
 | Synthesis/report (Pro) | ~3–6k | low | one per completed run |
 
-**Fallback behavior:** Gemini error/timeout → serve cached parse for reference scenarios and/or baseline + delta; never silently retry past 2×; a data-sparse dimension returns "Low — directional only" rather than a fabricated number.
+**Fallback behavior:** Azure OpenAI error/timeout → serve cached parse for reference scenarios and/or baseline + delta; never silently retry past 2×; a data-sparse dimension returns "Low — directional only" rather than a fabricated number.
 
 ### 8.1 RAG / GraphRAG Architecture (CR-008 Item 9)
 
@@ -303,10 +303,10 @@ User scenario text and retrieved third-party content both reach the model, so th
 | LLM01 Prompt injection (direct + via retrieved content) | Yes | Orchestrator extracts a **structured, schema-validated** sim plan — it does not execute free-form instructions; retrieved GraphRAG/third-party content is wrapped + delimited as **data**, never commands; system prompt is privileged | QAD AI-01 (TBD) |
 | LLM02 Insecure output handling | Yes | Model output is **data** (scores/narrative), never executed as code/SQL/shell; escaped before render; no `eval` | QAD AI-02 |
 | LLM06 Sensitive-info disclosure | Low | No PII in prompts (aggregated open data); PWA traces anonymized at device; output carries no secrets | QAD AI-03 |
-| LLM07 Excessive agency / over-permissioning | Yes | Least-privilege tools (read + internal only); no external writes; SUMO sandboxed; Gemini spend-capped via Flash-Lite/pool caching | QAD AI-04 |
+| LLM07 Excessive agency / over-permissioning | Yes | Least-privilege tools (read + internal only); no external writes; SUMO sandboxed; Azure OpenAI spend-capped via Flash-Lite/pool caching | QAD AI-04 |
 | Hallucination causing user harm | Yes | **Numbers come from the deterministic kernel, not the LLM**; narratives cite data sources; confidence floor → "directional only"; bias auditor enforces mode-share anchor | QAD AI-05 |
 
-**Data sent to model providers:** scenario text + retrieved public Iloilo facts → Gemini (Google AUP). No raw PII. Retention/training terms to be confirmed and recorded in the planned **CLR** (reconcile sub-processors there).
+**Data sent to model providers:** scenario text + retrieved public Iloilo facts → Azure OpenAI (Google AUP). No raw PII. Retention/training terms to be confirmed and recorded in the planned **CLR** (reconcile sub-processors there).
 **Trust boundary:** anything the user or a third-party source can influence is **untrusted** — it can *request* a simulation but never *command* a tool call.
 
 ---

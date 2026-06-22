@@ -10,12 +10,11 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-from google.genai import errors as genai_errors
-from google.genai import types
+import openai
 
 from matrix_kernel import llm
 from matrix_kernel import personas
-from matrix_kernel.llm import LLMUnavailable, generate_content, is_retryable
+from matrix_kernel.llm import LLMUnavailable, generate_chat_completion, is_retryable
 from matrix_kernel.personas import ILOILO_MODE_SHARE, generate_persona_pool
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.synthesis import synthesize
@@ -33,26 +32,48 @@ def _clean_llm_env(monkeypatch):
 
 # --- fakes (no network) -------------------------------------------------------
 
-class _FakeModels:
-    """Scripted generate_content: each outcome is returned, or raised if it's an
-    exception. The last outcome repeats forever (so 'always failing' is easy)."""
+class _FakeMessage:
+    def __init__(self, content="", parsed=None):
+        self.content = content
+        self.parsed = parsed
 
-    def __init__(self, outcomes):
-        self._outcomes = list(outcomes)
-        self.calls = []
+class _FakeChoice:
+    def __init__(self, content="", parsed=None):
+        self.message = _FakeMessage(content, parsed)
 
-    def generate_content(self, *, model, contents, config):
-        self.calls.append({"model": model, "contents": contents, "config": config})
-        outcome = (self._outcomes.pop(0) if len(self._outcomes) > 1
-                   else self._outcomes[0])
+class _FakeResponse:
+    def __init__(self, content="", parsed=None):
+        self.choices = [_FakeChoice(content, parsed)]
+
+class _FakeCompletions:
+    def __init__(self, outcomes, calls):
+        self._outcomes = outcomes
+        self.calls = calls
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        outcome = (self._outcomes.pop(0) if len(self._outcomes) > 1 else self._outcomes[0])
         if isinstance(outcome, BaseException):
             raise outcome
         return outcome
+        
+    def parse(self, **kwargs):
+        return self.create(**kwargs)
 
+class _FakeChat:
+    def __init__(self, outcomes, calls):
+        self.completions = _FakeCompletions(outcomes, calls)
+
+class _FakeBeta:
+    def __init__(self, outcomes, calls):
+        self.chat = _FakeChat(outcomes, calls)
 
 class FakeClient:
     def __init__(self, *outcomes):
-        self.models = _FakeModels(outcomes)
+        self.calls = []
+        self._outcomes = list(outcomes)
+        self.chat = _FakeChat(self._outcomes, self.calls)
+        self.beta = _FakeBeta(self._outcomes, self.calls)
 
 
 class RecordingSleep:
@@ -70,47 +91,59 @@ class UpperBoundRng:
         return hi
 
 
-def _client_error(code, status="INVALID_ARGUMENT", message="bad request"):
-    return genai_errors.ClientError(code, {"error": {"code": code, "message": message, "status": status}})
+def _mock_response(code):
+    req = httpx.Request("POST", "http://test")
+    return httpx.Response(code, request=req)
 
+def _client_error(code, message="bad request"):
+    resp = _mock_response(code)
+    if code == 429:
+        return openai.RateLimitError(message, response=resp, body={})
+    elif code == 404:
+        return openai.NotFoundError(message, response=resp, body={})
+    elif code == 401:
+        return openai.AuthenticationError(message, response=resp, body={})
+    return openai.BadRequestError(message, response=resp, body={})
 
-def _server_error(code=503, status="UNAVAILABLE", message="backend overloaded"):
-    return genai_errors.ServerError(code, {"error": {"code": code, "message": message, "status": status}})
+def _server_error(code=503, message="backend overloaded"):
+    if code == 503:
+        return openai.APIConnectionError(request=httpx.Request("POST", "http://test"))
+    return openai.InternalServerError(message, response=_mock_response(code), body={})
 
 
 # --- retry / backoff / typed failure ------------------------------------------
 
 def test_success_first_try_no_backoff():
-    response = SimpleNamespace(text="ok")
+    response = _FakeResponse("ok")
     client = FakeClient(response)
     sleep = RecordingSleep()
-    out = generate_content(client, model="gemini-3.1-pro", contents="hi", sleep=sleep)
+    out = generate_chat_completion(client, model="gpt-5.4", messages=[{"role": "user", "content": "hi"}], sleep=sleep)
     assert out is response
-    assert len(client.models.calls) == 1
+    assert len(client.calls) == 1
     assert sleep.delays == []
 
 
 def test_transient_failure_then_success_backs_off_once():
-    response = SimpleNamespace(text="recovered")
+    response = _FakeResponse("recovered")
     client = FakeClient(_server_error(503), response)
     sleep = RecordingSleep()
-    out = generate_content(client, model="gemini-3.1-pro", contents="hi",
-                           sleep=sleep, rng=UpperBoundRng())
+    out = generate_chat_completion(client, model="gpt-5.4", messages=[{"role": "user", "content": "hi"}],
+                                   sleep=sleep, rng=UpperBoundRng())
     assert out is response
-    assert len(client.models.calls) == 2
+    assert len(client.calls) == 2
     assert len(sleep.delays) == 1
     assert 0.0 < sleep.delays[0] <= llm.DEFAULT_BACKOFF_CAP_S
 
 
 def test_retries_exhausted_raises_typed_exception():
-    client = FakeClient(_client_error(429, status="RESOURCE_EXHAUSTED", message="rate limited"))
+    client = FakeClient(_client_error(429, message="rate limited"))
     sleep = RecordingSleep()
     with pytest.raises(LLMUnavailable) as excinfo:
-        generate_content(client, model="gemini-3.1-flash-lite", contents="hi",
-                         max_attempts=3, sleep=sleep)
+        generate_chat_completion(client, model="gpt-5.4", messages=[{"role": "user", "content": "hi"}],
+                                 max_attempts=3, sleep=sleep)
     assert excinfo.value.attempts == 3
-    assert isinstance(excinfo.value.last_error, genai_errors.ClientError)
-    assert len(client.models.calls) == 3
+    assert isinstance(excinfo.value.last_error, openai.RateLimitError)
+    assert len(client.calls) == 3
     assert len(sleep.delays) == 2  # no sleep after the final attempt
 
 
@@ -118,12 +151,12 @@ def test_non_retryable_error_fails_immediately():
     client = FakeClient(_client_error(400))
     sleep = RecordingSleep()
     with pytest.raises(LLMUnavailable) as excinfo:
-        generate_content(client, model="gemini-3.1-pro", contents="hi",
-                         max_attempts=5, sleep=sleep)
+        generate_chat_completion(client, model="gpt-5.4", messages=[{"role": "user", "content": "hi"}],
+                                 max_attempts=5, sleep=sleep)
     assert excinfo.value.attempts == 1
-    assert len(client.models.calls) == 1  # never retried
+    assert len(client.calls) == 1  # never retried
     assert sleep.delays == []
-    assert isinstance(excinfo.value.__cause__, genai_errors.ClientError)
+    assert isinstance(excinfo.value.__cause__, openai.BadRequestError)
 
 
 def test_backoff_grows_exponentially_and_caps(monkeypatch):
@@ -132,8 +165,8 @@ def test_backoff_grows_exponentially_and_caps(monkeypatch):
     client = FakeClient(_server_error(500))
     sleep = RecordingSleep()
     with pytest.raises(LLMUnavailable):
-        generate_content(client, model="m", contents="hi", max_attempts=4,
-                         sleep=sleep, rng=UpperBoundRng())
+        generate_chat_completion(client, model="m", messages=[{"role": "user", "content": "hi"}], max_attempts=4,
+                                 sleep=sleep, rng=UpperBoundRng())
     # full jitter upper bounds: min(cap, 1*2^(k-1)) -> 1, 2, then capped at 3
     assert sleep.delays == [1.0, 2.0, 3.0]
 
@@ -143,69 +176,38 @@ def test_negative_backoff_knob_never_sleeps_negative(monkeypatch):
     client = FakeClient(_server_error(503))
     sleep = RecordingSleep()
     with pytest.raises(LLMUnavailable):  # typed — not time.sleep's ValueError
-        generate_content(client, model="m", contents="hi", max_attempts=3,
-                         sleep=sleep)
+        generate_chat_completion(client, model="m", messages=[{"role": "user", "content": "hi"}], max_attempts=3,
+                                 sleep=sleep)
     assert all(d >= 0.0 for d in sleep.delays)
 
-
 def test_retry_classification():
-    assert is_retryable(_client_error(429, status="RESOURCE_EXHAUSTED"))
+    assert is_retryable(_client_error(429))
     assert is_retryable(_server_error(500))
     assert is_retryable(_server_error(503))
-    assert is_retryable(httpx.ConnectError("connection refused"))
-    assert is_retryable(httpx.ReadTimeout("read timed out"))
-    assert is_retryable(TimeoutError("socket timeout"))
+    assert is_retryable(openai.APIConnectionError(request=None))
+    assert is_retryable(openai.APITimeoutError(request=None))
     assert not is_retryable(_client_error(400))
-    assert not is_retryable(_client_error(401, status="UNAUTHENTICATED"))
-    assert not is_retryable(_client_error(404, status="NOT_FOUND"))
+    assert not is_retryable(_client_error(401))
+    assert not is_retryable(_client_error(404))
     assert not is_retryable(ValueError("schema mismatch"))
 
 
 # --- hard per-call timeout ------------------------------------------------------
-
-def test_timeout_injected_into_request_config():
-    client = FakeClient(SimpleNamespace(text="ok"))
-    generate_content(client, model="m", contents="hi", timeout_s=2.5)
-    config = client.models.calls[0]["config"]
-    assert config.http_options.timeout == 2500  # HttpOptions.timeout is in ms
-
-
-def test_timeout_env_knob_and_default(monkeypatch):
-    client = FakeClient(SimpleNamespace(text="ok"))
-    generate_content(client, model="m", contents="hi")
-    assert (client.models.calls[0]["config"].http_options.timeout
-            == int(llm.DEFAULT_TIMEOUT_S * 1000))
-
-    monkeypatch.setenv("MATRIX_LLM_TIMEOUT_S", "7")
-    generate_content(client, model="m", contents="hi")
-    assert client.models.calls[1]["config"].http_options.timeout == 7000
-
-
-def test_timeout_preserves_caller_config_without_mutating_it():
-    caller_config = types.GenerateContentConfig(temperature=0.2)
-    client = FakeClient(SimpleNamespace(text="ok"))
-    generate_content(client, model="m", contents="hi", config=caller_config,
-                     timeout_s=1.0)
-    sent = client.models.calls[0]["config"]
-    assert sent.temperature == 0.2
-    assert sent.http_options.timeout == 1000
-    assert caller_config.http_options is None  # caller's object untouched
-
 
 def test_max_attempts_env_knob(monkeypatch):
     monkeypatch.setenv("MATRIX_LLM_MAX_ATTEMPTS", "2")
     client = FakeClient(_server_error(503))
     sleep = RecordingSleep()
     with pytest.raises(LLMUnavailable) as excinfo:
-        generate_content(client, model="m", contents="hi", sleep=sleep)
+        generate_chat_completion(client, model="m", messages=[{"role": "user", "content": "hi"}], sleep=sleep)
     assert excinfo.value.attempts == 2
-    assert len(client.models.calls) == 2
+    assert len(client.calls) == 2
 
 
 def test_make_client_failure_is_typed(monkeypatch):
     def _boom():
         raise ValueError("Missing key inputs argument!")
-    monkeypatch.setattr(llm.genai, "Client", _boom)
+    monkeypatch.setattr(openai, "AzureOpenAI", _boom)
     with pytest.raises(LLMUnavailable):
         llm.make_client()
 
@@ -224,7 +226,7 @@ def test_synthesis_falls_back_on_llm_unavailable(monkeypatch, caplog):
     def _unavailable(*args, **kwargs):
         raise LLMUnavailable("Gemini (gemini-3.1-pro) unavailable after 3 attempt(s)",
                              attempts=3)
-    monkeypatch.setattr("matrix_kernel.synthesis.generate_content", _unavailable)
+    monkeypatch.setattr("matrix_kernel.synthesis.generate_chat_completion", _unavailable)
     with caplog.at_level(logging.WARNING, logger="matrix_kernel.synthesis"):
         narrative, citations = synthesize([_result()], client=object())
     assert narrative == "Synthesis narrative generation failed. Please see the raw data."
@@ -233,8 +235,8 @@ def test_synthesis_falls_back_on_llm_unavailable(monkeypatch, caplog):
 
 
 def test_synthesis_success_path_keeps_cited_numbers(monkeypatch):
-    response = SimpleNamespace(text="Trips increased by 450.00 [BEH-1].")
-    monkeypatch.setattr("matrix_kernel.synthesis.generate_content",
+    response = _FakeResponse("Trips increased by 450.00 [BEH-1].")
+    monkeypatch.setattr("matrix_kernel.synthesis.generate_chat_completion",
                         lambda *a, **k: response)
     narrative, citations = synthesize([_result()], client=object())
     assert "[BEH-1]" in narrative
@@ -242,8 +244,8 @@ def test_synthesis_success_path_keeps_cited_numbers(monkeypatch):
 
 
 def test_synthesis_empty_response_text_is_blocked_not_crashed(monkeypatch):
-    response = SimpleNamespace(text=None)
-    monkeypatch.setattr("matrix_kernel.synthesis.generate_content",
+    response = _FakeResponse(None)
+    monkeypatch.setattr("matrix_kernel.synthesis.generate_chat_completion",
                         lambda *a, **k: response)
     narrative, citations = synthesize([_result()], client=object())
     assert narrative  # the blocked-narrative message, never a crash on None
@@ -269,8 +271,8 @@ def test_personas_use_gemini_payload_when_available(monkeypatch):
         {"id": "p0001", "mode": "walk", "income_decile": 8, "trip_purpose": "school"},
     ])
     monkeypatch.setattr(llm, "make_client", lambda: object())
-    monkeypatch.setattr(llm, "generate_content",
-                        lambda *a, **k: SimpleNamespace(parsed=parsed, text=None))
+    monkeypatch.setattr(llm, "generate_chat_completion",
+                        lambda *a, **k: _FakeResponse("", parsed=parsed))
     pool = generate_persona_pool(n=2, seed=1)
     assert [p.mode for p in pool] == ["jeepney", "walk"]
     assert pool[1].income_decile == 8
@@ -278,8 +280,8 @@ def test_personas_use_gemini_payload_when_available(monkeypatch):
 
 def test_personas_fall_back_on_unusable_response(monkeypatch, caplog):
     monkeypatch.setattr(llm, "make_client", lambda: object())
-    monkeypatch.setattr(llm, "generate_content",
-                        lambda *a, **k: SimpleNamespace(parsed=None, text="not json"))
+    monkeypatch.setattr(llm, "generate_chat_completion",
+                        lambda *a, **k: _FakeResponse("not json", parsed=None))
     with caplog.at_level(logging.WARNING, logger="matrix_kernel.personas"):
         pool = generate_persona_pool(n=10, seed=3)
     assert "unusable Gemini response" in caplog.text

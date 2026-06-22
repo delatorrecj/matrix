@@ -23,16 +23,16 @@
 ## Locked decisions (do not silently revert — MATRIX.md §6)
 - Simulation engine **Eclipse SUMO** (TraCI) — not OASIS/MiroFish.
 - **One unified kernel → five impact modules** (Behavioral/Social/Economic/Ecological/Societal).
-- LLMs **Gemini 3.1 Pro** (orchestration/synthesis) + **Flash-Lite** (personas) via
-  **`google-genai`**. **Never Gemini 1.5 (dead) or 2.0 (dead 2026-06-01).**
+- LLMs **Azure OpenAI GPT-5.4** (orchestration/synthesis/personas) via
+  **`openai`**. **Never Gemini 1.5/2.0/3.1 or google-genai.**
 - **90-second** end-to-end budget (pre-warmed personas + nightly baseline + delta + parallel modules + streaming UI).
 - Stack: Next.js 14 + Tailwind v4 (`@tailwindcss/postcss`) + shadcn/ui; Mapbox GL + Deck.gl (TripsLayer); FastAPI + WebSocket; Supabase (Postgres+PostGIS) + ChromaDB + Redis; XGBoost.
 
 ## Verify-live-before-coding (overrides training memory)
 Before writing framework code, confirm the convention against the **pinned version's**
-official docs: **google-genai** (ai.google.dev), **Next.js** (nextjs.org), **Tailwind v4**
+official docs: **openai** (platform.openai.com), **Next.js** (nextjs.org), **Tailwind v4**
 (tailwindcss.com), **Deck.gl** (deck.gl). Stale forms to avoid: `google-generativeai`
-(→ `google-genai`), `framer-motion` (→ `motion/react`), `<link>` fonts (→ `next/font`),
+(→ `openai`), `framer-motion` (→ `motion/react`), `<link>` fonts (→ `next/font`),
 Tailwind v3 PostCSS plugin (→ `@tailwindcss/postcss`). Self-anneal: add a row to
 [`../docs/build-matrix.md`](../docs/build-matrix.md) §3 whenever drift is caught.
 

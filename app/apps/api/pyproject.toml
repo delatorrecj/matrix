@@ -8,9 +8,9 @@ dependencies = [
     "uvicorn[standard]",
     "websockets",
     "pydantic",
-    # Orchestrator + synthesis (Gemini 3.1 Pro). VERIFY against ai.google.dev
-    # before wiring (build-matrix.md §3). Never Gemini 1.5/2.0.
-    "google-genai",
+    # Orchestrator + synthesis (Azure OpenAI GPT-5.4).
+    # Never Gemini 1.5/2.0.
+    "openai",
     # matrix-kernel is consumed as a path/workspace dependency -- wire at Phase 4.
     "matrix-kernel",
     # Persistence (matrix_api/db.py): psycopg3. Lazy-imported -- the in-memory

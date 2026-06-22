@@ -9,22 +9,21 @@ import logging
 import os
 from typing import Any
 
-from google import genai
-from google.genai import types
+import openai
 
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.citation_guard import strip_uncited_claims
-from matrix_kernel.llm import LLMUnavailable, generate_content, make_client
+from matrix_kernel.llm import LLMUnavailable, generate_chat_completion, make_client
 
 logger = logging.getLogger(__name__)
 
 
-def synthesize(results: list[DimensionResult], client: genai.Client | None = None) -> tuple[str, list[dict[str, Any]]]:
+def synthesize(results: list[DimensionResult], client: openai.AzureOpenAI | None = None) -> tuple[str, list[dict[str, Any]]]:
     """Generate a narrative from results, enforcing citations."""
     if not results:
         return "No results produced.", []
 
-    model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro-preview")
+    model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4")
     
     # Provide the results to the LLM
     results_text = "Here are the simulation results. You MUST cite the Equation ID in brackets e.g., [BEH-1] when mentioning ANY number from these results:\n\n"
@@ -49,16 +48,17 @@ def synthesize(results: list[DimensionResult], client: genai.Client | None = Non
     try:
         if not client:
             client = make_client()
-        response = generate_content(
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt}
+        ]
+        response = generate_chat_completion(
             client,
             model=model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.2,
-            ),
+            messages=messages,
+            temperature=0.2,
         )
-        narrative = response.text or ""
+        narrative = response.choices[0].message.content or ""
     except LLMUnavailable as e:
         logger.warning(
             "synthesis: Gemini unavailable after %d attempt(s) — serving the "

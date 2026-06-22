@@ -14,9 +14,9 @@ dependencies = [
     "shapely",
     "xgboost",
     "redis",
-    # Persona pool (Gemini 3.1 Flash-Lite). VERIFY call shape + model IDs against
-    # ai.google.dev before use -- never Gemini 1.5/2.0 (build-matrix.md §3).
-    "google-genai",
+    # Persona pool (Azure OpenAI GPT-5.4). VERIFY call shape + model IDs against
+    # Azure documentation before use -- never Gemini 1.5/2.0.
+    "openai",
     "psycopg[binary]>=3.3.4",
     "scikit-learn>=1.9.0",
     "chromadb>=1.5.9",

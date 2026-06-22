@@ -14,14 +14,13 @@ import os
 import uuid
 from typing import Literal, Optional
 
-from google import genai
-from google.genai import types
+import openai
 from pydantic import BaseModel, Field
 
 from matrix_kernel.config import get_city_config
 from matrix_kernel.gazetteer import annotate_query_with_gazetteer
 from matrix_kernel.graphrag import retrieve
-from matrix_kernel.llm import generate_content
+from matrix_kernel.llm import generate_chat_completion, make_client
 from matrix_kernel.scenario import Scenario
 
 
@@ -44,7 +43,7 @@ class ScenarioSchema(BaseModel):
 
 def parse_scenario(
     query: str,
-    client: Optional[genai.Client] = None,
+    client: Optional[openai.AzureOpenAI] = None,
     geometry: Optional[dict] = None,
 ) -> Scenario:
     """Parse an NL query into a structured Scenario.
@@ -56,9 +55,9 @@ def parse_scenario(
     (matrix_kernel.geometry) instead of the location keyword.
     """
     if not client:
-        client = genai.Client()  # Automatically picks up GOOGLE_API_KEY from environment
+        client = make_client()
 
-    model_name = os.environ.get("GEMINI_MODEL_PRO", "gemini-3.1-pro-preview")
+    model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4")
     city_name = get_city_config().name  # city-agnostic: Iloilo by default (CityConfig)
 
     system_instruction = (
@@ -93,23 +92,24 @@ def parse_scenario(
     # Resilient call: retry/backoff + hard timeout, typed LLMUnavailable on exhaustion
     # (matrix_kernel.llm). The orchestrator has no silent fallback — a parse failure must
     # surface (the API layer turns LLMUnavailable into a clear error), never a guessed scenario.
-    response = generate_content(
+    messages = [
+        {"role": "system", "content": system_instruction},
+        {"role": "user", "content": annotated_query + retrieved_context}
+    ]
+
+    response = generate_chat_completion(
         client,
         model=model_name,
-        contents=annotated_query + retrieved_context,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            response_mime_type="application/json",
-            response_schema=ScenarioSchema,
-            temperature=0.1,  # Low temperature for deterministic parsing
-        ),
+        messages=messages,
+        response_format=ScenarioSchema,
+        temperature=0.1,  # Low temperature for deterministic parsing
     )
 
-    result = response.parsed
+    result = response.choices[0].message.parsed
     if not isinstance(result, ScenarioSchema):
         # In case the SDK didn't auto-parse into the Pydantic model (fallback)
         import json
-        data = json.loads(response.text)
+        data = json.loads(response.choices[0].message.content)
         result = ScenarioSchema(**data)
 
     if result.is_ambiguous:

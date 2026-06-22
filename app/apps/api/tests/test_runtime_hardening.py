@@ -319,7 +319,7 @@ def test_health_degraded_when_redis_down(client, monkeypatch):
     assert body["status"] == "degraded"
     assert body["service"] == "matrix-api"
     assert body["dependencies"]["redis"]["status"] == "down"
-    assert set(body["dependencies"]) == {"redis", "database", "gemini"}
+    assert set(body["dependencies"]) == {"redis", "database", "llm"}
     assert elapsed < 2.5  # never blocks > ~2 s, even with deps down
 
 
@@ -327,7 +327,7 @@ def test_health_ok_when_dependencies_up(client, monkeypatch):
     monkeypatch.setattr(
         runtime, "check_redis", lambda url, timeout_s=0.5: {"status": "ok", "detail": None}
     )
-    monkeypatch.setattr(runtime, "check_gemini", lambda: {"status": "ok", "detail": None})
+    monkeypatch.setattr(runtime, "check_llm", lambda: {"status": "ok", "detail": None})
     # An unconfigured DB must NOT degrade: persistence is optional + fallback-safe.
     monkeypatch.setattr(
         runtime, "check_database", lambda timeout_s=0.5: {"status": "unconfigured", "detail": "x"}
@@ -341,7 +341,7 @@ def test_health_degraded_when_db_configured_but_down(client, monkeypatch):
     monkeypatch.setattr(
         runtime, "check_redis", lambda url, timeout_s=0.5: {"status": "ok", "detail": None}
     )
-    monkeypatch.setattr(runtime, "check_gemini", lambda: {"status": "ok", "detail": None})
+    monkeypatch.setattr(runtime, "check_llm", lambda: {"status": "ok", "detail": None})
     monkeypatch.setenv("MATRIX_DATABASE_URL", "postgresql://user:pw@127.0.0.1:9/matrix")
     body = client.get("/health").json()
     assert body["status"] == "degraded"

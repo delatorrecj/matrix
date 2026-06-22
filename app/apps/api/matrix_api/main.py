@@ -2,7 +2,7 @@
 
 `/simulate/{id}` streams the real progressive pipeline:
   ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> EDGE_COUNTS -> DIMENSION_RESULT (per module, provenance intact)
-  -> SYNTHESIS (templated; Gemini 3.1 Pro synthesis is Phase 4) -> DONE
+  -> SYNTHESIS (templated; Azure OpenAI synthesis is Phase 4) -> DONE
 Any stage failure emits a typed ERROR event before closing -- never a silent drop.
 DONE carries per-stage timings {sumo_ms, modules_ms, gemini_ms, total_ms} (RFC-001
 latency budget visibility). Stage budgets, the concurrency gate, and the dependency
@@ -16,7 +16,7 @@ Run locally:  uvicorn matrix_api.main:app
 """
 from __future__ import annotations
 
-# ── Load .env BEFORE any import reads os.environ (Gemini key, DB URL, etc.) ─────
+# ── Load .env BEFORE any import reads os.environ (Azure OpenAI key, DB URL, etc.) ─────
 # Searches upward from CWD so `app/.env` is found whether you start from
 # `app/apps/api/` or `app/`. The local `apps/api/.env` loads as an override.
 from dotenv import find_dotenv, load_dotenv as _load_dotenv
@@ -94,7 +94,7 @@ def _warm_kernel_caches() -> None:
       • persona pool + bias audit (PRD-F6) — runs the full generate→audit→reweight loop once
         and caches it, so every run can log a real bias-audit entry (the auditor previously
         existed only in tests). Static literature-anchored pool by default; MATRIX_PERSONA_LLM=1
-        exercises the Gemini generator whose drift the reweighter corrects.
+        exercises the Azure OpenAI generator whose drift the reweighter corrects.
       • GraphRAG/Chroma collection — ingests the corpus so orchestrator `retrieve()` returns
         sourced chunks instead of [] (the collection was never built outside tests).
 
@@ -150,7 +150,7 @@ class ScenarioInput(BaseModel):
 
 @app.post("/scenario")
 def create_scenario(input_data: ScenarioInput) -> dict:
-    """Parse NL/map query into a structured Scenario via Gemini 3.1 Pro (Phase 4),
+    """Parse NL/map query into a structured Scenario via Azure OpenAI (Phase 4),
     persist it (Postgres, or the in-memory fallback), and return the parsed params."""
     if parse_scenario is None:  # kernel not installed (bare env) — REST surface stays up
         return JSONResponse(
@@ -483,9 +483,9 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
 
         runtime.persist_dimension_results(run_id, results)
 
-        # Gemini 3.1 Pro synthesis narrative (Phase 4.3). Must cite equation_id + dataset_ids.
+        # Azure OpenAI synthesis narrative (Phase 4.3). Must cite equation_id + dataset_ids.
         stage = "synthesis"
-        with timer.stage("gemini"):
+        with timer.stage("gemini"):  # Key must remain 'gemini' for frontend contract
             narrative, citations = await runtime.run_stage(
                 asyncio.to_thread(synthesize, results),
                 stage="synthesis",
@@ -507,7 +507,7 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
     except runtime.StageTimeout as e:
         await _send_error(ws, scenario_id, e.stage, str(e), recoverable=True)
     except runtime.LLMUnavailable as e:
-        # feat/llm-resilience: Gemini transiently down -- the run can be retried.
+        # feat/llm-resilience: LLM transiently down -- the run can be retried.
         await _send_error(ws, scenario_id, "synthesis", str(e), recoverable=True)
     except Exception as e:
         # Synthesis failures are recoverable (the narrative can be re-run); a failure

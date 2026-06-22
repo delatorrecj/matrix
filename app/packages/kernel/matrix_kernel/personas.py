@@ -50,17 +50,15 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
                           seed: int = 42) -> list[Persona]:
     """Sample `n` personas via Gemini 3.1 Flash-Lite, following the Iloilo anchor."""
     anchor = anchor or ILOILO_MODE_SHARE
-    from google.genai import types
     from pydantic import BaseModel
-
-    from matrix_kernel.llm import LLMUnavailable, generate_content, make_client
+    from matrix_kernel.llm import LLMUnavailable, generate_chat_completion, make_client
 
     class PersonaList(BaseModel):
         personas: list[dict]
 
     try:
         client = make_client()
-        model_name = os.environ.get("GEMINI_MODEL_FLASH_LITE", "gemini-3.1-flash-lite")
+        model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4")
 
         prompt = (
             f"Generate {n} diverse commuter personas for Iloilo City. "
@@ -73,15 +71,13 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
             "Return the result as a JSON object with a 'personas' list."
         )
 
-        response = generate_content(
+        messages = [{"role": "user", "content": prompt}]
+        response = generate_chat_completion(
             client,
             model=model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=PersonaList,
-                temperature=0.7,
-            ),
+            messages=messages,
+            response_format=PersonaList,
+            temperature=0.7,
         )
     except LLMUnavailable as e:
         logger.warning(
@@ -90,7 +86,7 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
         return _static_seeded_pool(n, anchor, seed)
 
     try:
-        data = response.parsed.personas if hasattr(response.parsed, 'personas') else json.loads(response.text).get('personas', [])
+        data = response.choices[0].message.parsed.personas if hasattr(response.choices[0].message, 'parsed') else json.loads(response.choices[0].message.content).get('personas', [])
 
         pool = []
         for d in data:

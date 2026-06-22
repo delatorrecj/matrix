@@ -6,29 +6,51 @@ parameter assembly, the legacy corridor back-fill, and the ambiguity guard.
 """
 import pytest
 
-# orchestrator imports google-genai + pydantic at module top; skip cleanly in bare envs.
-pytest.importorskip("google.genai", reason="google-genai not installed; run `uv sync` in app/packages/kernel")
+# orchestrator imports openai + pydantic at module top; skip cleanly in bare envs.
+pytest.importorskip("openai", reason="openai not installed; run `uv sync` in app/packages/kernel")
 
 from matrix_kernel.orchestrator import ScenarioSchema, parse_scenario
 
 
-class _FakeResponse:
+class _FakeMessage:
     def __init__(self, parsed):
         self.parsed = parsed
-        self.text = ""
+        self.content = ""
 
+class _FakeChoice:
+    def __init__(self, parsed):
+        self.message = _FakeMessage(parsed)
 
-class _FakeModels:
+class _FakeResponse:
+    def __init__(self, parsed):
+        self.choices = [_FakeChoice(parsed)]
+
+class _FakeCompletions:
     def __init__(self, parsed):
         self._parsed = parsed
 
-    def generate_content(self, **kwargs):
+    def parse(self, **kwargs):
         return _FakeResponse(self._parsed)
 
+    def create(self, **kwargs):
+        return _FakeResponse(self._parsed)
+
+class _FakeChat:
+    def __init__(self, parsed):
+        self.completions = _FakeCompletions(parsed)
+
+class _FakeBetaChat:
+    def __init__(self, parsed):
+        self.completions = _FakeCompletions(parsed)
+
+class _FakeBeta:
+    def __init__(self, parsed):
+        self.chat = _FakeBetaChat(parsed)
 
 class FakeClient:
     def __init__(self, parsed):
-        self.models = _FakeModels(parsed)
+        self.chat = _FakeChat(parsed)
+        self.beta = _FakeBeta(parsed)
 
 
 def test_lane_closure_maps_with_legacy_backfill():

@@ -140,12 +140,13 @@ def test_stage_timer_keys():
 # --- health checkers ---------------------------------------------------------------------
 
 
-def test_check_gemini_key_presence(monkeypatch):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    assert runtime.check_gemini()["status"] == "missing"
-    monkeypatch.setenv("GEMINI_API_KEY", "k")
-    assert runtime.check_gemini()["status"] == "ok"
+def test_check_llm_key_presence(monkeypatch):
+    monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
+    assert runtime.check_llm()["status"] == "missing"
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "k")
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "e")
+    assert runtime.check_llm()["status"] == "ok"
 
 
 def test_check_database_unconfigured_vs_down(monkeypatch):
@@ -161,7 +162,7 @@ def test_health_report_degradation_rules(monkeypatch):
     monkeypatch.setattr(
         runtime, "check_redis", lambda url, timeout_s=0.5: {"status": "ok", "detail": None}
     )
-    monkeypatch.setattr(runtime, "check_gemini", lambda: {"status": "ok", "detail": None})
+    monkeypatch.setattr(runtime, "check_llm", lambda: {"status": "ok", "detail": None})
     # An unconfigured DB must NOT degrade: persistence is optional + fallback-safe.
     monkeypatch.setattr(
         runtime, "check_database", lambda timeout_s=0.5: {"status": "unconfigured", "detail": "x"}
