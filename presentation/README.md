@@ -17,6 +17,7 @@ presentation/
     # PPT Template AAIH (student).pptx       # AAIH source template — git-ignored heavy reference
   assets/
     README.md       # legacy screenshot drop-in notes (from the old HTML deck)
+  semifinal-video-script.md  # 5-minute semi-final pitching video: full script + production plan
   walkthrough.md    # slide-by-slide narration + the 90-second live-demo run-of-show
   CONTENT-OUTLINE.md  # the scrutinized/debunked/refined content rationale
   DESIGN-NOTES.md     # design discipline (taste-skill dials, DSD palette, no fake precision)

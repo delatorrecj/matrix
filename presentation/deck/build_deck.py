@@ -146,7 +146,7 @@ tb(s, 1.0, 3.35, 18.0, 2.4, [{"runs":[("MATRIX", 150, True, WHITE, F_HEAD)], "al
 tb(s, 1.0, 5.95, 18.0, 0.8,
    [{"runs":[("Multi-Agent Twin for Routing & Infrastructure eXchange", 30, False, INK, F_BODY)],"align":PP_ALIGN.CENTER}])
 tb(s, 1.0, 7.05, 18.0, 0.8,
-   [{"runs":[("See a project’s full impact — ", 25, False, MUTE, F_BODY),
+   [{"runs":[("See a project’s full impact ", 25, False, MUTE, F_BODY),
              ("before you build it.", 25, True, CYAN, F_HEAD)],"align":PP_ALIGN.CENTER}])
 # meta strip
 panel(s, 4.6, 8.5, 10.8, 1.5, fill=C(0x081A45), line=BORDER, radius=0.10)
@@ -162,8 +162,8 @@ s.shapes.add_picture(A("logo_wordmark.png"), Inches(SW/2-1.6), Inches(11.75), he
 # =====================================================================
 s = slide(); bg(s); header(s, "The ASEAN Challenge", "Cities are building faster than they can foresee.", 2)
 tb(s, 0.7, 2.78, 18.6, 0.9, [{"runs":[
-    ("ASEAN is in its largest urban build-out in history — and infrastructure is still approved on "
-     "static feasibility studies that age the day they are filed. The damage shows up on opening day.",
+    ("ASEAN is going through its largest urban build-out in history, yet infrastructure is still approved using "
+     "static feasibility studies that age the day they are filed. The real damage only shows up on opening day.",
      17.5, False, INK, F_BODY)]}])
 cards = [
   ("Studies age on filing", "A 2022 traffic count cannot predict how a 2026 development reshapes a corridor, "
@@ -183,22 +183,22 @@ for i,(t,b,c) in enumerate(cards):
 panel(s, 0.7, 7.45, 18.6, 1.55, fill=C(0x2A0E1E), line=C(0x7A2742), radius=0.06, accent=SOC)
 tb(s, 1.15, 7.66, 17.9, 1.2, [
    {"runs":[("Who pays for the blind spot:  ", 16.5, True, SOC, F_HEAD),
-            ("the commuter who loses 25–35% of the fare to first-mile travel no one modeled  ·  the informal "
-             "vendor paved over because no one ran the displacement scenario  ·  the barangay that floods because "
+            ("the commuter who loses up to a third of their fare to unmodeled first-mile travel  ·  the informal "
+             "vendor who gets paved over without a displacement plan  ·  the barangay that floods because "
              "runoff was calculated in isolation.", 16, False, INK, F_BODY)],"ls":1.06}])
 tb(s, 0.7, 9.25, 18.6, 0.5, [{"runs":[
-   ("Illustrative of a documented pattern (Montalbo, UP SURP; JICA 2014/2019; ICLEI Iloilo Roadmap) — "
-    "shown as a pattern, not as cited point statistics.", 11.5, False, FAINT, F_BODY, True)]}])
+   ("Illustrative of a documented pattern (Montalbo, UP SURP; JICA 2014/2019; ICLEI Iloilo Roadmap), "
+    "shown as a general trend rather than cited point statistics.", 11.5, False, FAINT, F_BODY, True)]}])
 
 # =====================================================================
 # SLIDE 3 — THE AI SOLUTION (elevator pitch)
 # =====================================================================
 s = slide(); bg(s); header(s, "The AI Solution", "Drop a project on your city. See five futures in 90 seconds.", 3)
 tb(s, 0.7, 2.78, 18.6, 1.0, [{"runs":[
-   ("A planner asks in plain language — ", 17.5, False, INK, F_BODY),
+   ("A planner asks in plain language, ", 17.5, False, INK, F_BODY),
    ("“what happens if we build an 8-storey mixed-use here?”", 17.5, True, CYAN, F_HEAD),
-   ("  — or drops a pin. One unified kernel simulates thousands of agents; five impact modules score the "
-    "same reality; the map animates and a cited narrative explains it.", 17.5, False, INK, F_BODY)]}])
+   (" or simply drops a pin. A single unified kernel simulates thousands of agents while five impact modules score the "
+    "same reality. The map animates, and a cited narrative explains the results.", 17.5, False, INK, F_BODY)]}])
 # flow row
 nodes = [("Plain-language\nquery / map drop", COBALT),
          ("Azure OpenAI orchestrator\nparses the scenario", COBALT),
@@ -214,7 +214,7 @@ for i,(t,c) in enumerate(nodes):
     if i < len(nodes)-1:
         arrow(s, x+nw+0.07, ny+0.55, 0.48, 0.45, COBALT)
 # five dimension chips
-tb(s, 0.7, 6.3, 18.6, 0.5, [{"runs":[("ONE SIMULATED REALITY, SCORED FIVE WAYS — EACH WITH AN EXPLICIT CONFIDENCE LEVEL", 13.5, True, MUTE, F_HEAD)]}])
+tb(s, 0.7, 6.3, 18.6, 0.5, [{"runs":[("ONE SIMULATED REALITY, SCORED FIVE WAYS WITH EXPLICIT CONFIDENCE LEVELS", 13.5, True, MUTE, F_HEAD)]}])
 dcw, dg, dx, dy = 3.48, 0.30, 0.7, 6.95
 for i,(name,c) in enumerate(DIMS):
     x = dx + i*(dcw+dg)
@@ -235,10 +235,10 @@ tb(s, 1.0, 8.7, 18.0, 0.7, [{"runs":[
 s = slide(); bg(s); header(s, "Competitive Advantage", "The combination no existing tool offers.", 4)
 rows = [
   ("Tool", "Plain-language input", "5 dimensions, one run", "Per-dimension confidence", "No specialist needed"),
-  ("PTV Vissim / Aimsun", "—", "—", "—", "—"),
-  ("ESRI CityEngine", "—", "—", "—", "—"),
-  ("Replica / UrbanFootprint", "—", "partial", "—", "partial"),
-  ("AnyLogic", "—", "partial", "—", "—"),
+  ("PTV Vissim / Aimsun", "No", "No", "No", "No"),
+  ("ESRI CityEngine", "No", "No", "No", "No"),
+  ("Replica / UrbanFootprint", "No", "partial", "No", "partial"),
+  ("AnyLogic", "No", "partial", "No", "No"),
   ("MATRIX", "Yes", "Yes", "Yes", "Yes"),
 ]
 tx, ty, tw = 0.7, 2.85, 12.4
@@ -262,16 +262,16 @@ for ri, row in enumerate(rows):
             else:
                 mark = cell
                 mc = GOOD if cell=="Yes" else (WARN if cell=="partial" else FAINT)
-                disp = "✓" if cell=="Yes" else ("~" if cell=="partial" else "—")
+                disp = "✓" if cell=="Yes" else ("~" if cell=="partial" else "No")
                 tb(s, xx+0.12, yy, w-0.2, rh, [{"runs":[(disp, 18 if cell=="Yes" else 15, True, mc, F_HEAD)],"align":PP_ALIGN.CENTER}], anchor=MSO_ANCHOR.MIDDLE)
         xx += w
     yy += rh
-tb(s, tx, yy+0.12, tw, 0.5, [{"runs":[("Based on our competitor feature survey (GTM §2.1) — a combination claim, not an unfalsifiable absolute.", 11.5, False, FAINT, F_BODY, True)]}])
+tb(s, tx, yy+0.12, tw, 0.5, [{"runs":[("Based on our competitor feature survey (GTM §2.1). This represents a combination of features rather than an unfalsifiable absolute.", 11.5, False, FAINT, F_BODY, True)]}])
 # right column: 3 UVPs
 ux, uw = 13.5, 5.8
-uvps = [("One kernel → five dimensions","All five score the same simulated reality, so they can never contradict each other.",CYAN),
-        ("Glass box, by contract","Every number resolves to its equation, its datasets, and a computed confidence. The LLM narrates — it never invents a number.",COBALT),
-        ("Plain language → 90 seconds","A pin or a sentence in; a calibrated, confidence-anchored five-dimension answer out.",BEH)]
+uvps = [("One kernel to five dimensions","All five modules score the exact same simulated reality, meaning they will never contradict each other.",CYAN),
+        ("Glass box by contract","Every single number resolves to its exact equation, datasets, and a computed confidence. The AI narrates the results but never invents a number.",COBALT),
+        ("Plain language to 90 seconds","Provide a pin or a sentence and receive a calibrated, confidence-anchored five-dimension answer.",BEH)]
 uy = 2.85
 for t,b,c in uvps:
     panel(s, ux, uy, uw, 2.28, accent=c, radius=0.05)
@@ -315,10 +315,10 @@ for t,tag,b,c in proc:
     py_ += 1.67
 # outputs
 panel(s, colx[2], 3.25, colw3[2], 7.2, fill=PANEL, radius=0.04)
-outs = [("Animated playback","Deck.gl TripsLayer — agents re-routing in real time",ENV),
-        ("Five scored dimensions","each with a High / Medium / Low confidence band",COBALT),
-        ("Glass-box Inspect","click any number → equation + datasets + confidence",CYAN),
-        ("Exportable report","a structured recommendation for the planner",SOC)]
+outs = [("Animated playback","Deck.gl TripsLayer showing agents re-routing in real time",ENV),
+        ("Five scored dimensions","Each dimension comes with a High, Medium, or Low confidence band",COBALT),
+        ("Glass-box Inspect","Click any number to view its equation, datasets, and confidence",CYAN),
+        ("Exportable report","A structured and easy-to-read recommendation for the planner",SOC)]
 oy = 3.5
 for t,b,c in outs:
     tb(s, colx[2]+0.4, oy, colw3[2]-0.7, 1.6, [
@@ -329,7 +329,7 @@ for t,b,c in outs:
 arrow(s, 6.80, 6.55, 0.40, 0.55, COBALT)
 arrow(s, 13.52, 6.55, 0.40, 0.55, COBALT)
 tb(s, 0.7, 10.6, 18.6, 0.5, [{"runs":[
-    ("Engineered to a 90-second end-to-end budget: pre-warmed personas, delta simulation vs a nightly baseline, "
+    ("Engineered to a 90-second end-to-end budget: pre-warmed personas, delta simulation against a nightly baseline, "
      "parallel modules, and a streaming progressive UI.", 13, False, MUTE, F_BODY, True)],"align":PP_ALIGN.CENTER}])
 
 # =====================================================================
@@ -342,10 +342,10 @@ for c in chips6:
     w = 0.18*len(c)+0.5
     chip(s, cxx, 2.75, w, 0.5, c, PANEL2, CYAN, size=12, line=COBALT); cxx += w+0.3
 models = [
- ("Azure OpenAI GPT-5.4","Orchestration & synthesis","Parses plain language into a sim plan; writes the cited narrative. Current generation — 1.5 and 2.0 are shut down.",COBALT),
- ("Azure OpenAI GPT-5.4","High-volume persona generation","200–500 commuter personas on the free tier — cheap and fast enough to pre-warm the pool.",CYAN),
- ("Eclipse SUMO (TraCI)","Physical multi-agent mobility","The open urban-mobility standard (DLR). Not OASIS / MiroFish — those model social media, not cities.",ENV),
- ("XGBoost","Corridor-volume baseline","Time-series forecaster for the nightly baseline that delta simulations run against.",ECO),
+ ("Azure OpenAI GPT-5.4","Orchestration & synthesis","Parses plain language into a simulation plan and writes the cited narrative. We use the current generation since older models are shut down.",COBALT),
+ ("Azure OpenAI GPT-5.4","High-volume persona generation","Creates 200 to 500 commuter personas on the free tier, making it cheap and fast enough to pre-warm the pool.",CYAN),
+ ("Eclipse SUMO (TraCI)","Physical multi-agent mobility","The open urban-mobility standard from DLR. Unlike OASIS or MiroFish, which model social media, SUMO models actual cities.",ENV),
+ ("XGBoost","Corridor-volume baseline","A time-series forecaster that generates the nightly baseline for our delta simulations to run against.",ECO),
  ("bge-small-en","Knowledge-graph embeddings","Sentence-Transformers vectors in ChromaDB powering GraphRAG retrieval.",SOCI),
  ("Bias auditor (custom)","Mode-share anchoring","Anchors generated mode-share to ground truth and logs deviations to a public audit.",SOC),
 ]
@@ -369,8 +369,8 @@ tb(s, 1.1, 9.08, 17.8, 0.7, [{"runs":[
 s = slide(); bg(s); header(s, "Data Strategy", "Open-data-first, contact-free, and licence-clean.", 7)
 tiers = [
  ("TIER 1 · Day-1 open","OSM Geofabrik (ODbL) · PSA 2020/2024 census · Sentinel-2 (ESA) · PAGASA / Project NOAH flood · WHO/EMEP emission factors", ENV),
- ("TIER 2 · Request / FOI","LTFRB Region VI routes · PSA APIS poverty · Iloilo City CLUP 2021–2029 — filed Day 1; open substitutes used until they arrive", ECO),
- ("TIER 4 · Academic baseline","Calderon 2014 BRT corridor model · Macalalag 2021 bike study — anchors for validation", SOCI),
+ ("TIER 2 · Request / FOI","LTFRB Region VI routes · PSA APIS poverty · Iloilo City CLUP 2021-2029 requests filed on Day 1. Open substitutes are used until they arrive.", ECO),
+ ("TIER 4 · Academic baseline","Calderon 2014 BRT corridor model and Macalalag 2021 bike study serve as our anchors for validation.", SOCI),
 ]
 ty7 = 2.85
 for t,b,c in tiers:
@@ -382,13 +382,13 @@ for t,b,c in tiers:
 panel(s, 0.7, 8.25, 11.6, 2.4, fill=PANEL2, radius=0.05)
 tb(s, 1.15, 8.45, 11.0, 0.4, [{"runs":[("LICENSING & CLEANING", 13.5, True, CYAN, F_HEAD)]}])
 tb(s, 1.15, 8.95, 11.0, 1.7, [
-   {"runs":[("Licences honoured: ", 14, True, WHITE, F_HEAD),("ODbL attribution, PSA & ESA open terms — no scraping behind blocks.", 14, False, INK, F_BODY)],"sa":6,"ls":1.05},
+   {"runs":[("Licences honoured: ", 14, True, WHITE, F_HEAD),("We respect ODbL attribution and PSA/ESA open terms, with absolutely no scraping behind blocks.", 14, False, INK, F_BODY)],"sa":6,"ls":1.05},
    {"runs":[("Reproducible build: ", 14, True, WHITE, F_HEAD),("idempotent fetch scripts; CCHAIN subset to Iloilo; BIR zonal values parsed; vintages stamped (newest first).", 14, False, INK, F_BODY)],"ls":1.05}])
 # right: foundation stats
 panel(s, 12.55, 2.85, 6.75, 7.8, fill=C(0x081A45), line=BORDER, radius=0.05)
 tb(s, 12.95, 3.1, 6.0, 0.4, [{"runs":[("THE FOUNDATION IN HAND", 13.5, True, MUTE, F_HEAD)]}])
 fstats = [("180","Iloilo barangays in the data foundation"),
-          ("78 km²","pilot-city footprint — a full behavioral model"),
+          ("78 km²","Pilot-city footprint with a full behavioral model"),
           ("5,680","BIR-priced land parcels parsed (RDO 74)"),
           ("2024","newest vintages preferred (POPCEN-CBMS)")]
 fy = 3.7
@@ -403,12 +403,12 @@ for n,l in fstats:
 s = slide(); bg(s); header(s, "AI Ethics & Responsibility", "Honesty engineered in — not bolted on.", 8)
 eth = [
  ("Bias, audited in the open","The bias auditor anchors generated persona mode-share to ground-truth mode-share and "
-  "logs every deviation to a public audit. (Today it flags and surfaces; automated reweighting is on the roadmap — we say so.)", SOC),
- ("Confidence over false precision","Every dimension advertises a confidence floor and reports ranges, never a fake "
-  "point estimate — the safeguard data-sparse ASEAN cities actually need.", COBALT),
+  "logs every deviation to a public audit. (Today it flags and surfaces; automated reweighting is on the roadmap and we say so.)", SOC),
+ ("Confidence over false precision","Every dimension advertises a confidence floor and reports ranges instead of fake "
+  "point estimates. This is the safeguard that data-sparse ASEAN cities truly need.", COBALT),
  ("The informal economy, first-class","Jeepney, tricycle, and street-vendor displacement are modelled explicitly in "
-  "Social and Economic — exactly what imported Western tools omit.", ECO),
- ("Privacy by design (RA 10173)","No personal data in the pipeline — open and aggregate sources only. The optional "
+  "Social and Economic modules, which is exactly what imported Western tools omit.", ECO),
+ ("Privacy by design (RA 10173)","No personal data exists in the pipeline, as we use open and aggregate sources only. The optional "
   "GPS-trace companion app is gated behind a Privacy Impact Assessment and counsel.", ENV),
 ]
 cw8, g8, x08, y08 = 9.13, 0.34, 0.7, 2.95
@@ -431,7 +431,7 @@ s = slide(); bg(s); header(s, "Prototype Demonstration", "It runs today — and 
 panel(s, 0.7, 2.9, 11.2, 6.0, fill=C(0x05122E), line=COBALT, lw=1.25, radius=0.03)
 tb(s, 0.7, 5.2, 11.2, 1.2, [
    {"runs":[("▶  LIVE DEMO / GIF", 22, True, CYAN, F_HEAD)],"align":PP_ALIGN.CENTER,"sa":6},
-   {"runs":[("Deck.gl TripsLayer — simulated commuters re-routing around the new project", 14, False, MUTE, F_BODY)],"align":PP_ALIGN.CENTER}])
+   {"runs":[("Deck.gl TripsLayer showing simulated commuters re-routing around the new project", 14, False, MUTE, F_BODY)],"align":PP_ALIGN.CENTER}])
 tb(s, 1.1, 8.35, 10.4, 0.4, [{"runs":[("Drop  scenario-playback.png  /  recorded run here", 11.5, False, FAINT, F_BODY, True)],"align":PP_ALIGN.CENTER}])
 panel(s, 12.25, 2.9, 7.05, 2.85, fill=C(0x05122E), line=CYAN, lw=1.25, radius=0.04)
 tb(s, 12.25, 3.9, 7.05, 1.0, [
@@ -457,14 +457,14 @@ tb(s, 0.7, 9.15, 18.6, 0.7, [{"runs":[
 # =====================================================================
 # SLIDE 10 — TECHNICAL HURDLES
 # =====================================================================
-s = slide(); bg(s); header(s, "Technical Hurdles", "What broke — and how we made it honest.", 10)
+s = slide(); bg(s); header(s, "Technical Hurdles", "What broke, and how we made it honest.", 10)
 hur = [
  ("Cross-dimension contradiction","Five separate simulators disagreed on the same project.",
-  "One unified kernel → a single trajectory dataset every module scores. They physically cannot diverge.",CYAN),
+  "We built one unified kernel that generates a single trajectory dataset. Since every module scores the same data, they physically cannot diverge.",CYAN),
  ("The model inventing numbers","An LLM will happily hallucinate a confident statistic.",
-  "A glass-box contract + citation guard + an auditor that blocks the merge if any number ships unprovenanced.",COBALT),
- ("The 90-second budget","A cold run still clocks ~123 s, over target.",
-  "Pre-warmed personas, delta-vs-baseline, parallel modules, and a trajectory cache — repeat runs return in <1 s.",ECO),
+  "We enforced a glass-box contract and citation guard. An auditor blocks the merge if any number ships without clear provenance.",COBALT),
+ ("The 90-second budget","A cold run still clocks around 123 seconds, which is over target.",
+  "We introduced pre-warmed personas, delta-vs-baseline simulations, parallel modules, and a trajectory cache so repeat runs return in under a second.",ECO),
  ("Data gaps & provisional inputs","Mode-share isn’t calibrated; one flood fixture is provisional.",
   "We label them: Behavioral stays Medium, the fixture reads PROVISIONAL. Labelling provisional data is the feature.",SOC),
 ]
@@ -477,20 +477,20 @@ for i,(t,prob,fix,c) in enumerate(hur):
     tb(s, x+0.45, y+0.86, cw10-0.8, 0.7, [{"runs":[("HURDLE  ", 11, True, SOC, F_HEAD),(prob, 13.5, False, MUTE, F_BODY)],"ls":1.04}])
     tb(s, x+0.45, y+1.6, cw10-0.8, 1.0, [{"runs":[("FIX  ", 11, True, GOOD, F_HEAD),(fix, 13.5, False, INK, F_BODY)],"ls":1.05}])
 tb(s, 0.7, 9.05, 18.6, 0.7, [{"runs":[
-   ("Every stage is now measured and visible — we optimise against real numbers, and we say “target,” "
-    "“planned,” and “provisional” out loud. That discipline is the brand.", 14, False, MUTE, F_BODY, True)],"align":PP_ALIGN.CENTER}])
+   ("Every stage is now measured and visible. We optimize against real numbers and are very transparent about what is a “target,” "
+    "“planned,” or “provisional”. This kind of discipline is our brand.", 14, False, MUTE, F_BODY, True)],"align":PP_ALIGN.CENTER}])
 
 # =====================================================================
 # SLIDE 11 — ACCURACY & EFFICIENCY METRICS
 # =====================================================================
-s = slide(); bg(s); header(s, "Accuracy & Efficiency", "Computed, not asserted — and honest about what isn’t ready.", 11)
+s = slide(); bg(s); header(s, "Accuracy & Efficiency", "Computed instead of asserted, and honest about what isn’t ready.", 11)
 # efficiency stat row
-tb(s, 0.7, 2.7, 18.6, 0.4, [{"runs":[("EFFICIENCY — MEASURED", 13.5, True, CYAN, F_HEAD)]}])
-estats = [("186","kernel tests pass (1 skipped)",GOOD),
-          ("90 s","end-to-end budget (target)",COBALT),
-          ("<1 s","warm / cached repeat run",CYAN),
-          ("5","dimensions, one kernel",BEH),
-          ("~123 s","cold run — over target, honest",WARN)]
+tb(s, 0.7, 2.7, 18.6, 0.4, [{"runs":[("EFFICIENCY: MEASURED", 13.5, True, CYAN, F_HEAD)]}])
+estats = [("186","Kernel tests pass (1 skipped)",GOOD),
+          ("90 s","End-to-end budget target",COBALT),
+          ("<1 s","Warm or cached repeat run",CYAN),
+          ("5","Dimensions from one kernel",BEH),
+          ("123 s","Cold run time, over target but honest",WARN)]
 ew, eg, ex = 3.48, 0.30, 0.7
 for i,(n,l,c) in enumerate(estats):
     x = ex+i*(ew+eg)
@@ -498,7 +498,7 @@ for i,(n,l,c) in enumerate(estats):
     tb(s, x, 3.42, ew, 0.95, [{"runs":[(n, 44, True, c, F_NUM)]}], anchor=MSO_ANCHOR.MIDDLE, wrap=False)
     tb(s, x+0.2, 4.38, ew-0.4, 0.7, [{"runs":[(l, 12.5, False, MUTE, F_BODY)],"align":PP_ALIGN.CENTER,"ls":1.0}])
 # accuracy: validation harness
-tb(s, 0.7, 5.45, 18.6, 0.4, [{"runs":[("ACCURACY — A VALIDATION HARNESS THAT GRADES ITSELF", 13.5, True, CYAN, F_HEAD)]}])
+tb(s, 0.7, 5.45, 18.6, 0.4, [{"runs":[("ACCURACY: A VALIDATION HARNESS THAT GRADES ITSELF", 13.5, True, CYAN, F_HEAD)]}])
 val = [("VAL-01 · Behavioral","Normalised RMSE vs the Calderon 2014 Iloilo BRT corridor.","Threshold ≤ 0.30  (FHWA corridor band)",COBALT),
        ("VAL-02 · Flood","Spatial IoU back-test vs the 2024 Iloilo flood extent.","Threshold ≥ 0.50  (Horritt & Bates 2002)",ENV)]
 vx=0.7
@@ -519,13 +519,13 @@ tb(s, 1.15, 8.4, 17.9, 1.2, [{"runs":[
 # =====================================================================
 # SLIDE 12 — SCALABILITY ROADMAP
 # =====================================================================
-s = slide(); bg(s); header(s, "Scalability Roadmap", "One city to ASEAN — a config change, not a rebuild.", 12)
+s = slide(); bg(s); header(s, "Scalability Roadmap", "Scaling from one city to all of ASEAN is a config change, not a rebuild.", 12)
 panel(s, 0.7, 2.85, 18.6, 1.5, fill=PANEL2, line=COBALT, radius=0.05)
 tb(s, 1.15, 3.06, 17.9, 1.1, [
   {"runs":[("Zero hardware. ", 17, True, CYAN, F_HEAD),
            ("Scaling to a new city = swap the OpenStreetMap bounding box (API-level) and reweight the commuter "
             "personas to local modes (prompt-level). The city-agnostic CityConfig already lives in the code.", 16, False, INK, F_BODY)],"sa":4,"ls":1.05},
-  {"runs":[("The cost of a new ASEAN city is API tokens — not procurement.", 15.5, True, WHITE, F_HEAD)]}])
+  {"runs":[("The cost of adding a new ASEAN city is just API tokens, not expensive procurement.", 15.5, True, WHITE, F_HEAD)]}])
 steps = [("Iloilo","Pilot city","jeepney · tricycle · pedicab",ENV,"NOW"),
          ("PH cities","Cebu · Davao · Bacolod","same modes, new bbox",BEH,"NEXT"),
          ("Jakarta","Indonesia","ojek · angkot",ECO,"ASEAN"),
@@ -543,8 +543,8 @@ for i,(city,sub,modes,c,tag) in enumerate(steps):
     if i < len(steps)-1:
         arrow(s, x+sw5+0.03, syy+1.95, 0.24, 0.5, COBALT)
 tb(s, 0.7, 9.4, 18.6, 0.5, [{"runs":[
-   ("Naming the local informal-transit modes — ojek, angkot, songthaew, tuk-tuk, xe-om — is exactly what "
-    "imported Western planning tools cannot do.", 13.5, False, MUTE, F_BODY, True)],"align":PP_ALIGN.CENTER}])
+   ("Recognizing local informal transit modes like the ojek, angkot, songthaew, tuk-tuk, and xe-om is exactly what "
+    "imported Western planning tools fail to do.", 13.5, False, MUTE, F_BODY, True)],"align":PP_ALIGN.CENTER}])
 
 # =====================================================================
 # SLIDE 13 — IMPACT ASSESSMENT
@@ -565,9 +565,9 @@ for i,(n,l,c) in enumerate(sdgs):
     rr=p.add_run(); rr.text="SDG\n"+n; rr.font.size=Pt(20); rr.font.bold=True; rr.font.name=F_HEAD; rr.font.color.rgb=WHITE
     tb(s, x+1.8, gy+0.5, gw-2.0, 1.1, [{"runs":[(l, 15, True, WHITE, F_HEAD)],"ls":1.0}], anchor=MSO_ANCHOR.MIDDLE)
 # impact lines
-impacts = [("De-risks capital before it’s committed","Flood-risk redistribution, climate exposure, and equity are scored pre-construction — not discovered on opening day.",COBALT),
-           ("Equity is a first-class output","Equity-weighted access and informal-worker displacement are scored, not assumed (SDG 10).",SOC),
-           ("A public-trust instrument","Confidence-anchored, auditable outputs are what data-sparse ASEAN cities need to trust a model.",ENV)]
+impacts = [("De-risks capital before it’s committed","Flood-risk redistribution, climate exposure, and equity are scored pre-construction rather than discovered on opening day.",COBALT),
+           ("Equity is a first-class output","Equity-weighted access and informal-worker displacement are modeled and scored, not just assumed (SDG 10).",SOC),
+           ("A public-trust instrument","Confidence-anchored and auditable outputs provide the transparency that data-sparse ASEAN cities need to trust a model.",ENV)]
 iy13 = 5.4
 for t,b,c in impacts:
     panel(s, 0.7, iy13, 12.4, 1.5, accent=c, radius=0.05)
@@ -580,18 +580,18 @@ tb(s, 13.7, 5.65, 5.3, 0.4, [{"runs":[("REGIONAL ANCHOR", 13, True, MUTE, F_HEAD
 tb(s, 13.7, 6.2, 5.3, 3.4, [
    {"runs":[("Iloilo City", 24, True, CYAN, F_HEAD)],"sa":4},
    {"runs":[("2026 ASEAN Clean Tourist City", 16, True, WHITE, F_HEAD)],"sa":10,"ls":1.05},
-   {"runs":[("Aligns with the ASEAN Smart Cities Network and the AAIH 2026 sustainability theme. A representative "
-             "suburban-metro testbed — not a special case.", 14, False, INK, F_BODY)],"ls":1.1}])
+   {"runs":[("Aligns with the ASEAN Smart Cities Network and the AAIH 2026 sustainability theme. It serves as a representative "
+             "suburban-metro testbed, not just an isolated special case.", 14, False, INK, F_BODY)],"ls":1.1}])
 
 # =====================================================================
 # SLIDE 14 — FUTURE ROADMAP
 # =====================================================================
-s = slide(); bg(s); header(s, "Future Roadmap", "After the hackathon: from prototype to pilot.", 14)
+s = slide(); bg(s); header(s, "Future Roadmap", "After the hackathon: moving from prototype to pilot.", 14)
 phases = [
- ("NOW — close the loop","Calibrate mode-share → publish the VAL-01 RMSE · replace the provisional flood fixture → publish VAL-02 IoU · drive the cold run under 90 s (libsumo / headless).",CYAN),
- ("NEXT — deepen the model","Bias auditor: flag → reweight · Hiligaynon gazetteer (colloquial place-name → GIS node) · CPDO feedback loop (PRD-F20) · RAG ingestion pipeline.",COBALT),
- ("PILOT — prove it in Iloilo","One real CPDO planner validates the demo → LGU + academic partnerships (Clean Air Asia, UP Visayas SURP) → a signed pilot scenario.",ENV),
- ("PRODUCT — sustain it","Public-good free tier for LGUs & academia; a paid private-developer / SaaS tier later. Deliberately TBD — adoption and credibility first.",ECO),
+ ("NOW: Close the loop","Calibrate mode-share to publish the VAL-01 RMSE, replace the provisional flood fixture to publish VAL-02 IoU, and drive the cold run time under 90 seconds.",CYAN),
+ ("NEXT: Deepen the model","Upgrade the bias auditor from flagging to reweighting, integrate a Hiligaynon gazetteer for colloquial place names, and establish a CPDO feedback loop.",COBALT),
+ ("PILOT: Prove it in Iloilo","Have a real CPDO planner validate the demo, secure LGU and academic partnerships, and deliver a signed pilot scenario.",ENV),
+ ("PRODUCT: Sustain it","Launch a public-good free tier for LGUs and academia, followed by a paid SaaS tier later. We are deliberately holding off on pricing to focus on adoption and credibility first.",ECO),
 ]
 # timeline spine
 rect(s, 1.2, 3.3, 0.07, 6.7, BORDER)
@@ -636,7 +636,7 @@ panel(s, 0.7, 8.1, 18.6, 1.5, fill=C(0x081A45), line=COBALT, radius=0.06)
 tb(s, 1.0, 8.32, 18.0, 1.1, [
   {"runs":[("Contact:  ", 17, True, CYAN, F_HEAD),
            ("Carlos Jerico Dela Torre   ·   carlosjericodelatorre@gmail.com   ·   +63 949 636 9705", 17, False, WHITE, F_BODY)],"align":PP_ALIGN.CENTER,"sa":6},
-  {"runs":[("MATRIX — decide before you build.", 17, True, CYAN, F_HEAD)],"align":PP_ALIGN.CENTER}], anchor=MSO_ANCHOR.MIDDLE)
+  {"runs":[("MATRIX: decide before you build.", 17, True, CYAN, F_HEAD)],"align":PP_ALIGN.CENTER}], anchor=MSO_ANCHOR.MIDDLE)
 s.shapes.add_picture(A("logo_wordmark.png"), Inches(SW/2-1.6), Inches(11.7), height=Inches(0.42))
 
 out = os.path.join(HERE, "Smart Cities_PUP_ATLAN_PitchDeck.pptx")
