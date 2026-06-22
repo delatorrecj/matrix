@@ -47,7 +47,7 @@ graph TD
     MC["Ecological"]
     MZ["Societal"]
     SYN["Azure OpenAI (gpt-5.4) synthesis<br/>(narratives + report)"]
-    DB[("Supabase Postgres")]
+    DB[("Postgres + PostGIS")]
     REDIS[("Redis: persona pool + baseline + delta cache")]
 
     UI <-->|WebSocket stream| GW --> ORC
@@ -67,15 +67,15 @@ graph TD
 |-------|------------|----------------|
 | Client | Next.js 14 (App Router) + Tailwind + shadcn/ui; Mapbox GL JS + Deck.gl (TripsLayer) | Scenario input (`PRD-F2`), animated playback (`PRD-F4`), 5-dim panel + confidence layer (`PRD-F5`), comparison slider (`PRD-F8`) |
 | API / Gateway | FastAPI + WebSocket | Accept scenarios, stream simulation + per-dimension results progressively |
-| Service / Compute | Python: SUMO via TraCI (kernel, `PRD-F1`); persona generator (Azure OpenAI Flash-Lite); 5 impact modules (`PRD-F3`); bias auditor (`PRD-F6`); XGBoost baseline forecaster | Run the physics, generate/score the trajectory dataset, audit bias |
-| Data | Supabase Postgres (run metadata/results/audit), ChromaDB (vectors, `PRD-F9`), Redis (persona pool + baseline + delta cache) | Persistence, retrieval, hot caches |
-| Infrastructure | Vercel (frontend) + Hugging Face Spaces (FastAPI + SUMO Docker + workers) + Redis + Supabase | Hosting, scaling, the SUMO container |
+| Service / Compute | Python: SUMO via TraCI (kernel, `PRD-F1`); persona generator (Azure OpenAI gpt-5.4, opt-in); 5 impact modules (`PRD-F3`); bias auditor (`PRD-F6`); XGBoost baseline forecaster | Run the physics, generate/score the trajectory dataset, audit bias |
+| Data | Postgres + PostGIS (run metadata/results/audit; **in-memory fallback** so the demo needs no managed DB), ChromaDB (vectors, `PRD-F9`), Redis (persona pool + baseline + delta cache) | Persistence, retrieval, hot caches |
+| Infrastructure | Vercel (frontend) + Hugging Face Spaces (FastAPI + SUMO + Redis, one self-contained Docker container — CR-011) | Hosting, scaling, the SUMO container |
 
 ---
 
 ## 3. Data Architecture
 
-**Primary database:** Supabase Postgres — *run metadata, scenarios, per-dimension results, bias audit log; managed Postgres with auth/storage we can grow into.*
+**Primary database:** Postgres + PostGIS — *run metadata, scenarios, per-dimension results, bias audit log. Local dev via `docker compose`; an **in-memory fallback** (`matrix_api/db.py`) keeps the public demo running with zero managed infra.*
 **Secondary / cache:** Redis — *pre-warmed persona pool, the nightly baseline trajectory, and scenario delta cache; the latency budget depends on these being hot.*
 **Vector store:** ChromaDB (embeddings via `bge-small-en`) — *GraphRAG over OSM/PSA-CCHAIN/CLUP/literature for grounded orchestration + synthesis (`PRD-F9`).*
 
@@ -163,7 +163,7 @@ graph TD
 
 **Key relationships:** scenario 1:N runs; run 1:5 dimension_results; run 1:1 bias_audit_log; datasets referenced by modules to stamp result confidence.
 **Indexes & performance:** `(run_id, dimension)` for panel reads; GIST on `scenarios.geometry`; status index for the run queue.
-**Migration strategy:** Supabase migrations, forward-only, each backward-compatible for one release so rollback stays safe.
+**Migration strategy:** `packages/data/schema.sql` applied idempotently at init (and via `load_postgis.py`); forward-only, each change backward-compatible for one release so rollback stays safe.
 **Caching strategy:** Redis — persona pool (pre-warmed at startup, reweighted not regenerated), nightly baseline trajectory, scenario delta cache (TTL per session). The 90 s budget assumes these are warm.
 
 ---
@@ -198,7 +198,7 @@ graph TD
 
 ## 5. Security & Authorization
 
-**Authentication:** none required for the public demo (v1). Optional Supabase Auth later for saving/sharing scenarios.
+**Authentication:** none required for the public demo (v1); an env-gated API-key guard exists (`matrix_api/auth.py`, off by default). Optional full auth later for saving/sharing scenarios.
 **Session management:** stateless demo; WebSocket session keyed by scenario_id.
 **Authorization model:** public read (results + audit log are meant to be inspectable); scenario submission is rate-limited per IP to protect the Azure OpenAI budget.
 
@@ -212,7 +212,7 @@ graph TD
 
 ## 6. Infrastructure, CI/CD & Deployment
 
-**Hosting:** Vercel (Next.js frontend), Hugging Face Spaces (FastAPI + **SUMO Docker** + Python workers), Redis (cache), Supabase (Postgres + PostGIS), ChromaDB (alongside workers).
+**Hosting:** Vercel (Next.js frontend); Hugging Face Spaces (FastAPI + **SUMO** + Redis + ChromaDB, all in one self-contained Docker container — CR-011). Postgres + PostGIS is local-dev only; prod uses the in-memory persistence fallback.
 
 **Environments:**
 - `dev`: docker-compose locally (SUMO + FastAPI + Redis + Chroma); data via `data/fetch/*` scripts.
@@ -222,7 +222,7 @@ graph TD
 **CI/CD:** GitHub Actions — lint → type-check → test → deploy (frontend to Vercel, backend to Hugging Face). Preview per PR; prod on tagged release. *(A tagged "last-good" build is the demo rollback target — see PRD §9.)*
 
 **Backup & disaster recovery:**
-- Backup cadence: Supabase daily snapshots (run metadata/results). Raw input data is reproducible from `data/fetch/*` + INVENTORY, so it is regenerable rather than backed up.
+- Backup cadence: in prod the run/scenario store is the ephemeral in-memory fallback (re-seeded on each Space boot); local dev uses Postgres. Raw input data is reproducible from `data/fetch/*` + INVENTORY, so it is regenerable rather than backed up.
 - **RTO:** ~2 h (redeploy last-good build) · **RPO:** 24 h (run history); the kernel itself is stateless/reproducible.
 - Restore tested: TBD before any production claim.
 
@@ -243,14 +243,14 @@ graph TD
 
 ## 8. AI / Agent Architecture
 
-**AI approach:** Azure OpenAI (gpt-5.4) **Pro** orchestrates (NL/map → simulation plan) and synthesizes (per-dimension narratives + report), grounded by **GraphRAG/ChromaDB** retrieval; Azure OpenAI (gpt-5.4) **Flash-Lite** generates the commuter-persona pool at volume; **SUMO** is the deterministic physical kernel (not an LLM); **XGBoost** forecasts corridor baselines. Narratives are grounded in the actual trajectory dataset + cited data — the LLM never fabricates the scores.
+**AI approach:** a single **Azure OpenAI `gpt-5.4`** deployment orchestrates (NL/map → simulation plan), synthesizes (per-dimension narratives + report) grounded by **GraphRAG/ChromaDB** retrieval, and (optionally) generates the commuter-persona pool; **SUMO** is the deterministic physical kernel (not an LLM); **XGBoost** forecasts corridor baselines. Narratives are grounded in the actual trajectory dataset + cited data — the LLM never fabricates the scores.
 
 **Model selection:**
 
 | Agent / Task | Model | Reason |
 |-------------|-------|--------|
 | Orchestrator + Synthesis | Azure OpenAI (gpt-5.4) | current-gen reasoning for NL→plan and grounded narrative; low call count |
-| Persona generation | Azure OpenAI (gpt-5.4) | free-tier covers high-volume persona batches |
+| Persona generation | Azure OpenAI (gpt-5.4) | static literature-anchored pool by default; LLM generation opt-in (`MATRIX_PERSONA_LLM=1`) |
 | Embeddings | `bge-small-en` (Sentence Transformers) | lightweight ChromaDB vectors |
 | Corridor baseline | XGBoost | fast, accurate time-series baseline; not generative |
 | Physical kernel | Eclipse SUMO (TraCI) | the open urban-mobility standard; **not** OASIS/MiroFish (those simulate social media, not city agents) |
@@ -278,9 +278,9 @@ graph TD
 
 | Operation | Est. tokens | Est. cost | Monthly assumption |
 |-----------|-------------|-----------|--------------------|
-| Scenario parse (Pro) | ~1–3k | low | few calls/scenario |
-| Persona batch (Flash-Lite) | high volume | **free tier** | pool cached, reused across scenarios |
-| Synthesis/report (Pro) | ~3–6k | low | one per completed run |
+| Scenario parse (gpt-5.4) | ~1–3k | low | few calls/scenario |
+| Persona batch (gpt-5.4, opt-in) | high volume | static pool default → ~0 | pool cached, reused across scenarios |
+| Synthesis/report (gpt-5.4) | ~3–6k | low | one per completed run |
 
 **Fallback behavior:** Azure OpenAI error/timeout → serve cached parse for reference scenarios and/or baseline + delta; never silently retry past 2×; a data-sparse dimension returns "Low — directional only" rather than a fabricated number.
 
@@ -303,7 +303,7 @@ User scenario text and retrieved third-party content both reach the model, so th
 | LLM01 Prompt injection (direct + via retrieved content) | Yes | Orchestrator extracts a **structured, schema-validated** sim plan — it does not execute free-form instructions; retrieved GraphRAG/third-party content is wrapped + delimited as **data**, never commands; system prompt is privileged | QAD AI-01 (TBD) |
 | LLM02 Insecure output handling | Yes | Model output is **data** (scores/narrative), never executed as code/SQL/shell; escaped before render; no `eval` | QAD AI-02 |
 | LLM06 Sensitive-info disclosure | Low | No PII in prompts (aggregated open data); PWA traces anonymized at device; output carries no secrets | QAD AI-03 |
-| LLM07 Excessive agency / over-permissioning | Yes | Least-privilege tools (read + internal only); no external writes; SUMO sandboxed; Azure OpenAI spend-capped via Flash-Lite/pool caching | QAD AI-04 |
+| LLM07 Excessive agency / over-permissioning | Yes | Least-privilege tools (read + internal only); no external writes; SUMO sandboxed; Azure OpenAI spend-capped via the static persona-pool default + pool caching | QAD AI-04 |
 | Hallucination causing user harm | Yes | **Numbers come from the deterministic kernel, not the LLM**; narratives cite data sources; confidence floor → "directional only"; bias auditor enforces mode-share anchor | QAD AI-05 |
 
 **Data sent to model providers:** scenario text + retrieved public Iloilo facts → Azure OpenAI (Google AUP). No raw PII. Retention/training terms to be confirmed and recorded in the planned **CLR** (reconcile sub-processors there).

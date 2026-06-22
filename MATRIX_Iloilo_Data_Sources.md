@@ -285,7 +285,7 @@ This catalog's narrative still holds, but **acquisition has moved to a live, tra
 | Mapbox GL JS / MapLibre GL | Map rendering | https://maplibre.org/ | BSD-3 |
 | FastAPI | Backend API | https://fastapi.tiangolo.com/ | MIT |
 | Next.js 14 | Frontend framework | https://nextjs.org/ | MIT |
-| Supabase | Postgres + Auth + Storage | https://supabase.com/ | Apache 2.0 |
+| PostgreSQL + PostGIS | Relational DB + geospatial extension | https://postgis.net/ | PostgreSQL License / GPL-2.0 |
 
 ---
 
@@ -312,11 +312,11 @@ Once your team commits to Iloilo, execute these in parallel on Day 1 (May 15–1
 - [ ] Register HERE Developer account (backup)
 - [ ] Register OpenWeather API key
 - [ ] Register Sentinel Hub account
-- [ ] Verify Google AI Studio access for Azure OpenAI GPT-5.4
+- [ ] Verify Azure OpenAI access (AI Foundry key + endpoint) for `gpt-5.4`
 
 **Track D — Infrastructure setup:**
 - [ ] Create GitHub org repo (public, MIT license)
-- [ ] Provision Supabase project
+- [ ] Provision the Hugging Face Space (Docker) for the API
 - [ ] Set up Vercel deployment
 - [ ] Pull Eclipse SUMO Docker image
 - [ ] Test OSM → SUMO conversion on a small Iloilo neighborhood (e.g., Mandurriao District)

@@ -2,7 +2,7 @@
 
 ## Credential exposure notice (2026-06-10)
 
-A developer-local `app/.env` was found holding **real credentials**: a Azure OpenAI Portal
+A developer-local `app/.env` was found holding **real credentials**: an
 `AZURE_OPENAI_API_KEY`, a Mapbox public token, a `VERCEL_TOKEN`, and a `HF_TOKEN`.
 
 **Verified status (2026-06-10):** `app/.env` is *not* tracked by git and none of those
@@ -14,9 +14,9 @@ secret values appear anywhere in the repository's history — verified with
 outside the repo (developer tooling and AI-agent sessions read the file), so treat them
 as potentially exposed:
 
-1. **`AZURE_OPENAI_API_KEY`** — revoke and re-issue in [Azure OpenAI Portal](https://aistudio.google.com/apikey).
+1. **`AZURE_OPENAI_API_KEY`** — regenerate the key in the [Azure Portal](https://portal.azure.com/) under your Azure OpenAI / AI Foundry resource → **Keys and Endpoint**.
 2. **`VERCEL_TOKEN`** — revoke under Vercel → Account Settings → Tokens; re-issue with the narrowest scope.
-3. **`HF_TOKEN`** — revoke with `fly tokens list` / `fly tokens revoke`; prefer app-scoped deploy tokens.
+3. **`HF_TOKEN`** — revoke at [Hugging Face → Settings → Access Tokens](https://huggingface.co/settings/tokens); prefer a Space-scoped write token.
 4. **`NEXT_PUBLIC_MAPBOX_TOKEN`** — public-scope by design, but rotate and add URL restrictions in the Mapbox dashboard.
 
 A standing rule for this repo: **removing a file from the git index does not purge it
@@ -31,8 +31,8 @@ rewrite history with `git filter-repo`, which still does not un-leak anything al
   `credentials.json`, `token.json`, and `*.key`. `app/.env.example` (placeholders only)
   is the documented template — copy to `app/.env` and fill locally.
 - **Production secrets live in the platform, not in files:**
-  - Hugging Face Spaces (API): `Hugging Face Secrets configuration AZURE_OPENAI_API_KEY=...` — never in `Hugging Face Spaces configuration` (its `[env]`
-    block is for non-secret config only).
+  - Hugging Face Spaces (API): set `AZURE_OPENAI_API_KEY=...` under **Space → Settings →
+    Secrets** — never in the Space's README front-matter or any committed file.
   - Vercel (web): Project → Settings → Environment Variables.
   - GitHub Actions: repository **Actions secrets**, referenced as `${{ secrets.* }}`.
     The current CI (`.github/workflows/ci.yml`) intentionally requires no secrets.

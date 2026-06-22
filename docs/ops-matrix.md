@@ -30,7 +30,7 @@
 | Pillar | Tool | What's captured | Retention |
 |--------|------|-----------------|-----------|
 | Logs | FastAPI structured JSON (Hugging Face) | request/run_id on every line; stage timings; **no PII** | 30 days |
-| Metrics | Supabase events (PRD §5.5) + SLIs | `simulation_completed` (duration), `dimension_streamed` (latency), `bias_audit_logged` | rolling |
+| Metrics | Application events (PRD §5.5) + SLIs | `simulation_completed` (duration), `dimension_streamed` (latency), `bias_audit_logged` | rolling |
 | Traces | **`run_trace`** (glass-box) + AI tracing (Langfuse-style) | prompt + retrieved chunks + params + seed per run; per-call cost | per run history |
 
 **Dashboards:** (1) health — the 90 s SLO + error rate; (2) AI cost — Azure OpenAI spend/run; (3) fairness — bias-audit deltas. **Correlation ID:** `run_id` propagated client → WS → kernel → modules → `run_trace`, so one scenario is traceable end-to-end (this *is* the glass-box, operationalized). **No-PII rule:** open/aggregated data only; PWA traces anonymized at device (reconcile with [CLR §1](clr-matrix.md)).
@@ -73,7 +73,7 @@ Severity ladder = QAD P0–P3. When an incident fires:
 - **Dependency / stack currency:** re-verify the BUILD §3 pins (esp. Azure OpenAI SDK, Next.js, Deck.gl) before each sprint; patch promptly.
 - **Cost review:** weekly Azure OpenAI spend vs budget; confirm persona pool stays cached.
 - **Data refresh:** re-run `data/fetch/*` for live sources; re-stamp vintages in INVENTORY (owner: Rica/Russell — research — via `data-pipeline-runner`).
-- **Backup:** Supabase daily snapshots; raw data is reproducible via `data/fetch/*` (SDD §6 RTO ~2 h / RPO 24 h).
+- **Backup:** in production the run/scenario store is the **in-memory fallback** (ephemeral by design — a Space restart re-seeds the baseline and starts fresh). In local dev, Postgres+PostGIS holds run metadata (`docker compose`). Raw input data is reproducible via `data/fetch/*` (SDD §6 RTO ~2 h / RPO 24 h), so it is regenerable rather than backed up.
 
 ### 5.1 Triage Runbook (Planner Feedback)
 
@@ -107,67 +107,82 @@ Severity ladder = QAD P0–P3. When an incident fires:
 
 ## 7. Deploy Runbook (Hugging Face Spaces + Vercel)
 
-**Status as of CR-009:** Migrated backend to Hugging Face Spaces (Docker).
+**Status (CR-011):** backend on a **Docker Hugging Face Space** (`deploy/hf-space/`),
+frontend on **Vercel**. Fly.io is decommissioned. The Space is *self-contained* — it runs
+Redis in-container, bakes the SUMO net/demand via Git LFS, and uses the in-memory
+persistence fallback, so **no managed Postgres/Redis is required**.
 
 ### 7.1 Prerequisites
 
-- Hugging Face account and a created Docker Space.
+- Hugging Face account + a created **Docker** Space.
 - `vercel` CLI installed and authenticated (`vercel login`).
-- `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` provisioned.
-- Redis instance provisioned (e.g., Upstash) and URL available.
-- Net + demand files built locally: `cd app/packages/kernel && uv run python ../../packages/data/build_network.py` + `build_demand.py`.
+- An Azure OpenAI (AI Foundry) resource with a `gpt-5.4` deployment: `AZURE_OPENAI_API_KEY`,
+  `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`.
+- Git LFS installed (`git lfs install`) — the Space carries `iloilo.net.xml` /
+  `iloilo.rou.xml` as LFS objects.
 
-### 7.2 First-time API deploy (Hugging Face Spaces)
+### 7.2 First-time API deploy (Hugging Face Space)
 
-1. Create a new Docker Space on Hugging Face (e.g., `matrix-api-backend`).
-2. Navigate to **Settings > Variables and secrets** in your Space.
-3. Add the following secrets:
+The Space repo content lives in [`deploy/hf-space/`](../deploy/hf-space): a `Dockerfile`
+(clones the app repo + installs the kernel/API), `start.sh` (boots Redis, seeds the SUMO
+baseline ~45 s, then serves on **:7860**), the two SUMO files, and the Space `README.md`
+front-matter (`sdk: docker`, `app_port: 7860`).
+
+1. Create a new **Docker** Space (e.g. `matrix-api-backend`).
+2. **Settings → Variables and secrets** → add **secrets**:
    - `AZURE_OPENAI_API_KEY`
-   - `AZURE_OPENAI_ENDPOINT`
-   - `DATABASE_URL` (Supabase pooled URL, port 6543)
-   - `SUPABASE_KEY`
-   - `MATRIX_REDIS_URL`
-4. Deploy the code by pushing to the Hugging Face git remote:
+   - `AZURE_OPENAI_ENDPOINT` (e.g. `https://<resource>.services.ai.azure.com/`)
+   - `AZURE_OPENAI_DEPLOYMENT` (default `gpt-5.4`)
+   - `MATRIX_ALLOWED_ORIGINS` (the Vercel frontend origin, for browser CORS)
+3. Push the Space content to the HF git remote:
    ```bash
-   git remote add hf https://huggingface.co/spaces/<your-username>/<your-space-name>
-   git push hf main
+   git lfs install
+   cd deploy/hf-space
+   git init && git remote add space https://huggingface.co/spaces/<user>/<space>
+   git lfs track "*.net.xml" "*.rou.xml" && git add -A && git commit -m "deploy"
+   git push space main
    ```
-5. Ensure that the `app/packages/kernel/data` folder containing `iloilo.net.xml` and `iloilo.rou.xml` is pushed along with the repository, or downloaded during the Docker build process, as Hugging Face Spaces do not use Hugging Face Spaces's persistent volumes in the same way.
+4. The build clones the **public** app repo, so push app changes to GitHub first and then
+   **Factory Reboot** the Space (or bump the Dockerfile) to pull new commits.
+5. `GET https://<user>-<space>.hf.space/health` → `{"status":"ok"|"degraded", ...}` once the
+   baseline finishes seeding.
 
 ### 7.3 First-time web deploy (Vercel)
 
+`app/apps/web/vercel.json` already pins `NEXT_PUBLIC_API_WS_URL` / `NEXT_PUBLIC_API_URL` to
+the Space and region `sin1`, so the only optional dashboard var is the Mapbox token.
+
 ```bash
-# From apps/web; Vercel auto-detects Next.js
 cd app/apps/web
 vercel --prod
 
-# Set env secrets in Vercel dashboard (Settings → Environment Variables):
-#   NEXT_PUBLIC_MAPBOX_TOKEN    — Mapbox public token
-#   NEXT_PUBLIC_SUPABASE_URL    — Supabase project URL
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY — Supabase anon key
-# NEXT_PUBLIC_API_WS_URL should point to your Hugging Face space: wss://<your-username>-<your-space-name>.hf.space
+# Optional (Settings → Environment Variables):
+#   NEXT_PUBLIC_MAPBOX_TOKEN — only if switching off the keyless OpenFreeMap style
+# If the Space URL differs from vercel.json, override NEXT_PUBLIC_API_WS_URL /
+#   NEXT_PUBLIC_API_URL here (wss:// and https:// to <user>-<space>.hf.space).
 ```
 
-### 7.4 Nightly baseline refresh
+### 7.4 Baseline refresh
 
-The SUMO baseline (`baseline:iloilo:latest`) expires from Redis when the TTL runs out or Redis restarts. Set a cron script in a separate environment or GitHub Action to trigger the baseline refresh via a secure API endpoint:
-```bash
-curl -X POST https://<your-username>-<your-space-name>.hf.space/admin/baseline -H "Authorization: Bearer <ADMIN_TOKEN>"
-```
+The SUMO baseline (`baseline:iloilo:latest`) lives in the **in-container Redis** and is
+**re-seeded automatically on every Space boot** by `start.sh` — a restart/reboot is the
+refresh. There is no `/admin` endpoint; to force a fresh baseline, **Factory Reboot** the
+Space (or run `run_nightly_baseline()` in the Space terminal).
 
-### 7.5 Pre-warm trajectory cache before a demo session
+### 7.5 Pre-warm the trajectory cache before a demo
 
-Similarly, trigger the pre-warm via an API call to the backend:
-```bash
-curl -X POST https://<your-username>-<your-space-name>.hf.space/admin/prewarm -H "Authorization: Bearer <ADMIN_TOKEN>"
-```
+`_get_trajectory` writes each run's trajectory back to Redis (TTL
+`MATRIX_TRAJ_CACHE_TTL_S`, default 2 h). **Run the demo scenarios once** through the
+frontend or `wss://…/simulate/{id}` ahead of a judged session — the first run is ~48 s,
+every repeat of the same `scenario_id` is < 1 s (OPS §6).
 
 ### 7.6 Rollback
 
-Use `git revert` or revert to a previous commit on the Hugging Face remote:
+Revert the Space to a previous commit, then it rebuilds:
 ```bash
-git push hf <previous-commit-hash>:main --force
+cd deploy/hf-space && git push space <previous-commit>:main --force
 ```
+For app-code rollbacks, revert on GitHub and Factory Reboot the Space.
 
 ---
 

@@ -30,7 +30,7 @@
 
 Four levers (MATRIX.md §5.2), composed:
 
-1. **Pre-warmed persona pool** — 200–500 commuter personas generated once at startup (Flash-Lite) and cached in Redis. A scenario **reweights** archetype mix; it does not regenerate.
+1. **Pre-warmed persona pool** — 200–500 commuter personas warmed once at startup (static literature-anchored pool by default; gpt-5.4-generated when `MATRIX_PERSONA_LLM=1`) and cached in Redis. A scenario **reweights** archetype mix; it does not regenerate.
 2. **Delta simulation vs a nightly baseline** — a full baseline trajectory is computed nightly and cached. A scenario applies a **perturbation** (drop the project geometry → re-route only the affected agents/corridors) and computes the **difference**, not a fresh city-wide run.
 3. **Parallel modules on one trajectory dataset** — the five impact modules consume the *same* delta trajectory concurrently (no cross-dimension contradiction; `PRD-F1`).
 4. **Streaming / progressive UI** — results stream over WebSocket as each stage completes; playback animates while later modules still compute.
@@ -95,7 +95,7 @@ Client consumes the WS via a store; **progressive render** — playback starts o
 
 ## 5. AI / Agent Implementation Notes
 
-**Models:** Azure OpenAI GPT-5.4 (parse + synthesis), Flash-Lite (persona pool, cached). **Glass-box constraint:** synthesis claims that assert a number must cite an `equation_id` + `dataset_ids`; the numbers come from the kernel/equations, never the LLM (see [methods-matrix.md](methods-matrix.md) §4 citation guard). **Prompt strategy:** cached static system prefix (Iloilo context + mode-share anchors). **Edge cases:** unparseable scenario → clarification, no run; data-sparse dimension → `directional:true`; Azure OpenAI GPT-5.4 429 → backoff + cached parse for reference scenarios. **Token budget:** persona work on Flash-Lite free tier (cached); Pro low call count (1 parse + 1 synthesis/run).
+**Models:** Azure OpenAI `gpt-5.4` — one deployment for parse + synthesis + (optional) persona pool. **Glass-box constraint:** synthesis claims that assert a number must cite an `equation_id` + `dataset_ids`; the numbers come from the kernel/equations, never the LLM (see [methods-matrix.md](methods-matrix.md) §4 citation guard). **Prompt strategy:** cached static system prefix (Iloilo context + mode-share anchors). **Edge cases:** unparseable scenario → clarification, no run; data-sparse dimension → `directional:true`; Azure OpenAI GPT-5.4 429 → backoff + cached parse for reference scenarios. **Token budget:** persona work uses a cached static pool by default (LLM opt-in via `MATRIX_PERSONA_LLM=1`); gpt-5.4 low call count (1 parse + 1 synthesis/run).
 
 ---
 

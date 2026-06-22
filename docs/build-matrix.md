@@ -54,19 +54,19 @@ Specialist build agents are in the [SAD](sad-matrix.md), materialized to `.claud
 |-------|------------|-----|--------------------|
 | Language | Python · TypeScript | 3.12 · 5.x | ✔ |
 | Sim kernel | Eclipse SUMO (TraCI) + OSMnx | latest stable | eclipse.dev/sumo |
-| LLM | **Azure OpenAI GPT-5.4 + Flash-Lite** via **`openai`** SDK | 3.1 | ai.google.dev |
+| LLM | **Azure OpenAI `gpt-5.4`** via the **`openai`** SDK (Azure AI Foundry v1 endpoint) | gpt-5.4 | learn.microsoft.com/azure/ai-foundry |
 | Frontend | Next.js (App Router) + Tailwind + shadcn/ui | 14+ / v4 | nextjs.org, tailwindcss.com |
 | Map/3D | Mapbox GL JS + Deck.gl (TripsLayer) | current | deck.gl |
 | Backend | FastAPI + uvicorn + websockets | current | fastapi.tiangolo.com |
-| Data | Supabase (Postgres + PostGIS) · ChromaDB · Redis | current | — |
+| Data | Postgres + PostGIS (in-memory fallback) · ChromaDB · Redis | current | — |
 | ML | XGBoost · sentence-transformers (`bge-small-en`) | current | — |
 | Testing | Vitest + Playwright | current | vitest.dev, playwright.dev |
 
 ### Deprecations — DO NOT use the stale form (overrides memory)
 | ❌ Stale | ✅ Current | Why |
 |---------|-----------|-----|
-| Azure OpenAI GPT-5.4 **1.5 / 2.0** | **Azure OpenAI GPT-5.4** (Pro + Flash-Lite) | 1.5 shut down; 2.0 shut down 2026-06-01 — before submission (MATRIX.md §6) |
-| `google-generativeai` SDK | **`openai`** (unified SDK) | verify import shape against current docs |
+| Gemini / `google-genai` (any model) | **Azure OpenAI `gpt-5.4`** via `openai` SDK | migrated off Gemini in CR-008 — do not reintroduce |
+| `google-generativeai` SDK · `openai.AzureOpenAI` client | **`openai.OpenAI(base_url=…)`** (Azure AI Foundry v1) | `AzureOpenAI`'s `/deployments?api-version=` routing 404s on Foundry (CR-009) |
 | **OASIS / MiroFish** as the simulator | **SUMO** | OASIS/MiroFish simulate social media, not urban agents (MATRIX.md §6) |
 | Tailwind v3 PostCSS plugin (`tailwindcss`) | **`@tailwindcss/postcss`** (v4) | taste-skill §3.A |
 | `framer-motion` import | **`motion/react`** | taste-skill §3.A |

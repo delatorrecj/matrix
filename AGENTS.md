@@ -52,9 +52,9 @@ your code → glass-box-auditor PASS → eval-test-runner PASS → merge
 
 ## Key Constraints (read before coding)
 
-- **LLMs:** Azure OpenAI GPT-5.4 (orchestration) + Azure OpenAI GPT-5.4 (high-volume persona generation). Never Azure OpenAI 1.5 or 2.0.
+- **LLM:** Azure OpenAI `gpt-5.4` (one deployment) for orchestration, synthesis, and persona generation, via the `openai` SDK against the Azure AI Foundry v1 endpoint. Never reintroduce Gemini / `google-genai` (migrated off in CR-008).
 - **Simulation engine:** Eclipse SUMO via TraCI Python API.
-- **Stack:** Next.js 14 (App Router) · FastAPI · Supabase · Deck.gl · shadcn/ui. See [docs/build-matrix.md](docs/build-matrix.md) §3 for pinned versions.
+- **Stack:** Next.js 14 (App Router) · FastAPI · Postgres+PostGIS (in-memory fallback) · ChromaDB · Redis · Deck.gl · shadcn/ui. See [docs/build-matrix.md](docs/build-matrix.md) §3 for pinned versions.
 - **Equations:** Every number in the modules must map to [docs/methods-matrix.md](docs/methods-matrix.md) §3 (the glass-box ledger). Read this before coding any module.
 - **90 s budget:** End-to-end latency from query to playback. Hard constraint. RFC-001 has the pipeline strategy.
 

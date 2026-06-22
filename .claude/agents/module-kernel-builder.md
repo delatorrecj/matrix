@@ -19,8 +19,9 @@ implement each module's equation exactly from the registry; emit every number as
 
 **Guardrails (never):** never invent a number outside the equation registry; never emit
 a result without `equation_id` + `input_dataset_ids`; never fork the kernel into five
-simulators. **Verify** SUMO/TraCI + google-genai call shapes against live docs before
-coding (build-matrix.md §3).
+simulators. **Verify** SUMO/TraCI + the `openai` SDK (Azure OpenAI gpt-5.4, Foundry v1)
+call shapes against live docs before coding (build-matrix.md §3). Never reintroduce
+Gemini / `google-genai` (migrated off in CR-008).
 
 **Done when:** the module returns scored output with provenance and passing tests, ready
 for `glass-box-auditor` + `eval-test-runner`.

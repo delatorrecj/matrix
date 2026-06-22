@@ -30,10 +30,10 @@
 
 | Activity | Purpose | Data categories | Subjects | Recipients / sub-processors | Cross-border | Retention | Legal basis |
 |----------|---------|-----------------|----------|-----------------------------|--------------|-----------|-------------|
-| Simulation | impact scoring | **open/aggregated data only** (OSM, CCHAIN barangay, Overture) — synthetic personas, **no PII** | none (aggregate) | Hugging Face Spaces, Supabase | US (Supabase/Fly) | run metadata | legitimate interest (no personal data) |
-| Scenario NL query | parse → plan + narrative | scenario text (planner-authored; not personal) | user (planner) | **Google (Azure OpenAI GPT-5.4 API)** | US/Google | run trace | legitimate interest |
-| **PWA GPS traces** (`PRD-F10`) | behavioral calibration | **precise location**, device-anon ID | volunteer contributors | Supabase | US | minimize; aggregate then delete raw | **consent (explicit, opt-in)** |
-| Product analytics | usage metrics (PRD §5.5) | event telemetry, no PII | users | Supabase (events table) | US | 30 days | legitimate interest |
+| Simulation | impact scoring | **open/aggregated data only** (OSM, CCHAIN barangay, Overture) — synthetic personas, **no PII** | none (aggregate) | Hugging Face Spaces, Vercel | US | run metadata | legitimate interest (no personal data) |
+| Scenario NL query | parse → plan + narrative | scenario text (planner-authored; not personal) | user (planner) | **Microsoft (Azure OpenAI `gpt-5.4` API)** | US/Microsoft | run trace | legitimate interest |
+| **PWA GPS traces** (`PRD-F10`) | behavioral calibration | **precise location**, device-anon ID | volunteer contributors | Hugging Face Space (in-app Postgres) | US | minimize; aggregate then delete raw | **consent (explicit, opt-in)** |
+| Product analytics | usage metrics (PRD §5.5) | event telemetry, no PII | users | Postgres (`events` table) | US | 30 days | legitimate interest |
 
 **Sensitivity flags:**
 
@@ -53,7 +53,7 @@
 | Item | Done? | Evidence | Counsel? |
 |------|-------|----------|----------|
 | Every activity has a retention period | Partial | this table | — |
-| Every sub-processor named + DPA | No | Google/Supabase/Fly/Mapbox | **Yes** |
+| Every sub-processor named + DPA | No | Microsoft (Azure) / Hugging Face / Vercel / Mapbox (optional) | **Yes** |
 | Inventory dated + living | Yes | this doc | — |
 
 ---
@@ -66,7 +66,7 @@
 | **Data subject rights** | access, correct, erase/block, object, portability for trace contributors |
 | **Breach notification** | NPC **and** affected subjects within **72 h** of knowledge if real risk of serious harm |
 | **DPO / PIA / PMP** | **Mandatory DPO**, a **Privacy Impact Assessment** for the PWA, and a Privacy Management Program |
-| **Cross-border transfer** | controller (Team ATLAN) stays accountable for Google/Supabase/Fly (US) processing; ensure comparable protection |
+| **Cross-border transfer** | controller (Team ATLAN) stays accountable for Microsoft (Azure) / Hugging Face / Vercel (US) processing; ensure comparable protection |
 | **Our status / action** | designate a **DPO**; complete a **PIA before enabling PWA traces**; publish a Privacy Policy; sign/confirm DPAs |
 
 **Watch list:** NPC circulars on consent + breach; evolving AI-governance guidance (NPC advisory opinions on AI/automated processing).

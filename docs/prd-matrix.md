@@ -184,7 +184,7 @@ flowchart TD
 | `bias_audit_logged` | auditor finishes a persona batch | mode_share_delta, reweighted(bool) | fairness audit |
 | `report_exported` | PDF generated | dimensions_included, ts | activation |
 
-**Naming convention:** snake_case `object_action`, past tense, no PII in properties. **Analytics tool:** TBD (lightweight for hackathon; Supabase events table acceptable).
+**Naming convention:** snake_case `object_action`, past tense, no PII in properties. **Analytics tool:** TBD (lightweight for hackathon; a Postgres `events` table acceptable).
 
 ---
 
@@ -204,10 +204,10 @@ flowchart TD
 ## 7. AI / Agent Feature Specifications
 
 **AI Components:** (1) Orchestrator/Synthesis, (2) Persona generator, (3) Bias auditor, (4) Baseline forecaster.
-**Models considered:** Azure OpenAI GPT-5.4 / Flash-Lite; (rejected) Azure OpenAI GPT-5.4 1.5 (shut down) and 2.0 (shut down 2026-06-01, before final submission).
+**Models considered:** Azure OpenAI `gpt-5.4` (chosen — one deployment for orchestration, synthesis, and persona generation; migrated off Gemini in CR-008); (rejected) the deprecated Gemini 1.5 / 2.0 models.
 **Selected models:**
 - **Azure OpenAI GPT-5.4** — NL scenario parsing, orchestration, synthesis/report narratives. *Reason: current-generation reasoning; needed for reliable NL→plan and grounded narrative.*
-- **Azure OpenAI GPT-5.4** — high-volume persona generation. *Reason: free-tier covers prototype-scale persona batches.*
+- **Azure OpenAI GPT-5.4** (same deployment) — optional high-volume persona generation. *Reason: personas default to a cached static literature-anchored pool; LLM generation is opt-in (`MATRIX_PERSONA_LLM=1`).*
 - **XGBoost** — corridor-volume baseline forecaster. **Eclipse SUMO** (via TraCI) — the physical agent kernel (not an LLM; chosen over OASIS/MiroFish, which simulate social-media dynamics, not urban agents).
 
 **What the AI does:** parses the scenario → plans a SUMO run → generates a calibrated commuter-persona pool → (modules score the run) → synthesizes per-dimension narratives + a recommendation, each tagged with confidence.
@@ -225,16 +225,16 @@ flowchart TD
 - Persona pool is **pre-warmed and cached** — user input reweights, it does not regenerate; a nightly **baseline** run exists, so a scenario can fall back to baseline + delta.
 - If a dimension lacks data, it returns **"Low confidence — directional only"** rather than a fabricated number.
 
-**Token / cost budget per operation:** Flash-Lite (free tier) absorbs high-volume persona work; Pro is reserved for orchestration + synthesis only (low call count). Persona pool cached, not regenerated per run.
+**Token / cost budget per operation:** a single `gpt-5.4` deployment handles orchestration + synthesis (low call count). High-volume persona work is absorbed by a cached static literature-anchored pool (LLM persona generation is opt-in via `MATRIX_PERSONA_LLM=1`, off in prod); the pool is cached and reweighted, not regenerated per run.
 
 ---
 
 ## 8. Dependencies & Assumptions
 
 **Dependencies:**
-- Azure OpenAI GPT-5.4 API access (Google AI Studio key) — required for the build, not for these docs.
+- Azure OpenAI `gpt-5.4` API access (Azure OpenAI / AI Foundry key + endpoint) — required for the build, not for these docs.
 - Open Iloilo data per [../data/INVENTORY.md](../data/INVENTORY.md) — OSM, Project CCHAIN (barangay-level), Overture, LPTRP routes, literature — already acquired and Iloilo-subset.
-- Eclipse SUMO, OSMnx, Deck.gl/Mapbox, FastAPI/WebSocket, Supabase, ChromaDB/GraphRAG, Redis.
+- Eclipse SUMO, OSMnx, Deck.gl/Mapbox, FastAPI/WebSocket, Postgres/PostGIS, ChromaDB/GraphRAG, Redis.
 
 **Assumptions:**
 - **Single-user demo load** for the 90-second budget; multi-user requires queueing (acceptable for hackathon scope).

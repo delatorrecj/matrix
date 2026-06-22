@@ -157,7 +157,7 @@ Each non-trivial component documents what it does and how its output is made tra
 | Component | Purpose | Inputs → Output | Grounding | Known limits / failure mode | Traceability hook |
 |---|---|---|---|---|---|
 | **Orchestrator** (Azure OpenAI GPT-5.4) | NL/map → structured sim plan | query → JSON plan | GraphRAG retrieval (OSM, gazetteer) injected into prompt | mis-parse → clarification prompt (never guess) | `run_trace.retrieved_chunks` and `prompt` params |
-| **Persona generator** (Flash-Lite) | commuter persona pool | archetypes → agents | mode-share anchor | LLM bias → bias auditor reweights | `bias_audit_log` |
+| **Persona generator** (Azure OpenAI gpt-5.4, opt-in) | commuter persona pool | archetypes → agents | mode-share anchor | LLM bias → bias auditor reweights | `bias_audit_log` |
 | **Bias auditor** (Python) | enforce mode-share fairness | persona batch → pass/reweight | Iloilo ground truth (Calderon2014) | anchor stale → flagged | public `bias_audit_log` |
 | **SUMO kernel** (TraCI) | physical trajectories | net + agents → per-tick dataset | deterministic physics | net gaps → confidence floor | seed + net version in `simulation_runs` |
 | **XGBoost baseline** | corridor volume forecast | history → baseline | trained on open series | extrapolation risk | model version stamped |
@@ -169,11 +169,11 @@ Each non-trivial component documents what it does and how its output is made tra
 
 *(CR-008 Item 3 — added 2026-06-17. Mathematical specification of `reweight_pool`.)*
 
-LLMs default to WEIRD/middle-class archetypes. If Flash-Lite generates a persona pool that over-indexes on private cars vs the Iloilo ground-truth (`Calderon2014`), the Bias Auditor corrects it using **stratified resampling with per-mode multiplicative importance weights**.
+LLMs default to WEIRD/middle-class archetypes. If the persona LLM (gpt-5.4) generates a persona pool that over-indexes on private cars vs the Iloilo ground-truth (`Calderon2014`), the Bias Auditor corrects it using **stratified resampling with per-mode multiplicative importance weights**.
 
 **Correction formula:** `f_k = target_k / observed_k` (modes absent in observed but present in target receive a `10.0` injection weight).
 
-**Example: Flash-Lite private-car over-generation.** The **Target (Anchor)** column is the deployed
+**Example: persona-LLM private-car over-generation.** The **Target (Anchor)** column is the deployed
 `ILOILO_MODE_SHARE` (`config.py` / `personas.py` — jeepney 0.50, tricycle 0.05, private_car 0.15,
 motorcycle 0.15, walk 0.10, bicycle 0.05); the Observed column is one over-indexed batch.
 - **Trigger:** Observed `private_car` is 0.30 vs anchor 0.15 (a +15% delta, far beyond the ±3% `MODE_SHARE_TOLERANCE`).
@@ -257,7 +257,7 @@ A run is reproducible: `simulation_runs` records the scenario params, **random s
 | SUMO network (all modules) | `OSM-ILO` | OpenStreetMap Iloilo extract — roads, routes, POIs, heritage | [INVENTORY](../data/INVENTORY.md#osm-ilo) | **H** |
 | SUMO network (all modules) | `OVERTURE` | Overture Maps buildings + places + transportation | [INVENTORY](../data/INVENTORY.md#overture) | **H** |
 | SUMO network (all modules) | `SUMO-NET` | Derived network from OSM via netconvert (network physics) | [INVENTORY](../data/INVENTORY.md#osm-ilo) | **H** |
-| Persona pool (all modules) | `PERSONA-POOL` | ~500 commuter archetypes — Azure OpenAI GPT-5.4 Flash-Lite generated, bias-audited to mode-share anchor | [INVENTORY](../data/INVENTORY.md) | **H** |
+| Persona pool (all modules) | `PERSONA-POOL` | ~500 commuter archetypes — static literature-anchored pool by default (Azure OpenAI gpt-5.4-generated when `MATRIX_PERSONA_LLM=1`), bias-audited to the mode-share anchor | [INVENTORY](../data/INVENTORY.md) | **H** |
 | Mode-share anchor (BEH-2, audit) | `Calderon2014` | Calderon 2014 Iloilo BRT study — literature mode-share ground-truth anchor | [INVENTORY](../data/INVENTORY.md#lit-calderon) | **M** |
 | Barangay socioeconomic (multi-module) | `CCHAIN` | Project CCHAIN — 20-yr barangay climate/socioeco/health, 180 Iloilo barangays | [INVENTORY](../data/INVENTORY.md#cchain) | **H** |
 

@@ -4,8 +4,12 @@
 **Project:** MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange
 **Date:** 2026-06-16
 **Author:** Carlos Jerico Dela Torre (Team ATLAN)
-**Status:** Complete (PR 1–10 merged; actual Fly + Vercel deploy pending user credentials)
+**Status:** Complete (PR 1–10 merged) — **deploy section superseded by [CR-011](cr-011-huggingface-migration.md)**
 **Trigger document:** [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) §6 (carried-forward debt) + the next-session handoff
+
+> ⚠️ **Historical record.** The P4 "Deploy" steps below target **Fly.io**, which has since been
+> decommissioned. The current deploy target is **Hugging Face Spaces + Vercel** — see
+> [CR-011](cr-011-huggingface-migration.md) and [ops-matrix.md](ops-matrix.md) §7. Do not follow the Fly steps here.
 
 > **What this Record is.** CR-006 shipped a 16-unit product-hardening batch (PRs #1–#17), but
 > several of those features were built *self-contained and never connected end-to-end*. This

@@ -184,7 +184,7 @@ The processing core is structured as **one simulation kernel + five impact modul
 - **Predictive baseline:** XGBoost time-series for corridor volume forecasting
 - **Bias auditor:** custom Python module — enforces mode-share anchor matching ground truth
 - **Backend:** FastAPI + WebSocket for simulation streaming
-- **Database:** Supabase Postgres (run metadata), ChromaDB (vectors), Redis (simulation cache)
+- **Database:** Postgres + PostGIS (run metadata; in-memory fallback so the public demo needs no managed DB), ChromaDB (vectors), Redis (simulation cache)
 - **Frontend:** Next.js 14 (App Router) + Tailwind + shadcn/ui
 - **Map and animation:** Mapbox GL JS + Deck.gl TripsLayer for animated agent playback
 - **Companion:** Progressive Web App (mobile-first GPS trace collection)
@@ -229,7 +229,7 @@ The real-time interactive flow is the single highest-impact judging moment. We a
 
 **Why this stack and not the alternatives:**
 - **Why SUMO, not OASIS or MiroFish?** OASIS and MiroFish simulate social-media dynamics, not physical agents in cities. SUMO is the actual open-source urban mobility standard, developed by DLR (Germany), and supports intermodal simulation natively.
-- **Why Azure OpenAI (gpt-5.4), not 2.0 or 1.5?** Azure OpenAI 1.5 is shut down, and Azure OpenAI 2.0 shut down June 1, 2026 — before our final submission. Azure OpenAI (gpt-5.4) (released Feb 19, 2026) and 3.1 Flash-Lite are the current generation. Flash-Lite's free tier covers prototype scope.
+- **Why Azure OpenAI `gpt-5.4`?** One Azure OpenAI deployment serves orchestration, synthesis, *and* persona generation, reached via the `openai` SDK against the Azure AI Foundry OpenAI-compatible **v1** endpoint (`openai.OpenAI(base_url=…)`, not `openai.AzureOpenAI` — see CR-009). The project migrated off Gemini in CR-008 — do not reintroduce it.
 - **Why one simulation kernel feeding five modules, not five separate simulators?** A unified trajectory dataset ensures the five dimensions are scored against the *same* simulated reality. Separate simulators would produce internal contradictions ("Behavioral says trips up, Ecological says emissions flat" because they ran different physics).
 
 ---
@@ -293,7 +293,7 @@ This roadmap assumes a 10x fullstack team using Claude Code, Azure OpenAI CLI, A
 - Email Clean Air Asia for SMMR Iloilo data inventory access
 
 **Track B — Infrastructure:**
-- Scaffold monorepo: Next.js 14 + FastAPI + ChromaDB + SUMO Docker + Supabase
+- Scaffold monorepo: Next.js 14 + FastAPI + ChromaDB + SUMO Docker + Postgres/PostGIS
 - Deploy Vercel + Hugging Face Spaces + Redis cache
 - GitHub Actions CI/CD
 
@@ -304,7 +304,7 @@ This roadmap assumes a 10x fullstack team using Claude Code, Azure OpenAI CLI, A
 - Bias auditor v1
 
 **Track D — AI Scaffolding:**
-- Azure OpenAI (gpt-5.4) and Flash-Lite API integration
+- Azure OpenAI gpt-5.4 API integration (via the openai SDK)
 - ChromaDB ingestion (OSM + PSA + CLUP)
 - Initial GraphRAG schema
 - Prompt templates for NL scenario parsing
@@ -439,7 +439,7 @@ We build everything in Tier 1 before touching Tier 2, and Tier 2 before Tier 3. 
 
 **Honest technical constraints:**
 
-- **Cost of agentic simulation at scale.** Thousands of LLM personas per scenario hits real Azure OpenAI API cost. Mitigation: Flash-Lite for high-volume persona work; Pro only for orchestration. Persona pool cached, not regenerated.
+- **Cost of agentic simulation at scale.** Thousands of LLM personas per scenario would hit real Azure OpenAI API cost. Mitigation: personas default to a cached static literature-anchored pool (LLM persona generation is opt-in via `MATRIX_PERSONA_LLM=1`, off in prod); the pool is cached and reweighted, not regenerated; gpt-5.4 calls are reserved for orchestration + synthesis (low call count).
 - **Real-time latency under load.** 90-second budget holds for single user; multi-user load requires queueing. Acceptable for hackathon scope.
 - **Confidence floor for low-data dimensions.** Societal scoring in cities with sparse heritage data will return "Low confidence — directional only." This is honest, not weak.
 - **FOI lag.** LTFRB Region VI data may arrive after final submission. Hackathon build uses what's open; production deployment fills gaps over months.

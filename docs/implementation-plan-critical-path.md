@@ -137,7 +137,7 @@ This keeps the demoable glass-box story intact even in the worst SUMO case, and 
 Once Milestone A is green, the work converges back onto the gated plan:
 
 1. **Width:** Ecological → Social → Economic → Societal modules (Phase 3 order), each on the frozen trajectory.
-2. **Ask-able:** Azure OpenAI GPT-5.4 orchestrator turns a real NL query ("3,000-seat school at Molo") into a `Scenario` (Phase 4.2); Flash-Lite generates the real persona pool (upgrade S4).
+2. **Ask-able:** Azure OpenAI GPT-5.4 orchestrator turns a real NL query ("3,000-seat school at Molo") into a `Scenario` (Phase 4.2); the persona LLM (gpt-5.4) generates the real persona pool (upgrade S4).
 3. **Watchable:** scaffold `apps/web` per [SCAFFOLD.md](../app/apps/web/SCAFFOLD.md), wire the live WS, Deck.gl TripsLayer playback, the five-dimension panel, the **confidence layer**, and **Inspect on every number** (Phase 5).
 4. **Fast:** profile to the **90 s** warm-delta budget (Phase 6) — persona pool + nightly baseline hot, modules parallel, streaming first paint early.
 5. **Honest:** surface the Calderon-2014 / 2024-flood back-test in-product (PRD‑F18).

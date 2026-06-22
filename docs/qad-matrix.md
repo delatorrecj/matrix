@@ -22,7 +22,7 @@
 | Level | Tooling | Owner |
 |-------|---------|-------|
 | Unit | pytest (kernel/modules/equations), Vitest (frontend) | Engineer |
-| Integration | pytest + real SUMO + Supabase | Engineer |
+| Integration | pytest + real SUMO + Postgres/PostGIS | Engineer |
 | E2E | Playwright (browser → WS → result) | Engineer/QA |
 | AI / sim eval | `scripts/run_eval.py` harness | Engineer |
 | Manual exploratory | desktop + projector + mobile (PWA) | Team |
@@ -31,7 +31,7 @@
 
 ## 2. Test Environments & Data
 
-**Staging:** Vercel preview (frontend) + Fly staging (FastAPI + SUMO). **Test data:** the open Iloilo datasets in `data/` (reproducible via `data/fetch/*`) + the committed `data/processed/cchain_iloilo/`. **Data policy:** open/aggregated only — **no PII** (personas are synthetic; PWA traces excluded from test fixtures). Reference scenarios seeded.
+**Staging:** Vercel preview (frontend) + a Hugging Face staging Space (FastAPI + SUMO). **Test data:** the open Iloilo datasets in `data/` (reproducible via `data/fetch/*`) + the committed `data/processed/cchain_iloilo/`. **Data policy:** open/aggregated only — **no PII** (personas are synthetic; PWA traces excluded from test fixtures). Reference scenarios seeded.
 
 ```bash
 python data/fetch/fetch_open.py && python data/fetch/subset_iloilo.py   # test data

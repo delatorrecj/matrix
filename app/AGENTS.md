@@ -23,10 +23,11 @@
 ## Locked decisions (do not silently revert — MATRIX.md §6)
 - Simulation engine **Eclipse SUMO** (TraCI) — not OASIS/MiroFish.
 - **One unified kernel → five impact modules** (Behavioral/Social/Economic/Ecological/Societal).
-- LLMs **Azure OpenAI GPT-5.4** (orchestration/synthesis/personas) via
-  **`openai`**. **Never Azure OpenAI or google-genai.**
+- LLM **Azure OpenAI `gpt-5.4`** (orchestration/synthesis/personas) via the
+  **`openai`** SDK against the Azure AI Foundry v1 endpoint (`openai.OpenAI(base_url=…)`,
+  not `openai.AzureOpenAI` — CR-009). **Never reintroduce Gemini / `google-genai`** (CR-008).
 - **90-second** end-to-end budget (pre-warmed personas + nightly baseline + delta + parallel modules + streaming UI).
-- Stack: Next.js 14 + Tailwind v4 (`@tailwindcss/postcss`) + shadcn/ui; Mapbox GL + Deck.gl (TripsLayer); FastAPI + WebSocket; Supabase (Postgres+PostGIS) + ChromaDB + Redis; XGBoost.
+- Stack: Next.js 14 + Tailwind v4 (`@tailwindcss/postcss`) + shadcn/ui; Mapbox GL + Deck.gl (TripsLayer); FastAPI + WebSocket; Postgres+PostGIS (in-memory fallback) + ChromaDB + Redis; XGBoost. Deploy: Vercel (web) + Hugging Face Spaces (API).
 
 ## Verify-live-before-coding (overrides training memory)
 Before writing framework code, confirm the convention against the **pinned version's**
