@@ -92,7 +92,8 @@ describe("ScenarioBuilder", () => {
     });
     // Step 1 → 2 (parameters)
     clickNext();
-    fireEvent.change(screen.getByLabelText(/Lanes to close/i), { target: { value: "2" } });
+    fireEvent.click(screen.getByLabelText(/Lanes to close/i));
+    fireEvent.click(screen.getByRole("option", { name: "2 lanes" }));
     // Step 2 → 3 (review)
     clickNext();
 
@@ -124,7 +125,8 @@ describe("ScenarioBuilder", () => {
       target: { value: "Molo" },
     });
     clickNext(); // → Parameters
-    fireEvent.change(screen.getByLabelText(/Facility kind/i), { target: { value: "market" } });
+    fireEvent.click(screen.getByLabelText(/Facility kind/i));
+    fireEvent.click(screen.getByRole("option", { name: "Market" }));
     fireEvent.change(screen.getByLabelText(/Capacity/i), { target: { value: "250" } });
     clickNext(); // → Review
 

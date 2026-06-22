@@ -46,7 +46,7 @@
  * splits on the literal token `Geometry (GeoJSON):`.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -387,7 +387,7 @@ export default function ScenarioBuilder() {
             </h2>
 
             <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3.5 text-xs text-text-muted">
-              <p className="font-semibold text-primary mb-1">💡 Pro-tip: Write a comprehensive location prompt</p>
+              <p className="font-semibold text-primary mb-1">Pro-tip: Write a comprehensive location prompt</p>
               The simulation parser uses a local gazetteer and GraphRAG. You can specify exact corridors, intersecting landmarks, or colloquial Hiligaynon terms (e.g. <em>tulay sa forbes</em>, <em>super</em>, or <em>plasa</em>).
             </div>
 
@@ -437,18 +437,17 @@ export default function ScenarioBuilder() {
 
               {state.interventionType === "lane_closure" && (
                 <Field label="Lanes to close" htmlFor="param-lanes">
-                  <select
+                  <CustomSelect
                     id="param-lanes"
                     value={state.lanesClosed}
-                    onChange={(e) => update("lanesClosed", Number(e.target.value))}
-                    className="w-full bg-background border border-border rounded-md p-2.5 text-sm outline-none focus:border-primary"
-                  >
-                    {[1, 2, 3, 4].map((n) => (
-                      <option key={n} value={n}>
-                        {n} {n === 1 ? "lane" : "lanes"}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => update("lanesClosed", val as number)}
+                    options={[
+                      { value: 1, label: "1 lane" },
+                      { value: 2, label: "2 lanes" },
+                      { value: 3, label: "3 lanes" },
+                      { value: 4, label: "4 lanes" },
+                    ]}
+                  />
                 </Field>
               )}
 
@@ -490,16 +489,16 @@ export default function ScenarioBuilder() {
               {state.interventionType === "new_facility" && (
                 <div className="space-y-4">
                   <Field label="Facility kind" htmlFor="param-facility-kind">
-                    <select
+                    <CustomSelect
                       id="param-facility-kind"
                       value={state.facilityKind}
-                      onChange={(e) => update("facilityKind", e.target.value as FacilityKind)}
-                      className="w-full bg-background border border-border rounded-md p-2.5 text-sm outline-none focus:border-primary"
-                    >
-                      <option value="school">School</option>
-                      <option value="market">Market</option>
-                      <option value="terminal">Transport terminal</option>
-                    </select>
+                      onChange={(val) => update("facilityKind", val as FacilityKind)}
+                      options={[
+                        { value: "school", label: "School" },
+                        { value: "market", label: "Market" },
+                        { value: "terminal", label: "Transport terminal" },
+                      ]}
+                    />
                   </Field>
                   <Field
                     label={`Capacity (${FACILITY_UNIT[state.facilityKind]}s)`}
@@ -676,6 +675,87 @@ function geometryFeature(geometry: DrawnGeometry) {
       ? { type: "Polygon", coordinates: [geometry.vertices.map((v) => v.map((c) => Number(c.toFixed(5))))] }
       : { type: "Point", coordinates: [] });
   return { type: "Feature", geometry: geo, properties: {} };
+}
+
+// ── Custom Select Component for theme-friendly styling ──────────────────────
+
+interface CustomSelectOption<T> {
+  value: T;
+  label: string;
+}
+
+interface CustomSelectProps<T> {
+  id?: string;
+  value: T;
+  onChange: (val: T) => void;
+  options: CustomSelectOption<T>[];
+  ariaLabel?: string;
+}
+
+function CustomSelect<T extends string | number>({
+  id,
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: CustomSelectProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        id={id}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={ariaLabel || "Select option"}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between bg-surface border border-border rounded-md px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-left"
+      >
+        <span>{selectedOption ? selectedOption.label : String(value)}</span>
+        <span className="ml-2 text-text-muted pointer-events-none text-[10px]">▼</span>
+      </button>
+
+      {isOpen && (
+        <ul
+          role="listbox"
+          className="absolute z-50 mt-1 w-full rounded-md border border-border bg-surface-elevated shadow-lg max-h-60 overflow-y-auto py-1 outline-none animate-in fade-in slide-in-from-top-1 duration-100"
+        >
+          {options.map((opt) => (
+            <li
+              key={opt.value}
+              role="option"
+              aria-selected={opt.value === value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`cursor-pointer select-none px-3 py-2 text-sm transition-colors ${
+                opt.value === value
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-text hover:bg-surface hover:text-primary"
+              }`}
+            >
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 
