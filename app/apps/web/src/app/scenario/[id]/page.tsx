@@ -574,10 +574,10 @@ export default function ScenarioSimulation() {
       {/* Map Area */}
       <div className="flex-1 relative order-1 md:order-2">
         <DeckGL
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           viewState={{
             ...viewState,
             padding: { right: (showResultsPanel || isDrawerOpen) ? 424 : 0, left: 64, top: 0, bottom: 0 }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any}
           controller={true}
           onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
