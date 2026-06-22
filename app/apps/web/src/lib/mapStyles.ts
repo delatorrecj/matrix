@@ -16,6 +16,5 @@
 /** Light basemap — OpenFreeMap Liberty style (low-saturation, planner-grade). */
 export const MAP_STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty";
 
-/** Dark basemap — CartoDB Dark Matter GL style (free, no API key required). */
-export const MAP_STYLE_DARK =
-  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+/** Dark basemap — OpenFreeMap Dark style (free, no API key required). */
+export const MAP_STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";

@@ -48,20 +48,11 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Map } from "react-map-gl/maplibre";
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import DeckGL from "@deck.gl/react";
-import { ScatterplotLayer, PolygonLayer, PathLayer } from "@deck.gl/layers";
-import type { Layer, PickingInfo } from "@deck.gl/core";
 import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Loader2,
-  MapPin,
-  Pencil,
-  RotateCcw,
   Building2,
   Gauge,
   SignpostBig,
@@ -246,20 +237,8 @@ export function buildScenarioQuery(state: BuilderState): string {
   return `${sentence.trim()}.${suffix}`;
 }
 
-// ── Map config (mirrors home page.tsx / scenario page) ───────────────────────
-
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
-const INITIAL_VIEW_STATE = {
-  longitude: 122.56,
-  latitude: 10.71,
-  zoom: 13,
-  pitch: 0,
-  bearing: 0,
-};
-
-type DrawMode = "point" | "polygon";
-
 // ── Component ────────────────────────────────────────────────────────────────
+
 
 const STEPS = ["Type", "Location", "Parameters", "Review"] as const;
 type StepIndex = 0 | 1 | 2 | 3;
@@ -268,13 +247,6 @@ export default function ScenarioBuilder() {
   const router = useRouter();
   const [step, setStep] = useState<StepIndex>(0);
   const [state, setState] = useState<BuilderState>(INITIAL_BUILDER_STATE);
-
-  const [drawMode, setDrawMode] = useState<DrawMode>("point");
-
-  // Manual lon/lat entry — the always-available fallback to clicking the map
-  // (and the only path exercised in jsdom tests, where WebGL can't render).
-  const [manualLon, setManualLon] = useState("");
-  const [manualLat, setManualLat] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clarification, setClarification] = useState<string | null>(null);
@@ -288,114 +260,6 @@ export default function ScenarioBuilder() {
   );
 
   const query = useMemo(() => buildScenarioQuery(state), [state]);
-
-  // ── Geometry capture ──────────────────────────────────────────────────────
-
-  const commitPoint = useCallback(
-    (lon: number, lat: number) => {
-      update("geometry", { kind: "point", point: [lon, lat] });
-    },
-    [update]
-  );
-
-  const addPolygonVertex = useCallback((lon: number, lat: number) => {
-    setState((s) => {
-      const existing =
-        s.geometry?.kind === "polygon" ? s.geometry.vertices : [];
-      const vertices: [number, number][] = [...existing, [lon, lat]];
-      return { ...s, geometry: { kind: "polygon", vertices } };
-    });
-  }, []);
-
-  const handleMapClick = useCallback(
-    (info: PickingInfo) => {
-      const c = info.coordinate;
-      if (!c || c.length < 2) return;
-      const [lon, lat] = c;
-      if (drawMode === "point") commitPoint(lon, lat);
-      else addPolygonVertex(lon, lat);
-    },
-    [drawMode, commitPoint, addPolygonVertex]
-  );
-
-  const addManualCoord = useCallback(() => {
-    const lon = Number(manualLon);
-    const lat = Number(manualLat);
-    if (manualLon.trim() === "" || manualLat.trim() === "") return;
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
-    if (drawMode === "point") commitPoint(lon, lat);
-    else addPolygonVertex(lon, lat);
-    setManualLon("");
-    setManualLat("");
-  }, [manualLon, manualLat, drawMode, commitPoint, addPolygonVertex]);
-
-  const clearGeometry = useCallback(() => {
-    update("geometry", null);
-  }, [update]);
-
-  const switchDrawMode = useCallback(
-    (mode: DrawMode) => {
-      setDrawMode(mode);
-      // Switching capture modes starts fresh — point and polygon don't mix.
-      update("geometry", null);
-    },
-    [update]
-  );
-
-  // Deck.gl visual layers for the drawn geometry (skipped automatically in tests
-  // where DeckGL is mocked to a div).
-  const layers = useMemo(() => {
-    const out: Layer[] = [];
-    const g = state.geometry;
-    if (g?.kind === "point") {
-      out.push(
-        new ScatterplotLayer({
-          id: "drawn-point",
-          data: [g.point],
-          getPosition: (d: [number, number]) => d,
-          getRadius: 8,
-          radiusMinPixels: 6,
-          getFillColor: [29, 78, 216, 220],
-        })
-      );
-    } else if (g?.kind === "polygon" && g.vertices.length > 0) {
-      out.push(
-        new ScatterplotLayer({
-          id: "drawn-vertices",
-          data: g.vertices,
-          getPosition: (d: [number, number]) => d,
-          getRadius: 6,
-          radiusMinPixels: 4,
-          getFillColor: [29, 78, 216, 220],
-        })
-      );
-      if (g.vertices.length >= 2) {
-        out.push(
-          new PathLayer({
-            id: "drawn-edges",
-            data: [[...g.vertices, ...(g.vertices.length >= 3 ? [g.vertices[0]] : [])]],
-            getPath: (d: [number, number][]) => d,
-            getColor: [29, 78, 216, 200],
-            getWidth: 2,
-            widthMinPixels: 2,
-          })
-        );
-      }
-      if (g.vertices.length >= 3) {
-        out.push(
-          new PolygonLayer({
-            id: "drawn-polygon",
-            data: [g.vertices],
-            getPolygon: (d: [number, number][]) => d,
-            getFillColor: [29, 78, 216, 60],
-            getLineColor: [29, 78, 216, 0],
-            stroked: false,
-          })
-        );
-      }
-    }
-    return out;
-  }, [state.geometry]);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
@@ -427,20 +291,16 @@ export default function ScenarioBuilder() {
 
   const canAdvance = useMemo(() => {
     if (step === 1) {
-      // Location: require either a typed name or a usable geometry.
-      const hasName = state.locationName.trim().length > 0;
-      const g = state.geometry;
-      const hasGeo =
-        g?.kind === "point" || (g?.kind === "polygon" && g.vertices.length >= 3);
-      return hasName || hasGeo;
+      // Location: require a non-empty location description text
+      return state.locationName.trim().length > 0;
     }
     return true;
-  }, [step, state.locationName, state.geometry]);
+  }, [step, state.locationName]);
 
   const isRoadType = state.interventionType !== "new_facility";
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col bg-background text-foreground">
+    <div className="flex h-dvh w-full flex-col bg-background text-foreground">
       {/* Header + stepper */}
       <header className="border-b border-border bg-surface px-6 py-4">
         <div className="flex items-center justify-between gap-4">
@@ -482,8 +342,11 @@ export default function ScenarioBuilder() {
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto max-w-3xl">
           {/* STEP 0 — Intervention type */}
-          {step === 0 && (
-            <section aria-labelledby="step-type-heading">
+          <section
+            key="step-0"
+            aria-labelledby="step-type-heading"
+            className={step === 0 ? "wizard-step" : "hidden"}
+          >
               <h2 id="step-type-heading" className="text-sm font-semibold mb-3">
                 What kind of intervention?
               </h2>
@@ -511,137 +374,63 @@ export default function ScenarioBuilder() {
                   );
                 })}
               </div>
-            </section>
-          )}
+          </section>
 
           {/* STEP 1 — Location */}
-          {step === 1 && (
-            <section aria-labelledby="step-loc-heading">
-              <h2 id="step-loc-heading" className="text-sm font-semibold mb-3">
-                {isRoadType ? "Which corridor or street?" : "Where should it go?"}
-              </h2>
+          <section
+            key="step-1"
+            aria-labelledby="step-loc-heading"
+            className={step === 1 ? "wizard-step" : "hidden"}
+          >
+            <h2 id="step-loc-heading" className="text-sm font-semibold mb-3">
+              {isRoadType ? "Which corridor or street?" : "Where should it go?"}
+            </h2>
 
-              <label htmlFor="location-name" className="text-xs font-medium text-text-muted block mb-1">
-                Street / corridor name
-              </label>
-              <input
-                id="location-name"
-                type="text"
-                value={state.locationName}
-                onChange={(e) => update("locationName", e.target.value)}
-                placeholder="e.g. Diversion Road"
-                className="w-full bg-background border border-border rounded-md p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              />
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3.5 text-xs text-text-muted">
+              <p className="font-semibold text-primary mb-1">💡 Pro-tip: Write a comprehensive location prompt</p>
+              The simulation parser uses a local gazetteer and GraphRAG. You can specify exact corridors, intersecting landmarks, or colloquial Hiligaynon terms (e.g. <em>tulay sa forbes</em>, <em>super</em>, or <em>plasa</em>).
+            </div>
 
-              <div className="mt-5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-text-muted">
-                    …or place it on the map
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      aria-pressed={drawMode === "point"}
-                      onClick={() => switchDrawMode("point")}
-                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
-                        drawMode === "point"
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border text-text-muted hover:border-primary"
-                      }`}
-                    >
-                      <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Point
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={drawMode === "polygon"}
-                      onClick={() => switchDrawMode("polygon")}
-                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
-                        drawMode === "polygon"
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-border text-text-muted hover:border-primary"
-                      }`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Area
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clearGeometry}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-error hover:text-error transition-colors"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Clear
-                    </button>
-                  </div>
-                </div>
+            <label htmlFor="location-name" className="text-sm font-semibold mb-2 block text-text">
+              Where is this happening?
+            </label>
+            <textarea
+              id="location-name"
+              className="w-full bg-surface-elevated/50 backdrop-blur-md border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
+              placeholder="e.g., Diversion Road (from the Iloilo Esplanade bridge up to the Jaro flyover, service lanes only)"
+              value={state.locationName}
+              onChange={(e) => update("locationName", e.target.value)}
+            />
 
-                <p className="text-[11px] text-text-muted mb-2">
-                  {drawMode === "point"
-                    ? "Click the map to drop a point."
-                    : "Click the map to add polygon vertices (3+ for an area)."}
-                </p>
-
-                <div
-                  className="h-[320px] w-full overflow-hidden rounded-lg border border-border"
-                  data-testid="builder-map"
-                >
-                  <DeckGL
-                    initialViewState={INITIAL_VIEW_STATE}
-                    controller={true}
-                    onClick={handleMapClick}
-                    layers={layers}
-                    getCursor={() => "crosshair"}
-                  >
-                    <Map mapStyle={MAP_STYLE} mapLib={maplibregl} reuseMaps />
-                  </DeckGL>
-                </div>
-
-                {/* Manual lon/lat fallback — always available. */}
-                <div className="mt-3 flex flex-wrap items-end gap-2">
-                  <div>
-                    <label htmlFor="manual-lon" className="text-[11px] text-text-muted block mb-0.5">
-                      Longitude
-                    </label>
-                    <input
-                      id="manual-lon"
-                      type="number"
-                      step="any"
-                      value={manualLon}
-                      onChange={(e) => setManualLon(e.target.value)}
-                      placeholder="122.561"
-                      className="w-28 bg-background border border-border rounded-md p-1.5 text-sm outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="manual-lat" className="text-[11px] text-text-muted block mb-0.5">
-                      Latitude
-                    </label>
-                    <input
-                      id="manual-lat"
-                      type="number"
-                      step="any"
-                      value={manualLat}
-                      onChange={(e) => setManualLat(e.target.value)}
-                      placeholder="10.712"
-                      className="w-28 bg-background border border-border rounded-md p-1.5 text-sm outline-none focus:border-primary"
-                    />
-                  </div>
+            <div className="mt-3">
+              <span className="block text-xs font-semibold text-text-muted mb-2">Quick suggestions for Iloilo City:</span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "Diversion Road (Jaro to Mandurriao segment)",
+                  "JM Basa Street (Calle Real historic district)",
+                  "Molo Plaza area near the church",
+                  "tulay sa forbes (Forbes Bridge)",
+                  "Iloilo Terminal Market (Super)",
+                ].map((sug) => (
                   <button
+                    key={sug}
                     type="button"
-                    onClick={addManualCoord}
-                    className="h-[34px] rounded-md border border-border px-3 text-sm hover:border-primary hover:bg-primary/5 transition-colors"
+                    onClick={() => update("locationName", sug)}
+                    className="text-xs bg-secondary border border-border px-2.5 py-1.5 rounded-full hover:border-primary/50 hover:bg-primary/5 transition-colors text-text"
                   >
-                    {drawMode === "point" ? "Set point" : "Add vertex"}
+                    {sug}
                   </button>
-                </div>
-
-                {/* Live geometry summary */}
-                <GeometrySummary geometry={state.geometry} />
+                ))}
               </div>
-            </section>
-          )}
+            </div>
+          </section>
 
           {/* STEP 2 — Parameters */}
-          {step === 2 && (
-            <section aria-labelledby="step-params-heading">
+          <section
+            key="step-2"
+            aria-labelledby="step-params-heading"
+            className={step === 2 ? "wizard-step" : "hidden"}
+          >
               <h2 id="step-params-heading" className="text-sm font-semibold mb-3">
                 Parameters
               </h2>
@@ -727,12 +516,14 @@ export default function ScenarioBuilder() {
                   </Field>
                 </div>
               )}
-            </section>
-          )}
+          </section>
 
           {/* STEP 3 — Review + submit */}
-          {step === 3 && (
-            <section aria-labelledby="step-review-heading">
+          <section
+            key="step-3"
+            aria-labelledby="step-review-heading"
+            className={step === 3 ? "wizard-step" : "hidden"}
+          >
               <h2 id="step-review-heading" className="text-sm font-semibold mb-3">
                 Review &amp; submit
               </h2>
@@ -742,7 +533,7 @@ export default function ScenarioBuilder() {
               </p>
               <div
                 data-testid="review-query"
-                className="rounded-lg border border-border bg-secondary/40 p-4 text-sm font-mono whitespace-pre-wrap break-words"
+                className="rounded-lg border border-border bg-secondary/40 p-4 text-sm font-mono whitespace-pre-wrap wrap-break-word"
               >
                 {query}
               </div>
@@ -800,8 +591,7 @@ export default function ScenarioBuilder() {
                   "Submit scenario"
                 )}
               </button>
-            </section>
-          )}
+          </section>
         </div>
       </div>
 
@@ -888,26 +678,4 @@ function geometryFeature(geometry: DrawnGeometry) {
   return { type: "Feature", geometry: geo, properties: {} };
 }
 
-function GeometrySummary({ geometry }: { geometry: DrawnGeometry | null }) {
-  if (!geometry) {
-    return (
-      <p className="mt-2 text-[11px] text-text-muted" data-testid="geometry-summary">
-        No geometry drawn.
-      </p>
-    );
-  }
-  if (geometry.kind === "point") {
-    return (
-      <p className="mt-2 text-[11px] text-text-muted" data-testid="geometry-summary">
-        Point at [{geometry.point[0].toFixed(5)}, {geometry.point[1].toFixed(5)}].
-      </p>
-    );
-  }
-  return (
-    <p className="mt-2 text-[11px] text-text-muted" data-testid="geometry-summary">
-      Polygon with {geometry.vertices.length}{" "}
-      {geometry.vertices.length === 1 ? "vertex" : "vertices"}
-      {geometry.vertices.length < 3 ? " (need 3+ for an area)" : ""}.
-    </p>
-  );
-}
+

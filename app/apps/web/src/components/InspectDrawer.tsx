@@ -158,26 +158,26 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       onKeyDown={handleKeyDown}
       className="absolute right-6 top-24 w-[360px] md:w-[400px] z-30 flex flex-col bg-surface shadow-2xl border border-border rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
       style={{
-        maxHeight: isExpanded ? 'calc(100vh - 8rem)' : 'var(--panel-peek-height, 220px)'
+        maxHeight: isExpanded ? 'calc(100vh - 12rem)' : 'var(--panel-peek-height, 270px)'
       }}
       data-testid="inspect-drawer"
     >
       {/* Header */}
       <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated shrink-0">
         <div className="flex-1 pr-4">
-          <div className="flex items-start gap-3 mb-3">
-            <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono shrink-0 mt-1">
+          <div className="mb-2">
+            <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono inline-block">
               {data?.equationId || "..."}
             </span>
-            <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
-              {data?.metric || "Loading..."}
-            </h3>
           </div>
-            <div className="flex items-baseline gap-2 mt-4">
-              <span className="text-4xl font-mono font-bold tracking-tight">{data?.value}</span>
-              <span className="text-sm font-mono text-text-muted">range: {data?.range}</span>
-            </div>
+          <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
+            {data?.metric || "Loading..."}
+          </h3>
+          <div className="flex flex-col mt-4">
+            <span className="text-4xl font-mono font-bold tracking-tight">{data?.value}</span>
+            <span className="text-xs font-mono text-text-muted mt-1">range: {data?.range}</span>
           </div>
+        </div>
           <button
             onClick={onClose}
             aria-label="Close inspector"

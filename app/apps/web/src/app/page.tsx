@@ -136,6 +136,47 @@ export default function MatrixCockpit() {
     setActiveLayers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const updateBuildingVisibility = () => {
+      if (theme === "dark" && !map.getLayer("building-3d")) {
+        map.addLayer({
+          id: "building-3d",
+          source: "openmaptiles",
+          "source-layer": "building",
+          type: "fill-extrusion",
+          minzoom: 14,
+          paint: {
+            "fill-extrusion-base": ["get", "render_min_height"],
+            "fill-extrusion-color": "rgb(40,40,40)",
+            "fill-extrusion-height": ["get", "render_height"],
+            "fill-extrusion-opacity": 0.8,
+          },
+        });
+      }
+
+      if (map.getLayer("building-3d")) {
+        map.setLayoutProperty(
+          "building-3d",
+          "visibility",
+          activeLayers.buildings ? "visible" : "none"
+        );
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      updateBuildingVisibility();
+    }
+
+    map.on("style.load", updateBuildingVisibility);
+
+    return () => {
+      map.off("style.load", updateBuildingVisibility);
+    };
+  }, [activeLayers.buildings, theme]);
+
   const handleNavigation = (id: string) => {
     setActiveNavId(id);
     if (id === "layers") {
@@ -344,7 +385,7 @@ export default function MatrixCockpit() {
           </div>
         )}
         {sampleMode && showResultsPanel && !inspectMetric && (
-          <div className="absolute right-6 top-24 bottom-20 w-[360px] flex flex-col gap-4 z-10 pointer-events-auto overflow-y-auto pb-6">
+          <div className="absolute right-6 top-24 bottom-20 w-[360px] flex flex-col gap-4 z-10 pointer-events-auto overflow-y-auto overflow-x-hidden pb-6">
             <div className="flex justify-end sticky top-0 bg-background/40 backdrop-blur-xl z-20 -mx-4 -mt-4 px-4 py-2 rounded-t-xl">
               <button
                 onClick={() => setShowResultsPanel(false)}

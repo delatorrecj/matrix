@@ -20,7 +20,7 @@ export function DimensionCard({
   id,
   name,
   icon: Icon,
-  colorVar,
+
   score,
   rangeMin,
   rangeMax,
@@ -45,12 +45,6 @@ export function DimensionCard({
         }
       }}
     >
-      {/* Hue bar indicator on the left edge */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-1.5" 
-        style={{ backgroundColor: `var(${colorVar})` }} 
-      />
-
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2 text-text">
           <Icon className="w-4 h-4 text-text-muted" />
