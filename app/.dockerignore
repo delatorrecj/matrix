@@ -1,0 +1,42 @@
+# Keep the Docker/Fly build context small. Without this, the whole app/ tree
+# (node_modules, uv .venvs with torch+eclipse-sumo, .next, the 41 MB SUMO net) is
+# uploaded as context — ~3 GB, which is slow and can crash the builder. The API image
+# only needs packages/kernel + apps/api SOURCE (see Dockerfile.api).
+
+# Node / web (the API image never builds the frontend — Vercel does)
+**/node_modules
+apps/web
+
+# Python virtualenvs + caches
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.coverage
+**/htmlcov
+
+# Build outputs
+**/.next
+**/dist
+**/build
+**/*.egg-info
+
+# Large gitignored data assets — these live on the Fly /data volume, NOT the image
+packages/kernel/data
+packages/data/raw
+**/.chroma*
+
+# Local env + secrets (set via `fly secrets`, never baked into the image)
+**/.env
+**/.env.*
+
+# VCS / editor / OS noise
+.git
+.github
+**/.DS_Store
+**/*.log
+**/.vscode
+**/.idea

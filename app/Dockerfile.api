@@ -35,4 +35,9 @@ ENV MATRIX_NET_PATH=/data/iloilo.net.xml \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "matrix_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Single worker on the 2 GB machine: the startup warm-up loads the bge-small embedding
+# model (torch) + SUMO, so 2 workers would double the resident memory (OOM risk) and have
+# both processes write the same Chroma sqlite at once. Request concurrency is gated by the
+# MATRIX_MAX_CONCURRENT_SIMS semaphore + asyncio.to_thread, not by worker count, so one
+# worker is functionally equivalent here. Scale workers up only with a larger [[vm]] memory.
+CMD ["uvicorn", "matrix_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
