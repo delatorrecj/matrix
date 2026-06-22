@@ -20,6 +20,16 @@ def test_collection_is_populated():
     assert collection.count() > 0
 
 
+def test_get_collection_is_memoized():
+    """get_collection() must reuse one collection — and one loaded embedding model — per
+    process/target, never rebuild per call: it sits on the orchestrator's 90 s critical path
+    via retrieve() (RFC-001). The bge-small model load is the expensive part."""
+    from matrix_kernel.graphrag import _embedding_fn
+
+    assert get_collection() is get_collection()   # same collection object reused
+    assert _embedding_fn() is _embedding_fn()      # embedding model built once, then cached
+
+
 def test_retrieve_gazetteer_hit():
     chunks = retrieve("what happens if we close the merkado?", top_k=2)
     assert len(chunks) > 0

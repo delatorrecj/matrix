@@ -28,6 +28,7 @@ import asyncio
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
@@ -60,9 +61,22 @@ except ImportError as _exc:  # pragma: no cover - only without the kernel env
 
 from matrix_api.auth import allowed_origins, authorize_websocket, require_api_key
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Startup/shutdown (modern replacement for @app.on_event). Choose the persistence
+    backend, then warm the kernel caches off the event loop so a slow model load / ingest
+    never stalls startup. Both steps are best-effort and never fatal."""
+    db.init_db()
+    await asyncio.to_thread(_warm_kernel_caches)
+    yield
+
+
 # Auth + rate limiting are env-gated and OFF by default (see matrix_api/auth.py);
 # /health, /validation, and the docs stay open even when enabled.
-app = FastAPI(title="MATRIX API", version="0.1.0", dependencies=[Depends(require_api_key)])
+app = FastAPI(
+    title="MATRIX API", version="0.1.0",
+    dependencies=[Depends(require_api_key)], lifespan=_lifespan,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins(),  # MATRIX_ALLOWED_ORIGINS; defaults to localhost:3000
@@ -74,10 +88,35 @@ app.add_middleware(
 _APP_ROOT = Path(__file__).resolve().parents[3]
 
 
-@app.on_event("startup")
-def _init_persistence() -> None:
-    """Choose + announce the persistence backend once (Postgres, else in-memory fallback)."""
-    db.init_db()
+def _warm_kernel_caches() -> None:
+    """Best-effort warm-up of the two caches the live pipeline reads but nothing populated:
+
+      • persona pool + bias audit (PRD-F6) — runs the full generate→audit→reweight loop once
+        and caches it, so every run can log a real bias-audit entry (the auditor previously
+        existed only in tests). Static literature-anchored pool by default; MATRIX_PERSONA_LLM=1
+        exercises the Gemini generator whose drift the reweighter corrects.
+      • GraphRAG/Chroma collection — ingests the corpus so orchestrator `retrieve()` returns
+        sourced chunks instead of [] (the collection was never built outside tests).
+
+    Both are wrapped so a missing kernel / Redis / Chroma never blocks API startup. Disable
+    with MATRIX_SKIP_WARMUP=1 (e.g. bare test envs)."""
+    if os.environ.get("MATRIX_SKIP_WARMUP", "0") == "1" or _KERNEL_IMPORT_ERROR:
+        return
+    log = logging.getLogger("matrix_api")
+    try:
+        from matrix_kernel.personas import warm_persona_pool
+
+        _pool, entry = warm_persona_pool()
+        log.info("persona pool warmed: %d personas, reweighted=%s", len(_pool), entry.reweighted)
+    except Exception as exc:  # pragma: no cover - depends on Redis/LLM availability
+        log.warning("persona pool warm-up skipped (%s)", exc)
+    try:
+        from matrix_kernel.build_graphrag import ingest_corpus
+
+        ingest_corpus()
+        log.info("GraphRAG corpus ingested")
+    except Exception as exc:  # pragma: no cover - depends on Chroma availability
+        log.warning("GraphRAG ingest skipped (%s)", exc)
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
 # QUEUED and ERROR extend the original sequence (additive only -- never reordered).
@@ -159,6 +198,7 @@ def get_audit(run_id: str) -> dict:
         "observed_mode_share": latest.get("observed_mode_share", {}),
         "max_delta": latest.get("max_delta"),
         "reweighted": latest.get("reweighted", False),
+        "adjustment_factors": latest.get("adjustment_factors"),
         "timestamp": latest.get("timestamp"),
         "entries": entries,
     }
@@ -317,6 +357,31 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
     return traj
 
 
+def _persist_bias_audit(scenario_id: str, traj: "Trajectory") -> None:
+    """Log a public bias-audit entry (PRD-F6) for this run so GET /audit/{scenario_id} and the
+    BiasAuditLog panel show real data (previously always empty — the auditor ran only in tests).
+
+    Keyed by scenario_id, not the internal UUID run_id: the WS path, the DONE event, and the
+    frontend (BiasAuditLog runId={scenarioId}) all identify a run by its scenario_id — the UUID
+    run_id never reaches the client. Prefers the warmed persona-pool audit (carries any reweight
+    adjustment_factors); falls back to the run's realized mode share so an entry is ALWAYS
+    recorded. Best-effort: a failure here never aborts a run that already produced its results
+    (glass box stays honest — no fabricated entry, just a logged warning)."""
+    if _KERNEL_IMPORT_ERROR:
+        return
+    try:
+        from matrix_kernel import personas
+        from matrix_kernel.bias_auditor import audit_personas
+
+        entry = personas.load_pool_audit()
+        if not entry:
+            observed = traj.observed_mode_share()
+            entry = audit_personas(observed, personas.ILOILO_MODE_SHARE, batch_id="run").as_dict()
+        db.save_audit_entry(entry, scenario_id)
+    except Exception:  # pragma: no cover - depends on Redis/DB availability
+        logging.getLogger("matrix_api").warning("bias audit logging skipped", exc_info=True)
+
+
 async def _score_all_modules(traj: Trajectory) -> list:
     """Score modules in parallel for the first four, then societal which needs
     ecological output. This matches the implementation plan."""
@@ -400,6 +465,10 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
         # congestion layer; join key = SUMO edge id, matching public/layers/edges.geojson).
         # One message; an absent edge id means zero recorded vehicles, never a guess (PRD-F14).
         await ws.send_json({"type": "EDGE_COUNTS", "edge_counts": traj.edge_counts})
+
+        # Public bias audit (PRD-F6): log this run's persona mode share vs the ground-truth
+        # anchor so GET /audit/{scenario_id} returns real data. Off the critical path, never fatal.
+        await asyncio.to_thread(_persist_bias_audit, scenario_id, traj)
 
         stage = "modules"
         with timer.stage("modules"):

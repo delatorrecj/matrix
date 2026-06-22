@@ -138,6 +138,49 @@ def observed_mode_share(pool: list[Persona]) -> dict[str, float]:
     return {m: counts.get(m, 0) / n for m in keys}
 
 
+def warm_persona_pool(
+    n: int = 500,
+    anchor: dict[str, float] | None = None,
+    seed: int = 42,
+    use_llm: bool | None = None,
+):
+    """The full bias-auditor loop in one place (PRD-F6): generate → audit → reweight-if-drift
+    → cache. This is what wires the auditor + reweighter onto a live code path (run at API
+    startup); previously both existed only in tests.
+
+    Returns ``(pool, BiasAuditEntry)``. The realized mode share is checked against the anchor;
+    if it drifts beyond ±3% the pool is reweighted (matrix_kernel.bias_auditor.reweight_pool)
+    and the per-mode factors are recorded on the entry so the correction is glass-box
+    (Inspect-resolvable, never silent). The deployed default uses the static literature-anchored
+    pool (deterministic, on-anchor by construction → no correction needed); set
+    ``MATRIX_PERSONA_LLM=1`` to exercise the Gemini 3.1 Flash-Lite generator, whose drift is
+    what the reweighter corrects. Best-effort caching: a Redis failure never aborts warming.
+    """
+    from matrix_kernel.bias_auditor import audit_personas, reweight_pool
+
+    anchor = anchor or ILOILO_MODE_SHARE
+    if use_llm is None:
+        use_llm = os.environ.get("MATRIX_PERSONA_LLM", "0") == "1"
+
+    pool = generate_persona_pool(n, anchor, seed) if use_llm else _static_seeded_pool(n, anchor, seed)
+    observed = observed_mode_share(pool)
+    entry = audit_personas(observed, anchor, batch_id=PERSONA_POOL_KEY)
+
+    if entry.reweighted:
+        pool, factors = reweight_pool(observed, anchor, pool, seed=seed)
+        observed = observed_mode_share(pool)
+        # Re-audit the corrected pool and carry the factors so the public log shows the math.
+        entry = audit_personas(observed, anchor, batch_id=PERSONA_POOL_KEY, adjustment_factors=factors)
+
+    try:
+        cache_pool(pool)
+        cache_pool_audit(entry)
+    except Exception as exc:  # Redis down — warming is best-effort, the run path falls back.
+        logger.warning("warm_persona_pool: cache skipped (%s)", exc)
+
+    return pool, entry
+
+
 def cache_pool(pool: list[Persona], key: str = PERSONA_POOL_KEY,
                url: str = REDIS_URL) -> int:
     """Persist the pool to Redis so scenario runs reuse it (RFC matrix-rfc-001). Returns size."""
@@ -146,6 +189,25 @@ def cache_pool(pool: list[Persona], key: str = PERSONA_POOL_KEY,
     r = redis.from_url(url)
     r.set(key, json.dumps([asdict(p) for p in pool]))
     return len(pool)
+
+
+_POOL_AUDIT_KEY = PERSONA_POOL_KEY + ":audit"
+
+
+def cache_pool_audit(entry, key: str = _POOL_AUDIT_KEY, url: str = REDIS_URL) -> None:
+    """Cache the warmed pool's BiasAuditEntry (incl. any reweight factors) so each run can
+    log it against its run_id without regenerating the pool (PRD-F6, 90 s budget)."""
+    import redis
+
+    redis.from_url(url).set(key, json.dumps(entry.as_dict()))
+
+
+def load_pool_audit(key: str = _POOL_AUDIT_KEY, url: str = REDIS_URL) -> dict | None:
+    """Load the cached warmed-pool audit entry (dict), or None when none has been warmed."""
+    import redis
+
+    raw = redis.from_url(url).get(key)
+    return json.loads(raw) if raw is not None else None
 
 
 def load_pool(key: str = PERSONA_POOL_KEY, url: str = REDIS_URL) -> list[Persona]:

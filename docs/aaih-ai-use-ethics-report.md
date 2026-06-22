@@ -1,85 +1,118 @@
-# **AAIH 2026 AI Use & Ethics Report**
+# AAIH 2026 — AI Use & Ethics Report
 
-**Team Name:** ATLAN  
-**Institution:** Polytechnic University of the Philippines  
-**Track:** Smart Cities  
-**Project:** MATRIX (Multi-Agent Twin for Routing & Infrastructure eXchange)  
-**Pilot City:** Iloilo City, Western Visayas, Philippines  
+| | |
+| :---- | :---- |
+| **Team Name** | ATLAN |
+| **Institution** | Polytechnic University of the Philippines (PUP) |
+| **Country** | Philippines |
+| **Track** | [ ] Climate Change  [ ] Telemedicine  [x] **Smart Cities**  [ ] AI for Education |
+| **Project Title** | MATRIX — Multi-Agent Twin for Routing & Infrastructure eXchange |
+| **Pilot City** | Iloilo City, Western Visayas, Philippines |
+
+> **File for submission:** `SmartCities_PUP_ATLAN_AI_Report.pdf`
 
 ---
 
 ### 1. INTRODUCTION
-Urban infrastructure in developing ASEAN regions consistently suffers from a lack of reliable planning data. Municipalities frequently make multi-billion-peso decisions—such as locating transport hubs, routing flood-drainage corridors, or zoning high-density complexes—based on outdated, static feasibility studies or sparse, manual census counts. Consequently, new infrastructure is often misaligned with real public demand, resulting in immediate congestion or displacement. The primary objective of the MATRIX simulator is to model pre-construction urban changes dynamically across five critical dimensions—Behavioral, Social, Economic, Ecological, and Societal—within 90 seconds. AI is necessary to simulate the complex, non-linear routing choices of thousands of diverse commuter personas and to synthesize multi-dimensional results into plain-language, citation-anchored reports.
+
+Urban infrastructure in developing ASEAN regions is routinely planned on outdated, static feasibility studies. Municipalities commit multi-billion-peso decisions — siting transport hubs, routing flood-drainage corridors, zoning high-density complexes — without a way to test them against real demand, so new infrastructure often arrives already congested or already displacing the vulnerable. MATRIX is a **pre-construction infrastructure-impact simulator**: a planner asks a what-if in plain language and, within a 90-second budget, sees the change scored across five dimensions — Behavioral, Social, Economic, Ecological, and Societal. AI is necessary because the problem is doubly intractable for hand methods: simulating the non-linear routing choices of thousands of diverse commuters, and translating five streams of physics output into one honest, citation-anchored brief.
 
 ### 2. PROBLEM CONTEXT & SOLUTION OVERVIEW
-Developing ASEAN suburban centers like Iloilo City (Philippines)—recent winner of the 2026 ASEAN Clean Tourist City Award—are expanding rapidly without adequate digital planning simulators. Primary stakeholders include local government planning offices (CPDO), transport franchises, local businesses, residents, and vulnerable informal sectors (tricycle drivers and street vendors). MATRIX integrates road topology (OpenStreetMap), zoning layouts, public transit schedules, household poverty censuses, flood hazard layers (Project NOAH), satellite imagery (Sentinel-2), weather APIs, and vehicle emission factors (WHO). 
 
- planners input natural-language queries like *"What if we build a 3,000-seat school in Molo?"* The AI orchestration layer (Gemini 3.1 Pro) parses the query into specific spatial and transport variables, triggering a headless SUMO multi-agent traffic simulation populated by economic-demographic personas. The trajectory outputs are evaluated by five parallel impact modules and compiled by an LLM synthesis agent into an audit-ready summary.
+Iloilo City — 2026 ASEAN Clean Tourist City — is expanding fast with no digital planning twin. Stakeholders span the City Planning and Development Office (CPDO), transport franchises, local businesses, residents, and the **vulnerable informal sector**: tricycle drivers and street vendors whose livelihoods turn on routing and footfall. MATRIX integrates open data — OpenStreetMap road topology, the Iloilo CLUP zoning plan, public-transit routes, PSA poverty/population censuses, Project NOAH flood hazards, Sentinel-2 imagery, and WHO/EMEP emission factors. A planner's query (*"What if we build a 3,000-seat school in Molo?"*) is parsed by a Gemini 3.1 Pro orchestrator into structured simulation parameters; these drive **one** headless SUMO multi-agent run populated by economic-demographic personas. The single trajectory dataset is then scored in parallel by five impact modules and narrated by a synthesis agent. One kernel feeding five modules is deliberate: it is the reason the five dimensions can never contradict each other.
 
 ### 3. AI TOOLS & METHODS USED
-The prototype uses a hybrid architecture of simulation packages, machine learning models, and large language models:
-* **Orchestration & Synthesis:** Gemini 3.1 Pro parses natural-language inputs and synthesizes multi-dimensional results into a report.
-* **Persona Generation:** Gemini 3.1 Flash-Lite constructs a localized commuter persona pool (200–500 distinct agents).
-* **Traffic Simulation Kernel:** Eclipse SUMO (Simulation of Urban MObility) simulates physical vehicle trajectories and pedestrian flows.
-* **Predictive Layer:** XGBoost forecasts baseline corridor volumes using historical traffic datasets.
-* **Semantic Search:** ChromaDB vector store coupled with Sentence Transformers (`bge-small-en`) enables local zoning searches.
-* **Knowledge Retrieval:** Microsoft GraphRAG resolves dependencies between zoning policies and local infrastructure constraints.
 
-To achieve a 90-second response latency, commuter personas are generated and cached once at startup; scenarios are simulated as delta changes against pre-warmed baselines; and the five scoring modules process trajectories concurrently.
+- **Orchestration & Synthesis:** Gemini 3.1 Pro — parses NL queries and writes the final narrative.
+- **Persona Generation:** Gemini 3.1 Flash-Lite — builds a 200–500 agent commuter pool matched to Iloilo's mode-share.
+- **Traffic Kernel:** Eclipse SUMO (via the TraCI API) — simulates vehicle and pedestrian physics.
+- **Predictive Layer:** XGBoost — forecasts baseline corridor volumes.
+- **Retrieval (RAG):** a **ChromaDB** vector store embedded with `bge-small-en-v1.5` (Sentence-Transformers). An ingestion step indexes the Hiligaynon gazetteer, place context, and methods-ledger snippets; at query time the top-k chunks (each carrying a `source`) are injected into the orchestrator prompt for disambiguation and into synthesis for grounding. RAG informs prose only — it **never originates a number** (the citation guard enforces this).
+
+To hit the 90-second budget, the persona pool is generated and audited once at startup, scenarios run as delta changes against a pre-warmed nightly baseline, and the five modules score concurrently.
 
 ### 4. ASSESSMENT OF AI OUTPUT (CRITICAL EVALUATION)
-* **Accuracy:** Technical metrics (e.g., carbon emissions, delays, mode splits) are calculated using deterministic math formulas (e.g., WHO emission factors) and transport physics within the SUMO simulation kernel. The LLM does not generate numbers; it only reads, formats, and synthesizes the simulator's output.
-* **Technical Bias:** Persona generation tends to favor middle-class, private-vehicle behaviors due to biases in online LLM training data. To mitigate this, a custom *Bias Auditor* continuously checks generated mode shares against Iloilo's ground-truth surveys (LTFRB/PSA data) and reweights personas if discrepancy limits (±3%) are exceeded.
-* **Cultural & Regional Sensitivity:** LLM personas were prompted to reflect ASEAN suburban travel behaviors (e.g., multi-leg commuting using tricycle-to-jeepney transfers and regional walking tolerances in tropical temperatures).
-* **Linguistic Nuance:** System prompts utilize Hiligaynon, Filipino, and English datasets. Local terms (e.g., *"sarakyan"* for vehicles, and barangay-specific colloquial paths) are resolved to their structured route names in the GIS database, preventing the model from mischaracterizing routing choices or informal nodes.
+
+- **Accuracy & Ground-Truth Comparison.** Every metric is computed by deterministic equations and SUMO physics — the LLM only reads and formats. We back-test against Iloilo history: **VAL-01** compares simulated corridor flows to the Calderon (2014) Ungka–Iloilo counts (target NRMSE ≤ 0.30), and **VAL-02** compares flooded-segment extent to the 2024 floods (IoU). In honest current status, **VAL-01 is withheld** (`NOT_RUN`): our synthetic demand is not yet calibrated to a 2026 travel survey, so a passing RMSE would be a false precision; **VAL-02 is provisional** pending Copernicus Sentinel-1 ground-truth. We publish the withhold and its reason rather than a fabricated pass.
+- **Technical Bias — auditor in action.** LLM persona generation skews toward middle-class, private-car behavior. A **Bias Auditor** runs on every simulation, comparing the pool's mode-share to Iloilo's ground-truth anchor; beyond ±3% it **reweights** the pool with per-mode factors `f_k = target_k / observed_k`. *Worked example:* the generator over-produces cars at 0.18 vs the 0.07 anchor (+11 pts); the auditor applies `f_car ≈ 0.39` (down-weight) and up-weights jeepney, resampling the pool back inside ±3%. The factors are published in a public audit log and shown in the UI.
+- **Cultural & Regional Sensitivity.** Personas reflect ASEAN suburban behavior — multi-leg tricycle-to-jeepney transfers, tropical walking tolerances. The **informal sector** is modeled explicitly: tricycles as bounded, terminal-anchored feeder trips and street vendors as footfall-dependent revenue with displacement loss under closures. MATRIX also handles **extreme events** — a monsoon-flood or sudden full-closure query closes the affected segments, redistributes demand, and re-scores all five dimensions under capped confidence.
+- **Linguistic Nuance.** A curated **Hiligaynon gazetteer** maps colloquial terms to canonical GIS nodes before the LLM step (e.g. *"barahan ang tulay sa Forbes"* → *tulay* = bridge → Forbes Bridge node). The node id comes from the gazetteer, never the model — preserving semantic integrity.
 
 ### 5. HUMAN INTERVENTION & JUSTIFICATION
-Human developers designed and implemented the mathematical equations, confidence rubrics, and ground-truth mode-share anchors. The AI is structurally prevented from altering calculations or introducing speculative figures.
 
-Generative AI alone is insufficient for this task because LLMs lack spatial awareness, cannot compute physical traffic dynamics, and are prone to numeric hallucinations. Consequently, we drew a strict line: AI is used exclusively for unstructured cognitive tasks (parsing natural language inputs, generating diverse persona profiles, and summarizing multi-dimensional reports). Conversely, deterministic code, the SUMO transport physics engine, and hard-coded mathematical formulas (e.g., economic multipliers, Gini accessibility coefficients) own all numeric evaluations, ensuring strict data integrity.
+Human developers authored every equation, confidence rubric, and ground-truth anchor; the AI is **structurally barred** from altering a calculation or inventing a figure (the "glass box" — every number resolves to its `equation_id`, input datasets, and a *computed* confidence in the UI's Inspect drawer). We drew a hard line: AI handles only unstructured cognition (parsing language, generating personas, summarizing), while deterministic code owns all numbers. Two human-designed safeguards bound the AI: a **Low-Confidence Protocol** (sparse/missing data, >10-year vintage, uncalibrated method, or an unknown dataset → the dimension is flagged **Low** and rendered as a *direction*, not a point estimate, with the triggering reason surfaced), and a **CPDO feedback loop** (PRD-F20): planners can flag a result as implausible or attach a known value, which becomes a candidate validation fixture — human-in-the-loop refinement, never silent auto-tuning.
 
 ### 6. REFLECTION ON AI-HUMAN CO-CREATION
-* **Advantages:** Unprecedented scale and speed. Generating hundreds of nuanced, micro-demographic personas and parsing arbitrary planning scenarios would have taken human planners months; the LLM completed it in minutes.
-* **Risks & Challenges:** The primary risk was LLM numeric hallucination in reports. We resolved this by implementing a programmatic *Citation Guard* that scans generated narratives and strips out any number that does not include its exact simulation `equation_id` in brackets.
-* **Key Learning:** AI should serve as an intuitive translator and synthesizer, while human-coded algorithms and deterministic rules must serve as the absolute computational validator.
+
+**Advantages:** scale and speed — generating hundreds of nuanced micro-demographic personas and parsing arbitrary scenarios would take planners months; the LLMs do it in minutes. **Risks:** numeric hallucination and middle-class bias. We resolved hallucination with a programmatic **Citation Guard** that strips any number lacking its `equation_id`, and bias with the auditor above. **Key learning:** the AI is best as an intuitive translator and synthesizer; the moment a decision touches a number, a human-coded, auditable algorithm must be the authority.
 
 ### 7. CONCLUSION
-MATRIX demonstrates that pre-construction multi-agent simulators can evaluate complex infrastructure impacts in developing regions with high transparency, bypassing expensive sensor networks. By integrating physical simulation with agentic LLM personas, we enable cities like Iloilo to model flood risks, carbon deltas, and informal worker displacement, resulting in more resilient and equitable smart city layouts. Ultimately, the ethical development of AI in ASEAN requires "glass-box" architectures: systems must remain fully auditable, explicitly state their confidence limits (High/Medium/Low), and trace every forecast back to its data provenance.
+
+MATRIX shows that a pre-construction multi-agent twin can evaluate complex infrastructure impacts in a developing region transparently, without an expensive live-sensor network — turning fixed open data into an honest strength. By fusing physical simulation with agentic LLM personas, cities like Iloilo can model flood risk, carbon deltas, and informal-worker displacement *before* breaking ground. The ethical path for AI in ASEAN, we argue, is the **glass box**: systems that stay fully auditable, state their confidence limits (High/Medium/Low), trace every forecast to its data provenance, and withhold a result rather than fake one.
 
 ---
 
 ### 8. APPENDICES
 
 #### A. Walkthrough Screenshots
-* **Landing Page & Input:** [landing_page.png](file:///d:/PROJECTS/matrix/docs/images/landing_page.png)
-* **Live Dashboard & Playback:** [dashboard.png](file:///d:/PROJECTS/matrix/docs/images/dashboard.png)
-* **Inspect Traceability Drawer:** [inspect_drawer.png](file:///d:/PROJECTS/matrix/docs/images/inspect_drawer.png)
+- **Landing Page & Input:** [landing_page.png](images/landing_page.png)
+- **Live Dashboard & Playback:** [dashboard.png](images/dashboard.png)
+- **Inspect Traceability Drawer:** [inspect_drawer.png](images/inspect_drawer.png)
 
 #### B. Prompt Samples
 
-**1. Natural Language Scenario Parser Prompt (orchestrator.py):**
+**1. NL Scenario Parser (`orchestrator.py`):**
 ```python
 system_instruction = (
-    "You are the MATRIX Orchestrator. Your job is to parse natural language urban planning "
-    "queries into structured simulation parameters for the city of Iloilo.\n"
-    "If the query lacks a location or an action (e.g., 'what if we build a school?' - where?), "
-    "flag it as ambiguous and ask for clarification."
+    "You are the MATRIX Orchestrator. Parse natural-language urban-planning "
+    "queries into structured simulation parameters for Iloilo City.\n"
+    "Only fill numeric parameters the user stated or clearly implied — never invent numbers.\n"
+    "If the query lacks a location or an action, flag it as ambiguous and ask for clarification."
 )
 ```
 
-**2. Narrative Synthesis Prompt (synthesis.py):**
+**2. Narrative Synthesis (`synthesis.py`) — the citation contract:**
 ```python
 system_instruction = (
-    "You are the MATRIX Synthesis Agent. Your job is to write a cohesive, 2-3 paragraph "
-    "summary of the urban planning simulation results for Iloilo City. "
-    "CRITICAL RULE: Every time you state a number, you MUST include its Equation ID "
-    "in brackets immediately after, for example: 'Trips increased by 450 [BEH-1].' "
-    "Do not invent any numbers. Only use the numbers provided."
+    "You are the MATRIX Synthesis Agent. Write a 2-3 paragraph summary of the results.\n"
+    "CRITICAL: every time you state a number you MUST append its Equation ID in brackets, "
+    "e.g. 'Trips increased by 450 [BEH-1].' Do not invent any numbers — use only those provided."
 )
 ```
 
 #### C. Data Citations
-* **OpenStreetMap (Philippines Extract):** Map data © OpenStreetMap contributors, licensed under Open Data Commons Open Database License (ODbL).
-* **PSA Barangay Population Census (2020/2024):** Philippine Statistics Authority. Open Government Data policy.
-* **PAGASA & Project NOAH Hazard Map Layers:** Department of Science and Technology (DOST), Philippines. Public hazard data.
-* **Iloilo Comprehensive Land Use Plan (CLUP 2021–2029):** City Government of Iloilo. Public zoning regulation.
+- **OpenStreetMap (Philippines extract):** © OpenStreetMap contributors, ODbL.
+- **PSA Population/Poverty Census (2020/2024 POPCEN-CBMS):** Philippine Statistics Authority — Open Government Data.
+- **PAGASA / Project NOAH hazard layers:** DOST, Philippines — public hazard data.
+- **BIR Zonal Values (RDO 74), PSA FIES 2023 / ASPBI, DOT Visitor Arrivals 2024:** public government statistics.
+- **Project CCHAIN (barangay-level Iloilo climate/air/wealth/health/buildings):** open research dataset.
+- **Iloilo CLUP 2021–2029:** City Government of Iloilo — public zoning regulation.
+- **Calderon (2014) Iloilo BRT corridor study:** academic literature (VAL-01 ground truth).
+
+#### D. Module → Data-Source Traceability (Judges' Ask #8)
+
+| Module | Primary equations | Key datasets | Confidence |
+| :--- | :--- | :--- | :--- |
+| Behavioral | BEH-1…4 (Δtrips, V/C, mode-share, facility demand) | OSM/Overture network, persona pool, nightly baseline | Medium (BEH-4 provisional) |
+| Ecological | ECO-1…4 (carbon, PM2.5, noise, flood exposure) | WHO/EMEP emission factors, Project NOAH/CCHAIN flood | Medium |
+| Social | SOC-1…3 (accessibility, equity, vendor displacement) | CCHAIN RWI/poverty, LPTRP terminals, OSM POI | Medium |
+| Economic | ECON-1…3 (land value, business activity, informal income) | BIR zonal values, PSA FIES/ASPBI, DOT arrivals | Medium (ECON-1 = M w/ BIR-ZV) |
+| Societal | SOCI-1…4 (well-being, exposure synthesis) | derived from Ecological + accessibility outputs | Low–Medium (directional) |
+
+*(Generated from the `DATASET_TIERS` ledger + methods-matrix §3; see [methods-matrix.md](methods-matrix.md) Appendix A and [../data/INVENTORY.md](../data/INVENTORY.md) for the authoritative, per-equation mapping.)*
+
+#### E. Response to Judges' Feedback (9 Asks)
+
+| # | Judge ask | Where addressed |
+| :-- | :--- | :--- |
+| 1 | Ground-truth comparison vs Iloilo history | §4 Accuracy (VAL-01/VAL-02, honest withhold) |
+| 2 | Vulnerable informal sector (tricycles, vendors) | §4 Cultural Sensitivity |
+| 3 | Bias Auditor in action + reweight math | §4 Technical Bias (worked example + factors) |
+| 4 | Low-confidence trigger + user alert | §5 (Low-Confidence Protocol) |
+| 5 | Extreme events / resilience | §4 Cultural Sensitivity (flood/closure path) |
+| 6 | CPDO iterative-feedback mechanism | §5 (PRD-F20 feedback loop) |
+| 7 | Hiligaynon colloquial term → GIS node | §4 Linguistic Nuance (gazetteer example) |
+| 8 | Module → data-source traceability table | Appendix D |
+| 9 | RAG setup & implementation | §3 AI Tools (ChromaDB + bge-small) |
+
+> **Honest scope note (Ethics First).** Several capabilities are implemented and tested but still maturing: VAL-01 is withheld pending mode-share calibration; the Bias Auditor's reweight fires on the LLM-generated pool (the deployed default is a literature-anchored pool already on-anchor); and the gazetteer's GIS node ids are provisional placeholders pending OSM resolution. We disclose these rather than overstate them.

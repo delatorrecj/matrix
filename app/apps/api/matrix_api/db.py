@@ -485,6 +485,7 @@ def save_audit_entry(entry: Any, run_id: str | None = None) -> str:
             "target_mode_share": target,
             "max_delta": float(max_delta),
             "reweighted": bool(entry.get("reweighted", False)),
+            "adjustment_factors": entry.get("adjustment_factors"),
         }
     else:
         record = {
@@ -493,6 +494,7 @@ def save_audit_entry(entry: Any, run_id: str | None = None) -> str:
             "target_mode_share": dict(getattr(entry, "target_mode_share", {}) or {}),
             "max_delta": float(getattr(entry, "max_delta", 0.0)),
             "reweighted": bool(getattr(entry, "reweighted", False)),
+            "adjustment_factors": getattr(entry, "adjustment_factors", None),
         }
     record["run_id"] = run_id
     record["timestamp"] = _now_iso()
@@ -510,12 +512,17 @@ def save_audit_entry(entry: Any, run_id: str | None = None) -> str:
 def _pg_save_audit_entry(record: dict[str, Any]) -> str:
     from psycopg.types.json import Json
 
+    factors = record.get("adjustment_factors")
     with _connect() as conn:
         row = conn.execute(
             "INSERT INTO bias_audit_log (run_id, batch_id, mode_share, ground_truth,"
-            "  max_delta, reweighted) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            "  max_delta, reweighted, adjustment_factors)"
+            "  VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (record["run_id"], record["batch_id"], Json(record["observed_mode_share"]),
-             Json(record["target_mode_share"]), record["max_delta"], record["reweighted"]),
+             Json(record["target_mode_share"]), record["max_delta"], record["reweighted"],
+             # SQL NULL (not JSON 'null') when no reweight happened — distinguishes
+             # "no correction" from "corrected with empty factors" (matches persist_audit()).
+             Json(factors) if factors is not None else None),
         ).fetchone()
         conn.commit()
     return str(row[0])
@@ -539,7 +546,8 @@ def _pg_get_audit(run_id: str) -> list[dict[str, Any]]:
     with _connect() as conn:
         rows = conn.cursor(row_factory=dict_row).execute(
             "SELECT id, run_id, batch_id, mode_share, ground_truth, max_delta, reweighted,"
-            "  created_at FROM bias_audit_log WHERE run_id = %s ORDER BY created_at, id",
+            "  adjustment_factors, created_at FROM bias_audit_log WHERE run_id = %s"
+            "  ORDER BY created_at, id",
             (run_id,),
         ).fetchall()
     return [
@@ -551,6 +559,7 @@ def _pg_get_audit(run_id: str) -> list[dict[str, Any]]:
             "target_mode_share": r["ground_truth"],
             "max_delta": float(r["max_delta"]),
             "reweighted": r["reweighted"],
+            "adjustment_factors": r["adjustment_factors"],
             "timestamp": _iso(r["created_at"]),
         }
         for r in rows

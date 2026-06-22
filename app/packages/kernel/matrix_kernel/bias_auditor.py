@@ -44,6 +44,20 @@ class BiasAuditEntry:
             default=0.0,
         )
 
+    def as_dict(self) -> dict[str, Any]:
+        """Serialize for the public log / WS event / Redis cache (glass-box: factors included).
+
+        `max_delta` is computed (the property), never stored — so it can never drift from the
+        observed/target it summarizes. `db.save_audit_entry` consumes this exact shape."""
+        return {
+            "batch_id": self.batch_id,
+            "target_mode_share": dict(self.target_mode_share),
+            "observed_mode_share": dict(self.observed_mode_share),
+            "reweighted": self.reweighted,
+            "adjustment_factors": self.adjustment_factors,
+            "max_delta": self.max_delta,
+        }
+
 
 def audit_personas(
     observed: dict[str, float],

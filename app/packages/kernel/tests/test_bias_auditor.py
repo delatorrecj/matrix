@@ -125,3 +125,27 @@ def test_reweight_pool_factors_in_audit_entry():
     entry = audit_personas({"jeepney": 0.5}, {"jeepney": 0.6}, batch_id="test", adjustment_factors=factors)
     assert entry.reweighted is True
     assert entry.adjustment_factors == factors
+
+
+def test_entry_as_dict_carries_factors_and_computed_delta():
+    """as_dict() is the shape the public log / WS / Redis cache consume — it must carry the
+    factors and a *computed* max_delta (never a stored 0.0)."""
+    factors = {"jeepney": 1.2, "private_car": 0.5}
+    d = audit_personas({"jeepney": 0.5}, {"jeepney": 0.6}, batch_id="t", adjustment_factors=factors).as_dict()
+    assert d["adjustment_factors"] == factors
+    assert d["max_delta"] == pytest.approx(0.1)
+    assert d["reweighted"] is True
+    assert set(d) == {"batch_id", "target_mode_share", "observed_mode_share",
+                      "reweighted", "adjustment_factors", "max_delta"}
+
+
+def test_warm_persona_pool_runs_the_full_loop():
+    """warm_persona_pool wires generate→audit→reweight onto a live path (was test-only).
+    The static literature-anchored default is deterministic and Redis-free (caching is
+    best-effort), so this runs in a bare env."""
+    pool, entry = personas.warm_persona_pool(n=400, use_llm=False, seed=11)
+    assert len(pool) == 400
+    assert entry.target_mode_share == ILOILO_MODE_SHARE
+    # The entry is self-consistent: reweighted iff the realized share drifted past tolerance.
+    assert entry.reweighted == (entry.max_delta > MODE_SHARE_TOLERANCE)
+    assert entry.as_dict()["observed_mode_share"]  # non-empty realized share

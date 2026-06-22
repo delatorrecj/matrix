@@ -50,3 +50,24 @@ class Trajectory:
             frames=[Frame(**f) for f in d.get("frames", [])],
             meta=d.get("meta", {}),
         )
+
+    def observed_mode_share(self) -> dict[str, float]:
+        """The realized mode share of the agents actually simulated (one count per unique
+        agent id, mode being deterministic per id). This is the honest "what the run did"
+        basis the bias auditor (PRD-F6) checks against the ground-truth anchor when no warmed
+        persona-pool audit is available. Empty dict when the trajectory carries no agents."""
+        modes: dict[str, int] = {}
+        seen: set = set()
+        for fr in self.frames:
+            for a in fr.agents:
+                aid = a.get("id")
+                if aid in seen:
+                    continue
+                seen.add(aid)
+                m = a.get("mode")
+                if m is not None:
+                    modes[m] = modes.get(m, 0) + 1
+        n = sum(modes.values())
+        if n == 0:
+            return {}
+        return {m: c / n for m, c in modes.items()}

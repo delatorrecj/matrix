@@ -317,6 +317,27 @@ def test_audit_dict_entry_computes_max_delta(client):
     assert body["observed_mode_share"] == {"jeepney": 0.50}
 
 
+def test_audit_adjustment_factors_roundtrip(client):
+    """The reweight factors (the judges' 'mathematical adjustment') survive save→get→endpoint,
+    so the public log and Inspect drawer can show how the pool was rebalanced (PRD-F6)."""
+    entry = audit_personas(
+        observed={"jeepney": 0.40, "private": 0.60},
+        target={"jeepney": 0.55, "private": 0.45},
+        batch_id="b-rw",
+        adjustment_factors={"jeepney": 1.375, "private": 0.75},
+    )
+    db.save_audit_entry(entry, run_id="run-rw")
+    body = client.get("/audit/run-rw").json()
+    assert body["reweighted"] is True
+    assert body["adjustment_factors"] == {"jeepney": 1.375, "private": 0.75}
+    # No-factor entries report null, not a fabricated {} (distinguishes "no correction").
+    db.save_audit_entry(
+        {"batch_id": "b-none", "mode_share": {"jeepney": 0.55}, "ground_truth": {"jeepney": 0.55}},
+        run_id="run-none",
+    )
+    assert client.get("/audit/run-none").json()["adjustment_factors"] is None
+
+
 def test_audit_never_fabricated(client):
     """No entries -> empty shapes + a note; never the old mock numbers."""
     body = client.get("/audit/run-without-audit").json()

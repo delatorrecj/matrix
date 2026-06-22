@@ -2,7 +2,7 @@
 
 **Project slug:** `matrix`
 **Maintained by:** Carlos Jerico Dela Torre (Team ATLAN)
-**Last updated:** 2026-06-17
+**Last updated:** 2026-06-22
 
 ---
 
@@ -64,8 +64,8 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 |-------|------|-------|--------|------|
 | CR-006 | [cr-006-beyond-hackathon.md](cr-006-beyond-hackathon.md) | Beyond the Hackathon — product-hardening pivot (PRs #1–#17) | Applied | 2026-06-14 |
 | CR-007 | [cr-007-close-the-loop.md](cr-007-close-the-loop.md) | Close the loop — connect the shipped batch end-to-end (all 10 PRs P0–P4 merged) | Applied | 2026-06-17 |
-| CR-008 | [cr-008-judges-feedback.md](cr-008-judges-feedback.md) | ASEAN judges' feedback remediation — implementation plan for the 9 asks (ground-truth, informal sector, bias-auditor example, low-confidence, extreme events, CPDO feedback, Hiligaynon gazetteer, traceability table, RAG) | In progress | 2026-06-17 |
-| CR-009 | [cr-009-qa-frontend-fixes.md](cr-009-qa-frontend-fixes.md) | QA and Frontend Design Fixes — track completed agent animation bugs, confidence layer validation, and remaining UI hardening | In progress | 2026-06-20 |
+| CR-008 | [cr-008-judges-feedback.md](cr-008-judges-feedback.md) | ASEAN judges' feedback remediation — the 9 asks (ground-truth, informal sector, bias-auditor example, low-confidence, extreme events, CPDO feedback, Hiligaynon gazetteer, traceability table, RAG) | **Applied** | 2026-06-22 |
+| CR-009 | [cr-009-qa-frontend-fixes.md](cr-009-qa-frontend-fixes.md) | QA and Frontend Design Fixes — agent animation bug, confidence layer validation, UI redesign + map bounds | **Applied** | 2026-06-22 |
 
 ---
 
@@ -73,6 +73,7 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 
 | CR ID | Date | Summary | Trigger doc | Docs touched | File |
 |-------|------|---------|-------------|--------------|------|
+| — | 2026-06-22 | **Wire-up + polish pass (pre-deploy).** Connected three implemented-but-disconnected features: (1) the **bias auditor now runs in the live pipeline** — API startup warms the persona pool through the full `generate→audit→reweight` loop (`personas.warm_persona_pool`), and every run logs a public audit entry keyed to `scenario_id` (`adjustment_factors` persisted + rendered), so `GET /audit/{id}` and the BiasAuditLog panel show real data (previously always empty — the auditor lived only in tests); (2) **GraphRAG/Chroma corpus ingested at API startup** so `retrieve()` grounds the orchestrator instead of returning `[]`; (3) `BiasAuditLog.tsx` fetches via `NEXT_PUBLIC_API_URL` (was hardcoded localhost). Also rewrote the **AAIH AI-Use & Ethics report** around the judges' 9 flags (honest validation status, bias worked example, traceability appendix). Tests: kernel bare 182p/11s, API bare 64p/4s, `next build` clean. | code audit (state review) | CLAUDE.md, aaih-ai-use-ethics-report, this index | (logged here) |
 | CR-009 | 2026-06-20 | **QA and Frontend Design Fixes.** Fixed the agent trajectory animation bug in `TripsLayer` (updated `PLAYBACK_FRAME` accumulation and dynamic scrubber bounds). Verified the orange Confidence layer overlay as intentional per the `method_capped_confidence` rule. Confirmed Simulation Verification Guards (Glass-Box Traceability and Bias & Synthesis Audit) are fully functional. Authored by Yushin. Added CR-009 to track remaining frontend QA tasks. | QA sweep | cr-009 (new), this index | [cr-009-qa-frontend-fixes.md](cr-009-qa-frontend-fixes.md) |
 | CR-008 | 2026-06-17 | **ASEAN judges' feedback remediation — Milestones 3 & 4 Complete.** Implemented the CPDO Iterative Feedback Loop (Item 6), including `planner_feedback` schema, persistence fallback, and API endpoints (`POST/GET /feedback`); updated `prd-matrix.md` with PRD-F20 and US-09, documented API seam in `sdd-matrix.md`, and added triage runbook in `ops-matrix.md`. Also completed Extreme Events / Resilience (Item 5), Informal Sector Tricycle logic (Item 2), and Ground-Truth Validation (Item 1) from Milestone 3. Test suites for Kernel (197 passing) and API (98 passing) confirmed 100% green and glass-box compliant. | ASEAN judges' feedback | prd, sdd, ops | [cr-008-judges-feedback.md](cr-008-judges-feedback.md) |
 | CR-008 | 2026-06-17 | **ASEAN judges' feedback remediation — implementation plan.** Opened the `dev` branch and authored a file-level plan ([cr-008-judges-feedback.md](cr-008-judges-feedback.md)) addressing the 9 judge asks: (1) ground-truth comparison [VAL-01/02], (2) informal-sector modeling [tricycle routing + vendor economics], (3) bias-auditor worked example + **reweight math** (currently flags but does not rebalance — gap), (4) low-confidence trigger + alert protocol, (5) extreme-event resilience [flood/closure], (6) **new PRD-F20** CPDO feedback loop, (7) **Hiligaynon gazetteer** (colloquial→GIS node; none exists today), (8) module⇄data-source traceability appendix, (9) RAG setup/ingestion elaboration (no build script today). Maps 8/9 asks onto existing PRD features; flags Locked-doc edits (methods/prd/sdd) for governance. Branch audit: all 19 remaining remote branches confirmed merged into `main` (stale, undeleted). **No code/doc content shipped yet — plan only.** | ASEAN judges' feedback | cr-008 (new), this index | [cr-008-judges-feedback.md](cr-008-judges-feedback.md) |

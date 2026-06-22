@@ -24,6 +24,15 @@ primary_region = "sin"
   # These env vars are also set in Dockerfile.api; fly.toml overrides win at runtime.
   MATRIX_NET_PATH = "/data/iloilo.net.xml"
   MATRIX_ROU_PATH = "/data/iloilo.rou.xml"
+  # CORS: the browser blocks the Vercel frontend's REST calls (/scenario, /audit,
+  # /validation, /feedback) unless its origin is allowlisted. REQUIRED before launch —
+  # set to the Vercel production URL, e.g. `fly secrets set MATRIX_ALLOWED_ORIGINS=https://<your-app>.vercel.app`
+  # (defaults to http://localhost:3000 only, which rejects production).
+  # Startup warm-up knobs (matrix_api.main._warm_kernel_caches):
+  #   MATRIX_SKIP_WARMUP=1  skip the persona-pool + GraphRAG warm-up (e.g. cheap boots)
+  #   MATRIX_PERSONA_LLM=1  warm via the Gemini persona generator (else static anchored pool)
+  # GraphRAG: with no CHROMA_URL the corpus builds into an EPHEMERAL ./.chroma each boot
+  # (small; rebuilt by the startup ingest). Set CHROMA_URL to use a persistent Chroma server.
 
 # Secrets (set via `fly secrets set KEY=value` -- never commit values):
 #   GOOGLE_API_KEY     — Gemini 3.1 Pro/Flash-Lite (must have billing enabled;

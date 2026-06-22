@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+import { apiFetch } from "@/lib/api";
+
 interface AuditLog {
   run_id: string;
   batch_id: string;
   target_mode_share: Record<string, number>;
   observed_mode_share: Record<string, number>;
   reweighted: boolean;
+  adjustment_factors?: Record<string, number> | null;
   timestamp: string;
 }
 
@@ -15,7 +18,9 @@ export default function BiasAuditLog({ runId }: { runId: string }) {
   const [log, setLog] = useState<AuditLog | null>(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/audit/${runId}`)
+    // Same env-driven origin as every other REST call (NEXT_PUBLIC_API_URL) — never a
+    // hardcoded localhost, so the panel works in a deployed build, not just local dev.
+    apiFetch(`/audit/${runId}`)
       .then(res => res.json())
       .then(data => setLog(data))
       .catch(console.error);
@@ -59,6 +64,22 @@ export default function BiasAuditLog({ runId }: { runId: string }) {
           {log.reweighted ? "YES" : "NO"}
         </span>
       </div>
+
+      {log.adjustment_factors && Object.keys(log.adjustment_factors).length > 0 && (
+        <div className="mt-3 bg-background p-2 rounded border border-border">
+          <span className="text-text-muted block text-xs uppercase mb-1">
+            Adjustment Factors (f<sub>k</sub> = target / observed)
+          </span>
+          {Object.entries(log.adjustment_factors).map(([mode, factor]) => (
+            <div key={mode} className="flex justify-between border-b border-border border-dashed last:border-0 py-1">
+              <span>{mode}</span>
+              <span className={factor > 1 ? "text-success" : factor < 1 ? "text-destructive" : ""}>
+                ×{factor.toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 # CR-008 — ASEAN Judges' Feedback Remediation (Implementation Plan)
 
 **Change Record ID:** CR-008
-**Status:** In progress
+**Status:** Applied (merged to `main`; all 9 asks implemented — 2026-06-22)
 **Date opened:** 2026-06-17
 **Branch:** `dev` (cut from `main` @ `2dac893`; per-item feature branches below)
 **Trigger:** ASEAN AI Hackathon 2026 judges' written feedback (9 items, verbatim in §1)
@@ -204,8 +204,10 @@ Recommended start: **Item 8** (appendix) — highest signal-to-effort, unblocks 
 - [x] **#6** PRD-F20; `POST/GET /feedback` + `planner_feedback` table + test; SDD seam; OPS triage runbook; UI affordance.
 - [x] **#7** `gazetteer.py` + JSON; orchestrator/GraphRAG integration; worked Hiligaynon example; deterministic resolution test.
 - [x] **#9** `build_graphrag.py` ingestion + smoke test; SDD RAG subsection; methods §4 cards extended.
-- [ ] Both gating agents PASS on every merge; kernel/api/web test suites green.
-- [ ] [index.md](index.md) change log + this CR's status updated; auto-memory updated.
+- [x] Both gating agents PASS on every merge; kernel/api/web test suites green.
+- [x] [index.md](index.md) change log + this CR's status updated; auto-memory updated.
+
+> **Post-merge note (2026-06-22).** Item 3's reweight + Item 9's RAG shipped as *capabilities* but were not on the live run path until the 2026-06-22 wire-up pass: the bias auditor now runs per simulation (`personas.warm_persona_pool` at API startup + a per-run `GET /audit/{scenario_id}` entry carrying `adjustment_factors`), and the GraphRAG corpus is ingested at API startup so `retrieve()` actually grounds the orchestrator. See the [index.md](index.md) change log (2026-06-22 row).
 
 ---
 
