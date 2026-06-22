@@ -59,6 +59,10 @@ def run_sumo_edge_counts(net: Path, rou: Path, end: float) -> dict[str, int]:
             "--end", str(end),
             "--no-step-log", "true",
             "--xml-validation", "never",
+            # A few generated demand routes can cross a disconnected edge pair; SUMO aborts
+            # the whole run on the first one ("Vehicle X has no valid route ... Quitting").
+            # Skip those vehicles instead so the baseline still seeds (mirrors runner.py).
+            "--ignore-route-errors", "true",
         ]
         env = dict(os.environ, SUMO_HOME=sumo_env.sumo_home())
         result = subprocess.run(cmd, capture_output=True, text=True, env=env)
