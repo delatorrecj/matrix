@@ -8,11 +8,11 @@
 # The only things you supply are the Azure OpenAI secrets (Space Settings → Secrets).
 FROM python:3.12-slim
 
-# System libs for the eclipse-sumo wheel's headless `sumo` binary:
-#   • libxerces-c-dev — XML parsing; SUMO HARD-depends on it to read the .net.xml. Without
-#     it the binary aborts with "error while loading shared libraries: libxerces-c..." and
-#     run_nightly_baseline() fails at boot (the baseline never seeds → /simulate KeyErrors).
-#   • libgdal/libproj — geo-projection used by netconvert/sumolib.
+# System libs for the eclipse-sumo wheel's `sumo` binary. The wheel binary is dynamically
+# linked against Xerces-C (XML), GDAL/PROJ (geo), AND the FOX toolkit + X11/OpenGL stack —
+# the *headless* `sumo` still links them, so they must be PRESENT even with no display. A
+# single missing lib makes the binary exit 127 ("error while loading shared libraries: …")
+# and run_nightly_baseline() fails at boot → the baseline never seeds → /simulate KeyErrors.
 # Plus redis-server (bundled) and git+curl to clone the app at build time.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -20,6 +20,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdal-dev \
     libproj-dev \
     libxml2 \
+    libfox-1.6-0 \
+    libgl1 \
+    libglu1-mesa \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libxcursor1 \
+    libxrandr2 \
+    libxi6 \
+    libxfixes3 \
+    libxft2 \
+    libsm6 \
+    libice6 \
     redis-server \
     git \
     curl \
