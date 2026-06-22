@@ -254,7 +254,7 @@ Every input dataset carries a confidence tier (High / Medium / Low) propagated t
 - OSM under ODbL with attribution
 - PSA data under open government data policy
 - Sentinel-2 under ESA Copernicus license (free)
-- Azure OpenAI API under Google AUP
+- Azure OpenAI API under Microsoft service terms
 - All open libraries under MIT, Apache 2.0, or EPL 2.0
 - FOI-obtained data per Executive Order No. 2 (s. 2016)
 - Volunteer PWA GPS traces collected with explicit opt-in, anonymized at device level
@@ -464,7 +464,7 @@ We build everything in Tier 1 before touching Tier 2, and Tier 2 before Tier 3. 
 - DLR Institute of Transportation Systems. *Eclipse SUMO.* https://eclipse.dev/sumo/
 - Microsoft. *GraphRAG.* https://github.com/microsoft/graphrag
 - ChromaDB. https://www.trychroma.com/
-- Google. *Azure OpenAI (gpt-5.4)* (Feb 19, 2026). https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-1-pro/
+- Google. *Azure OpenAI (gpt-5.4)* (Feb 19, 2026). https://blog.google/innovation-and-ai/models-and-research/openai/azure-openai/
 - National Privacy Commission. *RA 10173 IRR.* https://privacy.gov.ph/
 
 ---

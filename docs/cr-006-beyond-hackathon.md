@@ -38,7 +38,7 @@ A 16-unit parallel→sequential build batch implemented that redirection end-to-
 | #4 | **Facility demand-redistribution module** (gravity trip deltas; method `BEH-4-PROVISIONAL`) |
 | #5 | **Real VAL-01 / VAL-02 validation gates** — computed Calderon-2014 RMSE + 2024 flood IoU + `validation_report.json` (Calderon fixture genuinely sourced; flood fixture flagged **PROVISIONAL**) |
 | #6 | **City-agnostic `CityConfig` layer** (Iloilo = zero-change default) |
-| #7 | **LLM resilience** — retry/backoff, hard timeout, typed `LLMUnavailable` for Gemini |
+| #7 | **LLM resilience** — retry/backoff, hard timeout, typed `LLMUnavailable` for Azure OpenAI GPT-5.4 |
 | #8 | **API persistence** — Postgres/PostGIS schema, db layer with in-memory fallback, wired `/scenario`, `/runs`, `/audit` + `GET /validation` |
 | #9 | **WS runtime hardening** — per-stage timings in `DONE`, stage timeouts, typed `ERROR` + `QUEUED` events, concurrency semaphore, dependency-aware `/health` |
 | #10 | **Auth + rate limit + CORS** (env-gated, default off; WS honors the key) |
@@ -70,7 +70,7 @@ This is also the cheapest moment to do it. The kernel, the five modules, the WS 
 
 **Alternatives rejected:** (a) *Keep building only to the demo* — rejected; it banks confidence the product hasn't earned and leaves no path past June. (b) *Re-open and edit the Locked PRD/SDD/methods directly* — rejected; that silently invalidates downstream docs and breaks the change-propagation contract. The CR is the correct instrument. (c) *Defer hardening to "post-submission"* (MATRIX.md §8 Post-Submission) — rejected; the gaps were cheapest to close while the code was warm, and the honesty they buy is itself the pitch.
 
-This **does not reverse** any locked technical decision (SUMO, Gemini 3.1, unified-kernel-five-modules, 90 s budget, Iloilo pilot all stand). It changes the *intent and finish quality* of the build, not its architecture.
+This **does not reverse** any locked technical decision (SUMO, Azure OpenAI GPT-5.4, unified-kernel-five-modules, 90 s budget, Iloilo pilot all stand). It changes the *intent and finish quality* of the build, not its architecture.
 
 ---
 

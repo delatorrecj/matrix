@@ -77,7 +77,7 @@ describe("reduceRunEvent lifecycle", () => {
       {
         type: "DONE",
         duration_ms: 84210,
-        timings: { sumo_ms: 41000, modules_ms: 18300, gemini_ms: 12100, total_ms: 84210 },
+        timings: { sumo_ms: 41000, modules_ms: 18300, llm_ms: 12100, total_ms: 84210 },
       },
     ]);
     expect(s.phase).toBe("done");
@@ -85,7 +85,7 @@ describe("reduceRunEvent lifecycle", () => {
     expect(s.timings).toEqual({
       sumo_ms: 41000,
       modules_ms: 18300,
-      gemini_ms: 12100,
+      llm_ms: 12100,
       total_ms: 84210,
     });
   });

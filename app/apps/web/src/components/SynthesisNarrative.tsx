@@ -89,11 +89,16 @@ export default function SynthesisNarrative({
 
   return (
     <div
-      className="p-4 bg-primary/5 border border-primary/20 rounded-lg mt-2"
+      className="p-5 bg-gradient-to-br from-primary/10 to-transparent border-l-4 border-l-primary border-y border-r border-primary/20 rounded-r-lg mt-4 shadow-sm backdrop-blur-sm"
       data-testid="synthesis-narrative"
     >
-      <h4 className="text-xs font-bold text-primary mb-2 uppercase">Synthesis</h4>
-      <p className="text-sm text-foreground leading-relaxed">
+      <div className="flex items-center gap-2 mb-3">
+        <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <h4 className="text-sm font-bold text-primary uppercase tracking-wide">Synthesis & Interpretations</h4>
+      </div>
+      <div className="text-[15px] text-foreground leading-relaxed whitespace-pre-wrap">
         {segments.map((segment, i) =>
           i % 2 === 1 ? (
             <CitationChip
@@ -103,10 +108,17 @@ export default function SynthesisNarrative({
               onCiteClick={onCiteClick}
             />
           ) : (
-            <span key={`text-${i}`}>{segment}</span>
+            <span key={`text-${i}`}>
+              {segment.split(/(EXECUTIVE SUMMARY|ACTIONABLE RECOMMENDATIONS|PERSONA PERSPECTIVES)/).map((part, j) => {
+                if (['EXECUTIVE SUMMARY', 'ACTIONABLE RECOMMENDATIONS', 'PERSONA PERSPECTIVES'].includes(part)) {
+                  return <strong key={j} className="block mt-4 mb-1 text-primary/80 font-bold tracking-wide">{part}</strong>;
+                }
+                return <span key={j}>{part}</span>;
+              })}
+            </span>
           )
         )}
-      </p>
+      </div>
 
       {footerCitations.length > 0 && (
         <div className="mt-3 pt-3 border-t border-primary/15" data-testid="synthesis-citations">

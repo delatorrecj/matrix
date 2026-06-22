@@ -201,7 +201,7 @@ tb(s, 0.7, 2.78, 18.6, 1.0, [{"runs":[
     "same reality; the map animates and a cited narrative explains it.", 17.5, False, INK, F_BODY)]}])
 # flow row
 nodes = [("Plain-language\nquery / map drop", COBALT),
-         ("Gemini orchestrator\nparses the scenario", COBALT),
+         ("Azure OpenAI orchestrator\nparses the scenario", COBALT),
          ("Unified kernel\nSUMO + AI personas", CYAN),
          ("Five impact modules\nscore one reality", CYAN),
          ("Animated map +\ncited report", COBALT)]
@@ -302,7 +302,7 @@ for t,b in ins:
     iy += 1.34
 # processing (center, emphasized)
 panel(s, colx[1], 3.25, colw3[1], 7.2, fill=C(0x0E2456), line=COBALT, lw=1.5, radius=0.04)
-proc = [("Gemini 3.1 Orchestrator","NLP","parse query → simulation plan",COBALT),
+proc = [("Azure OpenAI Orchestrator","NLP","parse query → simulation plan",COBALT),
         ("Unified Simulation Kernel","AGENTIC SIM","SUMO + persona pool + bias auditor → one trajectory dataset",CYAN),
         ("Five Impact Modules","ML","Behavioral · Social · Economic · Ecological · Societal, in parallel",CYAN),
         ("Synthesis + GraphRAG","GENAI + RAG","cited narrative; retrieval over the city knowledge graph",COBALT)]
@@ -342,8 +342,8 @@ for c in chips6:
     w = 0.18*len(c)+0.5
     chip(s, cxx, 2.75, w, 0.5, c, PANEL2, CYAN, size=12, line=COBALT); cxx += w+0.3
 models = [
- ("Gemini 3.1 Pro","Orchestration & synthesis","Parses plain language into a sim plan; writes the cited narrative. Current generation — 1.5 and 2.0 are shut down.",COBALT),
- ("Gemini 3.1 Flash-Lite","High-volume persona generation","200–500 commuter personas on the free tier — cheap and fast enough to pre-warm the pool.",CYAN),
+ ("Azure OpenAI GPT-5.4","Orchestration & synthesis","Parses plain language into a sim plan; writes the cited narrative. Current generation — 1.5 and 2.0 are shut down.",COBALT),
+ ("Azure OpenAI GPT-5.4","High-volume persona generation","200–500 commuter personas on the free tier — cheap and fast enough to pre-warm the pool.",CYAN),
  ("Eclipse SUMO (TraCI)","Physical multi-agent mobility","The open urban-mobility standard (DLR). Not OASIS / MiroFish — those model social media, not cities.",ENV),
  ("XGBoost","Corridor-volume baseline","Time-series forecaster for the nightly baseline that delta simulations run against.",ECO),
  ("bge-small-en","Knowledge-graph embeddings","Sentence-Transformers vectors in ChromaDB powering GraphRAG retrieval.",SOCI),
@@ -440,7 +440,7 @@ tb(s, 12.25, 3.9, 7.05, 1.0, [
 # the AI logic steps
 panel(s, 12.25, 6.0, 7.05, 2.9, fill=PANEL, radius=0.05)
 tb(s, 12.65, 6.2, 6.3, 0.4, [{"runs":[("THE AI “LOGIC”, ON SCREEN", 12.5, True, MUTE, F_HEAD)]}])
-steps = [("1","Plain-language query → Gemini sim plan"),
+steps = [("1","Plain-language query → Azure OpenAI sim plan"),
          ("2","Kernel runs → map animates while modules compute"),
          ("3","Five dimension cards stream in with confidence"),
          ("4","Click a number → the glass box opens")]

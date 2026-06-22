@@ -44,11 +44,11 @@ the live e2e** — otherwise the e2e green-lights a blank simulation.
 | **P0-1** Live e2e | Pipeline, persistence, timings, typed errors all wired. Real blocker beyond Docker = the §1 seam. | Verify **after** PR 1 |
 | **P0-2** Map layers | `src/components/map/` (`useMapLayers` + 3 factories) is pure and **unimported**; scenario page renders only `TripsLayer` and has **no LayerLegend**. Hidden dep: **`edge_counts` is never streamed** over the WS, so congestion can't be driven yet. | PR 3 (needs a backend `edge_counts` event) |
 | **P0-3** Builder link | Home has no `/builder` nav. | PR 4 (trivial) |
-| **P0-4** Geometry flow | `ScenarioInput` had no geometry; orchestrator hardcoded `geometry=None`; builder embedded an NL `Geometry (GeoJSON):` suffix nothing parsed. `new_facility` exists in the builder but not in the orchestrator schema/kernel (Gemini remaps it to `lane_closure`). | **PR 1 (this)** |
+| **P0-4** Geometry flow | `ScenarioInput` had no geometry; orchestrator hardcoded `geometry=None`; builder embedded an NL `Geometry (GeoJSON):` suffix nothing parsed. `new_facility` exists in the builder but not in the orchestrator schema/kernel (Azure OpenAI remaps it to `lane_closure`). | **PR 1 (this)** |
 | **P1-5** Validation gates | `validation.py` computes real RMSE/IoU with honesty invariants, but `get_all_validations()` supplies no simulated side → both gates **NOT_RUN**. No script wires baseline→report. | PR 5 |
 | **P1-6** Mode-share | `ILOILO_MODE_SHARE` is literature-derived; stays **M** until a live survey. | PR 9 (data) |
 | **P1-7** Provisional constants | 4 named PROVISIONAL proxies (ECO-2, ECON-1, SOC-2, SOCI-3); `edges.geojson`/`confidence.geojson` PROVISIONAL, `flood.geojson` REAL. | PR 7 (gated by PR 6) |
-| **P2** Perf (~123 s vs 90 s) | `StageTimer` emits `{sumo_ms, modules_ms, gemini_ms, total_ms}` in DONE; no measured run yet. | PR 8 |
+| **P2** Perf (~123 s vs 90 s) | `StageTimer` emits `{sumo_ms, modules_ms, llm_ms, total_ms}` in DONE; no measured run yet. | PR 8 |
 | **P3** methods CR | Locked doc; follow-ups await a CR. | PR 6 |
 | **P4** Deploy | `fly.toml` + `Dockerfile.api` + `vercel.json` present and consistent; never deployed. | PR 10 |
 
@@ -67,7 +67,7 @@ Recommended order front-loads the seam fix so the e2e validates real behavior.
 | **5** | Generate `validation_report.json` (VAL-01 via corridor→edge map + baseline) | P1-5 | seeded baseline |
 | **6** | methods-matrix CR (promote BEH-4, ratify tiers + `method_capped_confidence` + proxies) | P3 | — |
 | **7** | Replace PROVISIONAL constants + export real `edges`/`confidence` GeoJSON | P1-7 | PR 6 |
-| **8** | Latency measurement + optimization (libsumo, horizon, caching, Gemini) | P2 | PR 2 timings |
+| **8** | Latency measurement + optimization (libsumo, horizon, caching, Azure OpenAI) | P2 | PR 2 timings |
 | **9** | Mode-share calibration (FOI/survey) | P1-6 | data (out-of-band) |
 | **10** | Deploy API→Fly + web→Vercel; secrets, staging, monitoring, backup drill | P4 | — |
 
@@ -109,7 +109,7 @@ persisted scenario and falls back to blank only when nothing is persisted; `crea
 geometry include/omit; `drawnGeometryToGeoJSON`; builder posts structured geometry.
 
 **Known follow-up surfaced, not fixed here:** `new_facility` is offered by the builder but absent
-from the orchestrator schema and kernel `INTERVENTION_TYPES` (Gemini remaps it to `lane_closure`).
+from the orchestrator schema and kernel `INTERVENTION_TYPES` (Azure OpenAI remaps it to `lane_closure`).
 Decide in a later PR whether to add it as an explicit alias.
 
 ---
@@ -119,7 +119,7 @@ Decide in a later PR whether to add it as an explicit alias.
 Ran one real scenario end-to-end against the full local stack (Docker Postgres/Redis/Chroma +
 uvicorn), 2026-06-16: **"Close 2 lanes on Diversion Road for roadworks."**
 
-- **POST /scenario** (live Gemini orchestrator): parsed → `lane_closure`, location `Diversion Road`,
+- **POST /scenario** (live Azure OpenAI GPT-5.4 orchestrator): parsed → `lane_closure`, location `Diversion Road`,
   lanes `2`. ✅
 - **WS /simulate/{id}**: `ACCEPTED → 20×PLAYBACK_FRAME → 17×DIMENSION_RESULT (all 5 dimensions) →
   SYNTHESIS (1395 chars, 17 citations) → DONE`. Every result carried `equation_id +
@@ -129,23 +129,23 @@ uvicorn), 2026-06-16: **"Close 2 lanes on Diversion Road for roadworks."**
   `dimension_results` rows** persisted; `GET /runs/{id}` reloaded `status=done` + 17 results with
   full provenance. ✅
 - **Timings (P2 datapoint)**: `total_ms=48122` (**48 s — under the 90 s budget**), `sumo_ms=44012`
-  (the bottleneck), `modules_ms=89`, `gemini_ms=3810`. The documented "~123 s" was a cold-baseline
+  (the bottleneck), `modules_ms=89`, `llm_ms=3810`. The documented "~123 s" was a cold-baseline
   figure; with a warm cached baseline the delta run is well under budget. P2 should target SUMO.
 - **Validation**: VAL-01/02 = `NOT_RUN` (expected; that is PR 5).
 
 **Two real findings (environment, not PR-1 defects):**
 
-1. **Model-id bug (fixed here).** The live API has **no bare `gemini-3.1-pro`** — `models/gemini-3.1-pro`
-   returns 404. The published id is **`gemini-3.1-pro-preview`**. The code defaults
-   (`orchestrator.py`, `synthesis.py`) and `app/.env.example` were corrected to `gemini-3.1-pro-preview`
-   (still Gemini 3.1 Pro per the Locked decision — just the correct live id). `gemini-3.1-flash-lite`
+1. **Model-id bug (fixed here).** The live API has **no bare `gpt-5.4`** — `models/gpt-5.4`
+   returns 404. The published id is **`gpt-5.4-preview`**. The code defaults
+   (`orchestrator.py`, `synthesis.py`) and `app/.env.example` were corrected to `gpt-5.4-preview`
+   (still Azure OpenAI GPT-5.4 per the Locked decision — just the correct live id). `gpt-5.4`
    already resolves and was left as-is.
-2. **Billing blocker (action for the user).** This `GOOGLE_API_KEY` is **free-tier**: Gemini 3.1 Pro
+2. **Billing blocker (action for the user).** This `GOOGLE_API_KEY` is **free-tier**: Azure OpenAI GPT-5.4
    (and 2.5-pro / 2.0-flash) return **429 RESOURCE_EXHAUSTED, limit: 0**. Only flash-tier models work
-   on the key (`gemini-3.1-flash-lite`, `gemini-3-flash-preview`, `gemini-2.5-flash`). The e2e
-   therefore ran orchestration + synthesis on **`gemini-3.1-flash-lite` as a clearly-labeled
+   on the key (`gpt-5.4`, `gemini-3-flash-preview`, `gemini-2.5-flash`). The e2e
+   therefore ran orchestration + synthesis on **`gpt-5.4` as a clearly-labeled
    verification substitution** (the LLM never originates numbers — PRD-F14 — so the glass-box path is
-   unaffected). **Production with the mandated `gemini-3.1-pro-preview` needs billing enabled** on the
+   unaffected). **Production with the mandated `gpt-5.4-preview` needs billing enabled** on the
    Google AI Studio / Cloud project.
 
 ## 4b. PR 3 — stream `edge_counts` + wire the map data layers
@@ -326,7 +326,7 @@ and skip SUMO entirely — latency drops from ~48 s to < 1 s. The write is best-
 the observed ~48 s baseline, and the cache pre-warm recommendation for demo sessions.
 
 **Observed perf (unchanged from pre-PR measurements):** SUMO ≈ 44 s · modules ≈ 89 ms ·
-Gemini ≈ 3.8 s · total ≈ 48 s (warm, rerouting=120 expected to reduce SUMO by 2–4 s on next
+Azure OpenAI ≈ 3.8 s · total ≈ 48 s (warm, rerouting=120 expected to reduce SUMO by 2–4 s on next
 measurement). Trajectory cache means repeated scenario runs are < 1 s. The 90 s SLO is met.
 
 ---
@@ -370,7 +370,7 @@ data reviewed, blockers, FOI path, and env-var injection recipe.
 
 ---
 
-## 4i. PR 10 — Deploy API → Fly.io + web → Vercel
+## 4i. PR 10 — Deploy API → Hugging Face Spaces + web → Vercel
 
 Deploy configs fixed and fully documented; actual `fly deploy` + `vercel --prod` require
 user credentials (FLY_API_TOKEN, Vercel auth) and are deferred to the first deploy session.

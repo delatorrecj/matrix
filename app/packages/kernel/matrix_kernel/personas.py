@@ -2,7 +2,7 @@
 
 Milestone A seeds the pool from a *static* Iloilo mode-share anchor (literature-calibrated
 from Calderon 2014 + LPTRP context -> Medium confidence; the documented "soft spot" in
-READINESS.md — not a 2026 travel survey). The Gemini 3.1 Flash-Lite generator (RFC
+READINESS.md — not a 2026 travel survey). The Azure OpenAI GPT-5.4 generator (RFC
 matrix-rfc-001) is a Milestone-B upgrade. The pool is cached in Redis
 (`personas:{slug}:v1` — `personas:iloilo:v1` by default, see config.py) and
 *reweighted, not regenerated* per scenario.
@@ -48,7 +48,7 @@ class Persona:
 
 def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
                           seed: int = 42) -> list[Persona]:
-    """Sample `n` personas via Gemini 3.1 Flash-Lite, following the Iloilo anchor."""
+    """Sample `n` personas via Azure OpenAI GPT-5.4, following the Iloilo anchor."""
     anchor = anchor or ILOILO_MODE_SHARE
     from pydantic import BaseModel
     from matrix_kernel.llm import LLMUnavailable, generate_chat_completion, make_client
@@ -81,7 +81,7 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
         )
     except LLMUnavailable as e:
         logger.warning(
-            "personas: Gemini unavailable after %d attempt(s) — falling back to "
+            "personas: Azure OpenAI unavailable after %d attempt(s) — falling back to "
             "the static seeded pool. (%s)", e.attempts, e)
         return _static_seeded_pool(n, anchor, seed)
 
@@ -103,14 +103,14 @@ def generate_persona_pool(n: int = 500, anchor: dict[str, float] | None = None,
         return pool[:n]
     except Exception as e:
         logger.warning(
-            "personas: unusable Gemini response (%s) — falling back to the "
+            "personas: unusable Azure OpenAI response (%s) — falling back to the "
             "static seeded pool.", e)
         return _static_seeded_pool(n, anchor, seed)
 
 
 def _static_seeded_pool(n: int, anchor: dict[str, float], seed: int) -> list[Persona]:
     """The static literature-anchored fallback pool (the Milestone-A seeding) —
-    runs when Gemini is unavailable or returns an unusable payload."""
+    runs when Azure OpenAI is unavailable or returns an unusable payload."""
     rng = random.Random(seed)
     modes, weights = list(anchor), list(anchor.values())
     return [
@@ -149,7 +149,7 @@ def warm_persona_pool(
     and the per-mode factors are recorded on the entry so the correction is glass-box
     (Inspect-resolvable, never silent). The deployed default uses the static literature-anchored
     pool (deterministic, on-anchor by construction → no correction needed); set
-    ``MATRIX_PERSONA_LLM=1`` to exercise the Gemini 3.1 Flash-Lite generator, whose drift is
+    ``MATRIX_PERSONA_LLM=1`` to exercise the Azure OpenAI GPT-5.4 generator, whose drift is
     what the reweighter corrects. Best-effort caching: a Redis failure never aborts warming.
     """
     from matrix_kernel.bias_auditor import audit_personas, reweight_pool

@@ -7,7 +7,7 @@ import {
 
 /**
  * Progress line while the run streams ("n/5 dimensions · m/17 results") and,
- * once DONE, the stage-timing summary (SUMO / modules / Gemini breakdown when
+ * once DONE, the stage-timing summary (SUMO / modules / Azure OpenAI breakdown when
  * the server provides `timings`; legacy `duration_ms` otherwise).
  * All numbers shown are received counts/timings — nothing is estimated.
  */
@@ -49,7 +49,7 @@ function DoneSummary({ runState }: { runState: RunState }) {
   const stages: { label: string; ms: number | undefined }[] = [
     { label: "SUMO", ms: timings?.sumo_ms },
     { label: "Modules", ms: timings?.modules_ms },
-    { label: "Gemini", ms: timings?.gemini_ms },
+    { label: "Azure OpenAI", ms: timings?.llm_ms },
   ];
   const knownStages = stages.filter(
     (s): s is { label: string; ms: number } => typeof s.ms === "number",

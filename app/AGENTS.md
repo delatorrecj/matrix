@@ -24,7 +24,7 @@
 - Simulation engine **Eclipse SUMO** (TraCI) — not OASIS/MiroFish.
 - **One unified kernel → five impact modules** (Behavioral/Social/Economic/Ecological/Societal).
 - LLMs **Azure OpenAI GPT-5.4** (orchestration/synthesis/personas) via
-  **`openai`**. **Never Gemini 1.5/2.0/3.1 or google-genai.**
+  **`openai`**. **Never Azure OpenAI or google-genai.**
 - **90-second** end-to-end budget (pre-warmed personas + nightly baseline + delta + parallel modules + streaming UI).
 - Stack: Next.js 14 + Tailwind v4 (`@tailwindcss/postcss`) + shadcn/ui; Mapbox GL + Deck.gl (TripsLayer); FastAPI + WebSocket; Supabase (Postgres+PostGIS) + ChromaDB + Redis; XGBoost.
 

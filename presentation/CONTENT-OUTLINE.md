@@ -3,7 +3,7 @@
 **Audience:** ASEAN AI Hackathon 2026 judges (Smart Cities track) — VC-grade business slides kept credible.
 **Format:** self-contained HTML deck → PDF (`deck/index.html`, `scripts/export-pdf.mjs`).
 **Through-line:** *honest confidence is the brand.* Every claim is sourced or explicitly labeled directional. We never trade trust for a bigger number.
-**Status of the build it pitches:** Milestone A+B done (kernel + 5 modules + WS/Gemini API + Next.js/Deck.gl frontend). Validation gates (Calderon RMSE, 2024 flood) are *planned, not shipped* — the deck says so.
+**Status of the build it pitches:** Milestone A+B done (kernel + 5 modules + WS/Azure OpenAI API + Next.js/Deck.gl frontend). Validation gates (Calderon RMSE, 2024 flood) are *planned, not shipped* — the deck says so.
 
 > This file is the rationale behind the slides. Your 10 requested sections are all covered; refinements and debunks are called out. **One addition is recommended:** a *Proof / What's-built* slide — the strongest judge asset now that the code genuinely runs.
 
@@ -22,7 +22,7 @@
 - **Debunk:** the absolute "no ASEAN platform does this" is unfalsifiable. Replace with a **feature survey** (PTV Vissim, Aimsun, ESRI CityEngine, Replica, UrbanFootprint, AnyLogic) showing the *combination* gap: NL input **+** 5 dimensions in one run **+** per-dimension confidence. Honest caveat on the slide: "based on our feature survey." (Mirrors [GTM §2.1](../docs/gtm-matrix.md).)
 
 ### 4. Solution
-- **Keep, tighten:** drop a project on a city's simulator → 90 s → 5 scored dimensions with confidence intervals + animated playback + cited Gemini narrative + exportable report.
+- **Keep, tighten:** drop a project on a city's simulator → 90 s → 5 scored dimensions with confidence intervals + animated playback + cited Azure OpenAI narrative + exportable report.
 
 ### 5. Three Features = UVP (exactly three, all verified built)
 1. **One unified kernel → five dimensions in one run.** All five score the *same* simulated reality, so they never contradict each other.
@@ -30,7 +30,7 @@
 3. **Plain language → 90-second real-time simulation.** A planner asks in words / drops a pin; no specialist, no modeling background.
 
 ### 6. How it Works
-- **Keep:** pipeline diagram (NL/map → Gemini orchestrator → unified SUMO + persona + bias-auditor kernel → one trajectory dataset → 5 parallel modules → synthesis → Deck.gl) + the 90 s mechanics (pre-warmed persona pool, delta-vs-nightly-baseline, parallel modules, streaming/progressive UI).
+- **Keep:** pipeline diagram (NL/map → Azure OpenAI orchestrator → unified SUMO + persona + bias-auditor kernel → one trajectory dataset → 5 parallel modules → synthesis → Deck.gl) + the 90 s mechanics (pre-warmed persona pool, delta-vs-nightly-baseline, parallel modules, streaming/progressive UI).
 - **Honesty note:** the 90 s budget is the **target** and holds with a *warm baseline, single user*; the current warm-run probe is ~123 s and Phase-6 optimization is the named next step. Say "target," show the architecture that earns it.
 
 ### 7. Value of the Solution
@@ -77,6 +77,6 @@
 
 ## Sources used on factual slides
 - ASEAN Clean Tourist City Award 2026 — PIA, Panay News, VisMin (ATF Cebu, Jan 30 2026; Iloilo's 2nd, prior cycle 2020–22). See [MATRIX.md References](../MATRIX.md).
-- Gemini 3.1 Pro released Feb 19 2026 — Google blog.
+- 
 - Competitor feature survey — [GTM §2.1](../docs/gtm-matrix.md).
 - Equations + provenance — [methods-matrix.md](../docs/methods-matrix.md). Data backing — [data/READINESS.md](../data/READINESS.md).

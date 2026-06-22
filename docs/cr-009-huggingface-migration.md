@@ -5,10 +5,10 @@
 **Author:** Antigravity (on behalf of User)
 
 ## Context
-The MATRIX architecture originally used Fly.io for hosting the FastAPI backend, SUMO Docker container, and Python workers. To optimize our deployment infrastructure, we are migrating the backend services to Hugging Face Spaces using Docker. The Next.js frontend will remain on Vercel. 
+The MATRIX architecture originally used Hugging Face Spaces for hosting the FastAPI backend, SUMO Docker container, and Python workers. To optimize our deployment infrastructure, we are migrating the backend services to Hugging Face Spaces using Docker. The Next.js frontend will remain on Vercel. 
 
 ## Decision
-- Decommission Fly.io deployment (`app/fly.toml`).
+- Decommission Hugging Face Spaces deployment (`app/fly.toml`).
 - Deploy the FastAPI backend and SUMO simulation engine as a Docker-based Hugging Face Space.
 - The frontend architecture (Vercel) remains unchanged.
 - Use Hugging Face Secrets for environment variable management instead of `fly secrets`.

@@ -30,8 +30,8 @@
 
 | Activity | Purpose | Data categories | Subjects | Recipients / sub-processors | Cross-border | Retention | Legal basis |
 |----------|---------|-----------------|----------|-----------------------------|--------------|-----------|-------------|
-| Simulation | impact scoring | **open/aggregated data only** (OSM, CCHAIN barangay, Overture) — synthetic personas, **no PII** | none (aggregate) | Fly.io, Supabase | US (Supabase/Fly) | run metadata | legitimate interest (no personal data) |
-| Scenario NL query | parse → plan + narrative | scenario text (planner-authored; not personal) | user (planner) | **Google (Gemini 3.1 API)** | US/Google | run trace | legitimate interest |
+| Simulation | impact scoring | **open/aggregated data only** (OSM, CCHAIN barangay, Overture) — synthetic personas, **no PII** | none (aggregate) | Hugging Face Spaces, Supabase | US (Supabase/Fly) | run metadata | legitimate interest (no personal data) |
+| Scenario NL query | parse → plan + narrative | scenario text (planner-authored; not personal) | user (planner) | **Google (Azure OpenAI GPT-5.4 API)** | US/Google | run trace | legitimate interest |
 | **PWA GPS traces** (`PRD-F10`) | behavioral calibration | **precise location**, device-anon ID | volunteer contributors | Supabase | US | minimize; aggregate then delete raw | **consent (explicit, opt-in)** |
 | Product analytics | usage metrics (PRD §5.5) | event telemetry, no PII | users | Supabase (events table) | US | 30 days | legitimate interest |
 
@@ -122,7 +122,7 @@
 | SUMO (EPL 2.0), OSMnx/FastAPI/Deck.gl (MIT), GraphRAG (MIT), libs | compatible; keep an **SBOM** (SPDX/CycloneDX) | — |
 | Data licenses: CCHAIN (open), PSA/WB (open gov / CC BY), Sentinel/Copernicus (free), CC BY 4.0 attributions | attribute each per INVENTORY | — |
 | Fonts (Geist — OFL/MIT) | compliant | — |
-| **Gemini output ownership / indemnity** (Google AUP + generative-AI terms) | review before commercial use | **Yes** |
+| **Azure OpenAI output ownership / indemnity** (Google AUP + generative-AI terms) | review before commercial use | **Yes** |
 | Product/brand name "MATRIX" trademark knockout | not done — "MATRIX" is a common mark; check class | **Yes** |
 | IP assignment from all contributors (team) | confirm for the hackathon team | review |
 

@@ -52,7 +52,7 @@ your code → glass-box-auditor PASS → eval-test-runner PASS → merge
 
 ## Key Constraints (read before coding)
 
-- **LLMs:** Gemini 3.1 Pro (orchestration) + Gemini 3.1 Flash-Lite (high-volume persona generation). Never Gemini 1.5 or 2.0.
+- **LLMs:** Azure OpenAI GPT-5.4 (orchestration) + Azure OpenAI GPT-5.4 (high-volume persona generation). Never Azure OpenAI 1.5 or 2.0.
 - **Simulation engine:** Eclipse SUMO via TraCI Python API.
 - **Stack:** Next.js 14 (App Router) · FastAPI · Supabase · Deck.gl · shadcn/ui. See [docs/build-matrix.md](docs/build-matrix.md) §3 for pinned versions.
 - **Equations:** Every number in the modules must map to [docs/methods-matrix.md](docs/methods-matrix.md) §3 (the glass-box ledger). Read this before coding any module.

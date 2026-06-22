@@ -133,7 +133,7 @@ def test_stage_timer_keys():
     with timer.stage("gemini"):
         pass
     t = timer.timings()
-    assert set(t) == {"sumo_ms", "modules_ms", "gemini_ms", "total_ms"}
+    assert set(t) == {"sumo_ms", "modules_ms", "llm_ms", "total_ms"}
     assert all(isinstance(v, int) for v in t.values())
 
 

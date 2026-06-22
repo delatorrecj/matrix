@@ -1,6 +1,6 @@
 """Synthesis narrative generator (PRD-F7; methods §4).
 
-Uses Gemini 3.1 Pro to generate per-dimension narratives from the module scores.
+Uses Azure OpenAI GPT-5.4 to generate per-dimension narratives from the module scores.
 Must cite equation_id + dataset_ids for any number it asserts.
 """
 from __future__ import annotations
@@ -36,8 +36,14 @@ def synthesize(results: list[DimensionResult], client: openai.AzureOpenAI | None
         results_text += f"- {r.dimension.title()} ({r.equation_id}): {r.metric} = {r.value:.2f} {r.unit} (Range: {r.range[0]:.2f} to {r.range[1]:.2f}). Confidence: {r.confidence}.\n"
     
     system_instruction = (
-        "You are the MATRIX Synthesis Agent. Your job is to write a cohesive, 2-3 paragraph "
-        "summary of the urban planning simulation results for Iloilo City. "
+        "You are the MATRIX Synthesis Agent. Your job is to write a cohesive summary of the urban planning simulation results for Iloilo City.\n"
+        "Structure your response EXACTLY with these three sections, using these exact uppercase headers:\n\n"
+        "EXECUTIVE SUMMARY\n"
+        "(2-3 paragraphs of synthesis)\n\n"
+        "ACTIONABLE RECOMMENDATIONS\n"
+        "(2-3 concrete interventions based on the data)\n\n"
+        "PERSONA PERSPECTIVES\n"
+        "(How 1-2 specific stakeholders, e.g. a commuter or business owner, view these results)\n\n"
         "CRITICAL RULE: Every time you state a number, you MUST include its Equation ID "
         "in brackets immediately after, for example: 'Trips increased by 450 [BEH-1].' "
         "Do not invent any numbers. Only use the numbers provided."
@@ -61,7 +67,7 @@ def synthesize(results: list[DimensionResult], client: openai.AzureOpenAI | None
         narrative = response.choices[0].message.content or ""
     except LLMUnavailable as e:
         logger.warning(
-            "synthesis: Gemini unavailable after %d attempt(s) — serving the "
+            "synthesis: Azure OpenAI unavailable after %d attempt(s) — serving the "
             "placeholder narrative. (%s)", e.attempts, e)
         narrative = "Synthesis narrative generation failed. Please see the raw data."
 

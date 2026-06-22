@@ -124,10 +124,10 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
     assert "duration_ms" in done  # pre-existing key, kept for back-compat
     timings = done["timings"]
     # Exact frontend contract -- do not change these keys.
-    assert set(timings) == {"sumo_ms", "modules_ms", "gemini_ms", "total_ms"}
+    assert set(timings) == {"sumo_ms", "modules_ms", "llm_ms", "total_ms"}
     assert all(isinstance(v, int) and v >= 0 for v in timings.values())
     assert timings["total_ms"] >= max(
-        timings["sumo_ms"], timings["modules_ms"], timings["gemini_ms"]
+        timings["sumo_ms"], timings["modules_ms"], timings["llm_ms"]
     )
     assert done["duration_ms"] == timings["total_ms"]
 
@@ -386,7 +386,7 @@ def test_db_seam_persists_run_and_results(fast_pipeline, client, monkeypatch):
     assert dims[1:] == ("run-1", 5)
     assert done[1:4] == ("persisted", "run-1", "done")
     assert isinstance(done[4], int)  # duration_ms
-    assert set(done[5]) == {"sumo_ms", "modules_ms", "gemini_ms", "total_ms"}  # timings
+    assert set(done[5]) == {"sumo_ms", "modules_ms", "llm_ms", "total_ms"}  # timings
 
 
 def test_db_seam_tolerates_legacy_signature(fast_pipeline, client, monkeypatch):

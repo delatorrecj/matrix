@@ -65,7 +65,7 @@ python scripts/seed_reference_scenarios.py                              # 8 cann
 | S-01 | Unparseable query | clarification prompt; no guess, no run |
 | S-02 | Network drops mid-stream | resume or clear retry; partial results preserved |
 | S-03 | No nightly baseline | cold-run notice; falls outside 90 s honestly (not a silent hang) |
-| S-04 | Gemini timeout/429 | backoff; cached parse for reference scenarios; degrade to baseline+delta |
+| S-04 | Azure OpenAI GPT-5.4 timeout/429 | backoff; cached parse for reference scenarios; degrade to baseline+delta |
 | S-05 | SUMO/network gap in a barangay | confidence floor → directional only |
 
 ### Abuse / Adversarial
@@ -74,7 +74,7 @@ python scripts/seed_reference_scenarios.py                              # 8 cann
 |----|--------|------------------|
 | AB-01 | Prompt injection in scenario text or retrieved GraphRAG content | treated as data; no tool fires; structured-plan only (SDD §8.1 LLM01) |
 | AB-02 | Insecure output (number/markup used as code) | output is data, escaped; never executed (LLM02) |
-| AB-03 | Cost bomb — rapid expensive sims | rate limit + Gemini spend cap; persona pool cached (LLM07) |
+| AB-03 | Cost bomb — rapid expensive sims | rate limit + Azure OpenAI GPT-5.4 spend cap; persona pool cached (LLM07) |
 | AB-04 | Tamper a run_id/scenario_id in URL | server-side checks; audit log read-only |
 
 ---

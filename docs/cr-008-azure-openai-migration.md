@@ -5,10 +5,10 @@
 **Author:** Antigravity (on behalf of User)
 
 ## Context
-The MATRIX architecture originally mandated Gemini 3.1 Pro for orchestration and synthesis, and Gemini 3.1 Flash-Lite for high-volume persona generation (see PRD-F2, PRD-F7, and SDD §8). Due to billing constraints on the Google side, a migration to an Azure OpenAI GPT-5.4 endpoint was proposed and approved by the User. 
+The MATRIX architecture originally mandated Azure OpenAI GPT-5.4 for orchestration and synthesis, and Azure OpenAI GPT-5.4 for high-volume persona generation (see PRD-F2, PRD-F7, and SDD §8). Due to billing constraints on the Google side, a migration to an Azure OpenAI GPT-5.4 endpoint was proposed and approved by the User. 
 
 ## Decision
-- Replace `google-genai` with the Azure OpenAI Python SDK (`openai`).
+- Replace `openai` with the Azure OpenAI Python SDK (`openai`).
 - Use the provided Azure OpenAI GPT-5.4 deployment (`gpt-5.4`) for **both** orchestration/synthesis and high-volume persona generation.
 - The glass-box citation guard mechanism remains identical. The LLM acts solely as a parser and synthesizer; all raw numbers and metrics remain strictly deterministic from the kernel.
 

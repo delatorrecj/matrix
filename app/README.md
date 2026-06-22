@@ -14,7 +14,7 @@ Nested inside the planning repo so the docs and the Iloilo data sit one clone aw
 app/
 ├── apps/
 │   ├── web/      Next.js 14 + Deck.gl frontend   (built — InspectDrawer, TripsLayer, e2e)
-│   └── api/      FastAPI + WebSocket gateway      (health + /scenario + /simulate stream + Gemini)
+│   └── api/      FastAPI + WebSocket gateway      (health + /scenario + /simulate stream + Azure OpenAI)
 ├── packages/
 │   ├── kernel/   SUMO/TraCI kernel + 5 glass-box impact modules (Phase 2–3)
 │   │   └── data/ iloilo.net.xml + iloilo.taz.xml (produced by Phase 1 pipeline)
@@ -39,7 +39,7 @@ python -m pytest -q     # → 15 passed, 7 skipped (no collection errors)
 # One test:
 python -m pytest tests/test_results.py::test_low_confidence_is_directional
 
-# API — health + /scenario + streaming /simulate (Gemini orchestrator/synthesis wired)
+# API — health + /scenario + streaming /simulate (Azure OpenAI orchestrator/synthesis wired)
 cd apps/api && uvicorn matrix_api.main:app --reload
 #   GET http://localhost:8000/health  ->  {"status":"ok",...}
 
@@ -62,6 +62,6 @@ cd apps/web && npm install && npm run dev   # http://localhost:3000 ; npm run te
 1. **Glass box** — no number ships without `equation_id` + `input_dataset_ids` + a
    *computed* confidence. `DimensionResult` enforces this at construction.
 2. **One kernel → five modules** — never fork into five simulators.
-3. **Verify-live-before-coding** the fast-movers (Gemini SDK, Next.js, Tailwind v4,
-   Deck.gl). Never Gemini 1.5/2.0.
+3. **Verify-live-before-coding** the fast-movers (Azure OpenAI SDK, Next.js, Tailwind v4,
+   Deck.gl). Never Azure OpenAI 1.5/2.0.
 4. **90-second** end-to-end budget.

@@ -142,7 +142,7 @@ describe("RunProgress", () => {
       {
         type: "DONE",
         duration_ms: 84210,
-        timings: { sumo_ms: 41000, modules_ms: 18300, gemini_ms: 12100, total_ms: 84210 },
+        timings: { sumo_ms: 41000, modules_ms: 18300, llm_ms: 12100, total_ms: 84210 },
       },
     ]);
     render(<RunProgress runState={done} />);
@@ -154,7 +154,7 @@ describe("RunProgress", () => {
     expect(stages).toHaveTextContent("41.0s");
     expect(stages).toHaveTextContent("Modules");
     expect(stages).toHaveTextContent("18.3s");
-    expect(stages).toHaveTextContent("Gemini");
+    expect(stages).toHaveTextContent("Azure OpenAI");
     expect(stages).toHaveTextContent("12.1s");
   });
 
@@ -419,7 +419,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
         type: "DONE",
         scenario_id: "scn-test",
         duration_ms: 84210,
-        timings: { sumo_ms: 41000, modules_ms: 18300, gemini_ms: 12100, total_ms: 84210 },
+        timings: { sumo_ms: 41000, modules_ms: 18300, llm_ms: 12100, total_ms: 84210 },
       });
     });
 

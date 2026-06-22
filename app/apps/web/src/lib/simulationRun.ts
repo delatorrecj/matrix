@@ -68,7 +68,7 @@ export interface RunError {
 export interface RunTimings {
   sumo_ms?: number;
   modules_ms?: number;
-  gemini_ms?: number;
+  llm_ms?: number;
   total_ms?: number;
 }
 
@@ -140,11 +140,11 @@ function parseTimings(raw: unknown): RunTimings | null {
   const timings: RunTimings = {};
   const sumo = asFiniteNumber(t.sumo_ms);
   const modules = asFiniteNumber(t.modules_ms);
-  const gemini = asFiniteNumber(t.gemini_ms);
+  const gemini = asFiniteNumber(t.llm_ms);
   const total = asFiniteNumber(t.total_ms);
   if (sumo !== null) timings.sumo_ms = sumo;
   if (modules !== null) timings.modules_ms = modules;
-  if (gemini !== null) timings.gemini_ms = gemini;
+  if (gemini !== null) timings.llm_ms = gemini;
   if (total !== null) timings.total_ms = total;
   return Object.keys(timings).length > 0 ? timings : null;
 }

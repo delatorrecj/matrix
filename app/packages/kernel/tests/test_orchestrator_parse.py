@@ -1,6 +1,6 @@
 """Orchestrator NL->Scenario mapping tests (no network -- a fake genai client is injected).
 
-The Gemini call itself is not under test (that's an eval, not a unit test); what is under
+The Azure OpenAI call itself is not under test (that's an eval, not a unit test); what is under
 test is the deterministic mapping ScenarioSchema -> Scenario v2: intervention typing,
 parameter assembly, the legacy corridor back-fill, and the ambiguity guard.
 """

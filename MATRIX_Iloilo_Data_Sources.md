@@ -312,7 +312,7 @@ Once your team commits to Iloilo, execute these in parallel on Day 1 (May 15–1
 - [ ] Register HERE Developer account (backup)
 - [ ] Register OpenWeather API key
 - [ ] Register Sentinel Hub account
-- [ ] Verify Google AI Studio access for Gemini 3.1 Flash-Lite
+- [ ] Verify Google AI Studio access for Azure OpenAI GPT-5.4
 
 **Track D — Infrastructure setup:**
 - [ ] Create GitHub org repo (public, MIT license)

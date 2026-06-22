@@ -42,7 +42,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | # | Task | Owner | Notes |
 |---|------|-------|-------|
 | 0.1 | Scaffold the MATRIX application monorepo: `apps/web` (Next.js 14 App Router), `apps/api` (FastAPI), `packages/kernel` (SUMO/TraCI + modules), `packages/data` (processing), `.claude/agents/` (SAD build agents), root `AGENTS.md` (materialized from [build-matrix.md](build-matrix.md)) | Jerico | **Decided: nested at `app/`** inside this repo (one clone, data co-located) — chosen over a separate repo at Gate 0 kickoff. ✅ scaffolded (kernel + API + agents). |
-| 0.2 | Toolchain: Python 3.12 (`uv`), Node 20, SUMO 1.x (Docker image), pinned per [build-matrix.md §3](build-matrix.md) | Jerico | **Verify-live-before-coding** the Gemini `google-genai` SDK, Next.js, Deck.gl, Tailwind v4 versions at scaffold — do not trust training memory. |
+| 0.2 | Toolchain: Python 3.12 (`uv`), Node 20, SUMO 1.x (Docker image), pinned per [build-matrix.md §3](build-matrix.md) | Jerico | **Verify-live-before-coding** the Azure OpenAI GPT-5.4 `openai` SDK, Next.js, Deck.gl, Tailwind v4 versions at scaffold — do not trust training memory. |
 | 0.3 | Local-first datastores: ChromaDB (local), Postgres+PostGIS (local/Supabase), Redis (local/Upstash). Cloud provisioning deferred to Phase 4 unless trivial. | Jerico | `.env` template; never commit secrets ([clr-matrix.md](clr-matrix.md)). |
 | 0.4 | **Manual / browser-gated economic data**: BIR ZV RDO 74 (`.xls`); PSA FIES 2023 + ASPBI 2022 (reachable via OpenStat PX-Web API — **scripted, not manual**); DOT visitor arrivals 2024. See [INVENTORY.md](../data/INVENTORY.md) for exact URLs/targets. | Jerico | **✅ Resolved 2026-06-04.** BIR ZV RDO 74 `.xls` (DO17-2021) downloaded + parsed → `data/processed/economic/bir_zonal_rdo74_2021.csv` (5,680 priced entries); FIES 2023 (incl. City of Iloilo) + ASPBI 2022 fetched via OpenStat. **`ECON-1` moves L→M** (CR-003, pending sign-off). Only DOT *regional* arrivals 2024 still ☐ — national-expenditure substitute in hand, no confidence-tier impact. |
 | 0.5 | Lock the build-blocking docs once their equations/IDs are final: **PRD, SDD, methods-matrix**. Draft → Locked; subsequent changes need a Change Record. | Jerico | Governance decision — owner's call. Locking `methods-matrix` means the equation registry (BEH/ECO/SOC/ECON/SOCI) is frozen as the contract the modules implement. **✅ Done — PRD + SDD + methods Locked 2026-06-03 (CR-001).** |
@@ -50,7 +50,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 ### Gate 0 — Foundation checkpoint
 - [x] App monorepo exists: `apps/api` (FastAPI health + WS) + `packages/kernel` (**5 tests pass**) + `packages/data` + root `AGENTS.md`. **`apps/web` intentionally deferred** (SCAFFOLD.md — verify-live at Phase 5).
 - [x] `import traci` + `sumolib` 1.27.0 verified (`app/.venv`). **SUMO Docker image deferred to Phase 2** (`ghcr.io/eclipse-sumo/sumo:latest`; not needed for Phase 1).
-- [~] Framework version-verify (`google-genai`/Next/Deck/Tailwind) — **deferred to when that code is written** (Phase 4/5); the rule is wired into `apps/web/SCAFFOLD.md` + [build-matrix.md §3](build-matrix.md).
+- [~] Framework version-verify (`openai`/Next/Deck/Tailwind) — **deferred to when that code is written** (Phase 4/5); the rule is wired into `apps/web/SCAFFOLD.md` + [build-matrix.md §3](build-matrix.md).
 - [x] Datastores reachable: Postgres+**PostGIS 3.4** (5432), Redis (6379, PONG), Chroma v2 (8001, HTTP 200) — all verified from host via `app/docker-compose.yml`.
 - [x] Economic data resolved: **BIR (DO17-2021) + FIES 2023 + ASPBI 2022 acquired**; DOT deferred-with-substitute (no confidence impact). Economic now solidly **M**.
 - [x] **PRD + SDD + methods-matrix Locked 2026-06-03 (CR-001)** — equation registry frozen as the module contract.
@@ -88,7 +88,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 |---|------|-------|----------|
 | 2.1 | Route generation from LPTRP 24 published routes + OSM ways → SUMO `.rou.xml` | Jerico | `iloilo.rou.xml` |
 | 2.2 | XGBoost baseline forecaster: CCHAIN + Overture/OSM trip generators → per-corridor trip volume prior | Jerico | `packages/kernel/baseline.py` |
-| 2.3 | Persona pool: ~500 commuter archetypes via **Gemini 3.1 Flash-Lite** (income / mode / trip-purpose weights), cached | Jerico | `personas:iloilo:v1` (Redis) |
+| 2.3 | Persona pool: ~500 commuter archetypes via **Azure OpenAI GPT-5.4** (income / mode / trip-purpose weights), cached | Jerico | `personas:iloilo:v1` (Redis) |
 | 2.4 | **Bias auditor** (`PRD-F6`): mode-share anchored to Iloilo ground truth; ±3% deviation triggers reweight; append-only public log | Jerico | `packages/kernel/bias_auditor.py` + `bias_audit` table |
 | 2.5 | Nightly baseline run: SUMO simulation of current state → baseline trajectory dataset, cached | Jerico | `baseline:iloilo:latest` (Redis) |
 | 2.6 | TraCI runner: `simulate(scenario) → trajectory_dataset` computed as a **delta vs. baseline** | Jerico | `packages/kernel/runner.py` |
@@ -128,10 +128,10 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 **Goal:** Wire the kernel to the network. NL/map input → sim plan → stream per-dimension results progressively, then synthesize.
 
 | 4.1 | WebSocket progressive stream endpoint: `/simulate/{id}` → `ACCEPTED` → `PLAYBACK_FRAME`* → `DIMENSION_RESULT`* → `SYNTHESIS` → `DONE` | Yushin | `apps/api/main.py` |
-| 4.2 | NL scenario orchestrator (Gemini 3.1 Pro): "Add a BRT lane on Diversion Rd" → `Scenario` JSON (`PRD-F2`, `PRD-F8`) | Jerico | `packages/kernel/orchestrator.py` |
-| 4.3 | Synthesis narrative (Gemini 3.1 Pro): narrative prose from the 5 dimension scores | Jerico | `apps/api/synthesis.py` |
+| 4.2 | NL scenario orchestrator (Azure OpenAI GPT-5.4): "Add a BRT lane on Diversion Rd" → `Scenario` JSON (`PRD-F2`, `PRD-F8`) | Jerico | `packages/kernel/orchestrator.py` |
+| 4.3 | Synthesis narrative (Azure OpenAI GPT-5.4): narrative prose from the 5 dimension scores | Jerico | `apps/api/synthesis.py` |
 | 4.4 | **Citation guard**: filter out any synthesis claim that asserts a number but lacks an inline `[EQ-ID]` citation | Jerico | `packages/kernel/citation_guard.py` |
-| 4.5 | Cloud deploy: Fly.io (FastAPI + SUMO Docker + worker), Redis + Supabase wired; SUMO pre-warm on deploy | Jerico | First time the cloud path is exercised end-to-end. |
+| 4.5 | Cloud deploy: Hugging Face Spaces (FastAPI + SUMO Docker + worker), Redis + Supabase wired; SUMO pre-warm on deploy | Jerico | First time the cloud path is exercised end-to-end. |
 
 ### Gate 4 — API checkpoint
 - [x] API client connects to WS and receives the progressive stream shape (playback frames + 5 module results + templated synthesis).
@@ -197,7 +197,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 7.2 | **One Iloilo CPDO planner** walks the demo; capture their reaction | Jerico | Highest-leverage non-technical move — external validation. |
 | 7.3 | Pitch deck (from [gtm-matrix.md](gtm-matrix.md)); Hormozi-warm voice, every claim backed by an on-screen number | Jerico + Rica + Russell | Lead with the counterfactual framing: *"what would happen if we built X"*, not a worse live-IoT simulator. |
 | 7.4 | Demo video (OBS, ≤ 5 min) showing the full end-to-end incl. an Inspect drill-down | Yushin | — |
-| 7.5 | Final QA sweep: confidence labels on all outputs, no Gemini 1.5/2.0 references anywhere, license/attribution (ODbL) + RA 10173 banner present ([clr-matrix.md](clr-matrix.md)) | Maria/Rica/Russell | — |
+| 7.5 | Final QA sweep: confidence labels on all outputs, no Azure OpenAI GPT-5.4 1.5/2.0 references anywhere, license/attribution (ODbL) + RA 10173 banner present ([clr-matrix.md](clr-matrix.md)) | Maria/Rica/Russell | — |
 
 ### Gate 7 — Submission checkpoint
 - [ ] Canonical scenario runs flawlessly within budget, repeatedly.
@@ -221,7 +221,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | 8.4 | **Facility demand-redistribution module** — gravity trip deltas (method `BEH-4-PROVISIONAL`) (→ #4) | Jerico | `…/demand_delta.py` |
 | 8.5 | **Real VAL-01/VAL-02 gates** — computed Calderon-2014 RMSE + 2024 flood IoU + `validation_report.json` (Calderon fixture sourced; flood fixture **PROVISIONAL**) (→ #5) | Jerico | `validation_report.json` |
 | 8.6 | **City-agnostic `CityConfig` layer** — Iloilo = zero-change default (→ #6) | Jerico | `CityConfig` |
-| 8.7 | **LLM resilience** — retry/backoff, hard timeout, typed `LLMUnavailable` (→ #7) | Jerico | Gemini wrapper |
+| 8.7 | **LLM resilience** — retry/backoff, hard timeout, typed `LLMUnavailable` (→ #7) | Jerico | Azure OpenAI GPT-5.4 wrapper |
 | 8.8 | **API persistence** — Postgres/PostGIS schema, db layer (in-memory fallback), wired `/scenario`,`/runs`,`/audit` + `GET /validation` (→ #8) | Jerico | `schema.sql`, db layer |
 | 8.9 | **WS runtime hardening** — per-stage timings in `DONE`, stage timeouts, typed `ERROR` + `QUEUED` events, concurrency semaphore, dependency-aware `/health` (→ #9) | Jerico | hardened WS runtime |
 | 8.10 | **Auth + rate limit + CORS** — env-gated, default off; WS honors the key (→ #10) | Jerico | auth middleware |
@@ -251,9 +251,9 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | Risk | Severity | Mitigation |
 |------|----------|------------|
 | **Solo-dev capacity** — teammates unavailable as of 2026-06-04 | **High** | Collapse to the critical path only: data → baseline → one module → thin API → minimal UI. Defer Track B parallelism, the PWA, and multi-district breadth until the team returns. Protect the end-to-end glass-box slice over feature breadth. |
-| SUMO cold-start on Fly.io consumes the 90 s budget | **High** | Pre-warm container + hot nightly baseline + delta runs; profile first at Gate 2, attack at Gate 6. |
+| SUMO cold-start on Hugging Face Spaces consumes the 90 s budget | **High** | Pre-warm container + hot nightly baseline + delta runs; profile first at Gate 2, attack at Gate 6. |
 | BIR zonal-values machine-readability (was: PDF scan-only) | **Resolved 2026-06-04** | Acquired as machine-readable `.xls` (DO17-2021, Sheet 9), parsed to `bir_zonal_rdo74_2021.csv` (5,680 entries) → `ECON-1` L→M (CR-003, pending sign-off). CCHAIN RWI + nighttime lights remain the barangay-level proxy. |
-| Gemini 3.1 Flash-Lite rate limits on the 500-persona batch | Medium | Generate once, cache to Redis (`personas:iloilo:v1`); reuse the same pool for all demo runs. |
+| Azure OpenAI GPT-5.4 rate limits on the 500-persona batch | Medium | Generate once, cache to Redis (`personas:iloilo:v1`); reuse the same pool for all demo runs. |
 | Phase 2 overruns on SUMO network-import complexity | Medium | Timebox at Gate 2; fallback = NetworkX graph + synthetic trajectory good enough to demo the five modules and the glass-box story. |
 | Mode-share calibration is literature-derived, not a live travel survey | Ongoing | Carry Behavioral behavior at **M**; show the H/M/L label honestly. Bias auditor + confidence layer turn this into a trust feature, not a hidden gap. **(Phase 8: still uncalibrated — carried, not closed.)** |
 | End-to-end ~123 s exceeds the 90 s budget | Ongoing | Phase 8 (PR #9) made **per-stage timings visible in the `DONE` event** so the dominant cost can be attacked precisely; the budget is not yet met. |

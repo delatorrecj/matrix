@@ -1,4 +1,4 @@
-"""Tests for the resilient Gemini wrapper (matrix_kernel.llm) and its call sites.
+"""Tests for the resilient Azure OpenAI wrapper (matrix_kernel.llm) and its call sites.
 
 All bare-mode: fake/stub clients only, no network, no API key. Covers retry
 classification (429/5xx/transport vs. 4xx), exponential backoff + jitter, the
@@ -224,7 +224,7 @@ def _result():
 
 def test_synthesis_falls_back_on_llm_unavailable(monkeypatch, caplog):
     def _unavailable(*args, **kwargs):
-        raise LLMUnavailable("Gemini (gemini-3.1-pro) unavailable after 3 attempt(s)",
+        raise LLMUnavailable("Azure OpenAI (gpt-5.4) unavailable after 3 attempt(s)",
                              attempts=3)
     monkeypatch.setattr("matrix_kernel.synthesis.generate_chat_completion", _unavailable)
     with caplog.at_level(logging.WARNING, logger="matrix_kernel.synthesis"):
@@ -254,7 +254,7 @@ def test_synthesis_empty_response_text_is_blocked_not_crashed(monkeypatch):
 
 def test_personas_fall_back_to_static_pool_on_llm_unavailable(monkeypatch, caplog):
     def _no_client():
-        raise LLMUnavailable("could not construct Gemini client", attempts=0)
+        raise LLMUnavailable("could not construct Azure OpenAI client", attempts=0)
     monkeypatch.setattr(llm, "make_client", _no_client)
     with caplog.at_level(logging.WARNING, logger="matrix_kernel.personas"):
         pool = generate_persona_pool(n=50, seed=7)
@@ -284,5 +284,5 @@ def test_personas_fall_back_on_unusable_response(monkeypatch, caplog):
                         lambda *a, **k: _FakeResponse("not json", parsed=None))
     with caplog.at_level(logging.WARNING, logger="matrix_kernel.personas"):
         pool = generate_persona_pool(n=10, seed=3)
-    assert "unusable Gemini response" in caplog.text
+    assert "unusable Azure OpenAI response" in caplog.text
     assert pool == personas._static_seeded_pool(10, ILOILO_MODE_SHARE, 3)

@@ -3,7 +3,7 @@
 **Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6)
 **Backs:** [prd-matrix.md](prd-matrix.md) `PRD-F14` · [sdd-matrix.md](sdd-matrix.md) · data IDs from [../data/INVENTORY.md](../data/INVENTORY.md)
 
-> **MATRIX is a glass box, not a black box.** Every number it outputs is **derived by an explicit equation from named data**, carries a **confidence tier computed by a rule**, and is **reproducible and citable**. If a number cannot be traced through this ledger, it does not ship. The LLM (Gemini) *orchestrates and narrates with citations* — it **never originates a number**; all scores come from the deterministic kernel and the equations below.
+> **MATRIX is a glass box, not a black box.** Every number it outputs is **derived by an explicit equation from named data**, carries a **confidence tier computed by a rule**, and is **reproducible and citable**. If a number cannot be traced through this ledger, it does not ship. The LLM (Azure OpenAI) *orchestrates and narrates with citations* — it **never originates a number**; all scores come from the deterministic kernel and the equations below.
 
 ---
 
@@ -68,7 +68,7 @@ A dimension flagged **Low** renders as *directional only* (`PRD-F5`) — never a
 **What the user sees for a Low result:**
 1. **Dimension Card:** score is replaced with a `—` or a range label; confidence chip shows `L` in amber with a warning glyph; "Directional only" badge is shown.
 2. **Inspect Drawer:** the *capping factor* is printed explicitly (e.g. "Capped by: heuristic method — `_TRIPS_PER_CAPACITY = 8` PROVISIONAL"), so a planner knows exactly why.
-3. **Narrative:** Gemini synthesis cites only the directional direction ("likely reduces…") — never a precise number — and the citation guard blocks any precise number from an L-tier result.
+3. **Narrative:** Azure OpenAI GPT-5.4 synthesis cites only the directional direction ("likely reduces…") — never a precise number — and the citation guard blocks any precise number from an L-tier result.
 
 **Dataset tier ledger** (authoritative: `packages/kernel/matrix_kernel/confidence.py` `DATASET_TIERS`; tiers below ratified CR-007 PR 6 from [data/INVENTORY.md](../data/INVENTORY.md)):
 
@@ -156,12 +156,12 @@ Each non-trivial component documents what it does and how its output is made tra
 
 | Component | Purpose | Inputs → Output | Grounding | Known limits / failure mode | Traceability hook |
 |---|---|---|---|---|---|
-| **Orchestrator** (Gemini 3.1 Pro) | NL/map → structured sim plan | query → JSON plan | GraphRAG retrieval (OSM, gazetteer) injected into prompt | mis-parse → clarification prompt (never guess) | `run_trace.retrieved_chunks` and `prompt` params |
+| **Orchestrator** (Azure OpenAI GPT-5.4) | NL/map → structured sim plan | query → JSON plan | GraphRAG retrieval (OSM, gazetteer) injected into prompt | mis-parse → clarification prompt (never guess) | `run_trace.retrieved_chunks` and `prompt` params |
 | **Persona generator** (Flash-Lite) | commuter persona pool | archetypes → agents | mode-share anchor | LLM bias → bias auditor reweights | `bias_audit_log` |
 | **Bias auditor** (Python) | enforce mode-share fairness | persona batch → pass/reweight | Iloilo ground truth (Calderon2014) | anchor stale → flagged | public `bias_audit_log` |
 | **SUMO kernel** (TraCI) | physical trajectories | net + agents → per-tick dataset | deterministic physics | net gaps → confidence floor | seed + net version in `simulation_runs` |
 | **XGBoost baseline** | corridor volume forecast | history → baseline | trained on open series | extrapolation risk | model version stamped |
-| **Synthesis** (Gemini 3.1 Pro) | narratives + report | scores → prose | GraphRAG retrieval + **must cite numbers + sources** | hallucination → citation guard rejects uncited claims | citations resolve to `equation_id` + `dataset_ids` (not RAG text) |
+| **Synthesis** (Azure OpenAI GPT-5.4) | narratives + report | scores → prose | GraphRAG retrieval + **must cite numbers + sources** | hallucination → citation guard rejects uncited claims | citations resolve to `equation_id` + `dataset_ids` (not RAG text) |
 
 **Citation guard:** synthesis narrative claims that assert a number must reference an `equation_id` and its `input_dataset_ids`; uncited quantitative claims are blocked from render.
 
@@ -203,7 +203,7 @@ The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index 
 - **Query Annotation:** The orchestrator annotates the query before sending it to the LLM:
   `Ano matabo kung siraduhon ang merkado kag ang tulay sa forbes? [GAZETTEER HIT PROVISIONAL-id: 'Iloilo Central Market' (OSM: way/87654321, SUMO Edge: E_central_mkt_front)] [GAZETTEER HIT PROVISIONAL-id: 'Forbes Bridge' (OSM: way/12345678, SUMO Edge: E_forbes_bridge)]`
 - **GraphRAG Retrieval:** The system retrieves top-k chunks from ChromaDB and injects them as `Relevant Local Context: [source]: text`.
-- **LLM Parse:** The Gemini model parses the annotated string, extracts the canonical location, and sets the structured geometry/SUMO edges based *only* on the explicitly provided gazetteer IDs.
+- **LLM Parse:** The Azure OpenAI GPT-5.4 model parses the annotated string, extracts the canonical location, and sets the structured geometry/SUMO edges based *only* on the explicitly provided gazetteer IDs.
 
 ---
 
@@ -257,7 +257,7 @@ A run is reproducible: `simulation_runs` records the scenario params, **random s
 | SUMO network (all modules) | `OSM-ILO` | OpenStreetMap Iloilo extract — roads, routes, POIs, heritage | [INVENTORY](../data/INVENTORY.md#osm-ilo) | **H** |
 | SUMO network (all modules) | `OVERTURE` | Overture Maps buildings + places + transportation | [INVENTORY](../data/INVENTORY.md#overture) | **H** |
 | SUMO network (all modules) | `SUMO-NET` | Derived network from OSM via netconvert (network physics) | [INVENTORY](../data/INVENTORY.md#osm-ilo) | **H** |
-| Persona pool (all modules) | `PERSONA-POOL` | ~500 commuter archetypes — Gemini Flash-Lite generated, bias-audited to mode-share anchor | [INVENTORY](../data/INVENTORY.md) | **H** |
+| Persona pool (all modules) | `PERSONA-POOL` | ~500 commuter archetypes — Azure OpenAI GPT-5.4 Flash-Lite generated, bias-audited to mode-share anchor | [INVENTORY](../data/INVENTORY.md) | **H** |
 | Mode-share anchor (BEH-2, audit) | `Calderon2014` | Calderon 2014 Iloilo BRT study — literature mode-share ground-truth anchor | [INVENTORY](../data/INVENTORY.md#lit-calderon) | **M** |
 | Barangay socioeconomic (multi-module) | `CCHAIN` | Project CCHAIN — 20-yr barangay climate/socioeco/health, 180 Iloilo barangays | [INVENTORY](../data/INVENTORY.md#cchain) | **H** |
 

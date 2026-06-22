@@ -4,7 +4,7 @@
   ACCEPTED -> [QUEUED] -> PLAYBACK_FRAME* -> EDGE_COUNTS -> DIMENSION_RESULT (per module, provenance intact)
   -> SYNTHESIS (templated; Azure OpenAI synthesis is Phase 4) -> DONE
 Any stage failure emits a typed ERROR event before closing -- never a silent drop.
-DONE carries per-stage timings {sumo_ms, modules_ms, gemini_ms, total_ms} (RFC-001
+DONE carries per-stage timings {sumo_ms, modules_ms, llm_ms, total_ms} (RFC-001
 latency budget visibility). Stage budgets, the concurrency gate, and the dependency
 health checks live in matrix_api.runtime so the handler stays thin.
 
@@ -255,10 +255,6 @@ def get_validation() -> dict:
         "source": "matrix_kernel.validation",
         "note": "live module results (no validation_report.json found)",
     }
-
-@app.post("/report/{run_id}")
-def generate_report(run_id: str) -> dict:
-    return {"run_id": run_id, "status": "stub"}
 
 
 # ─── persistence seam for the WS pipeline (wired post-merge by the WS-handler owner) ────

@@ -51,7 +51,7 @@ class Scenario:
 
     v1 (Milestone A) carried only `corridor` + `lanes_closed` -- every query was a lane
     closure. v2 adds `intervention_type`, `location`, `geometry`, `parameters` so the
-    Gemini orchestrator (PRD-F2) can express closures, speed changes, and capacity
+    Azure OpenAI orchestrator (PRD-F2) can express closures, speed changes, and capacity
     changes. Back-compat: `corridor`/`lanes_closed` keep their positions and defaults,
     and a v1 construction (`Scenario(id, desc, corridor=..., lanes_closed=...)`) behaves
     exactly as before (it *is* a lane_closure).

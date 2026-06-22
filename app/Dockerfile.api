@@ -25,9 +25,9 @@ COPY apps/api ./apps/api
 # Install kernel + API (uv resolves eclipse-sumo + all transitive deps)
 RUN uv pip install --system --no-cache -e packages/kernel -e apps/api
 
-# Net + demand files are gitignored large assets.  Mount a Fly persistent volume
-# at /data before the first deploy (see fly.toml [mounts] + deploy runbook in
-# docs/ops-matrix.md §7).  The env vars below tell the kernel where to look;
+# Net + demand files are gitignored large assets.  Mount a Hugging Face Space persistent volume
+# at /data before the first deploy (see deploy runbook in docs/ops-matrix.md §7).
+# The env vars below tell the kernel where to look;
 # a missing file is detected per-simulate call and surfaces as a clear error —
 # it is NOT a startup failure so /health stays green.
 ENV MATRIX_NET_PATH=/data/iloilo.net.xml \

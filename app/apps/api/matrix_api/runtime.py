@@ -3,7 +3,7 @@
 Everything heavier than a send_json lives here so main.py stays thin:
 
   StageTimer     -- per-stage wall-clock timings for the DONE event. The shape
-                    {sumo_ms, modules_ms, gemini_ms, total_ms} is a frontend
+                    {sumo_ms, modules_ms, llm_ms, total_ms} is a frontend
                     contract -- do not rename keys.
   run_stage      -- asyncio.wait_for wrapper that converts a timeout into a typed
                     StageTimeout carrying the stage name (mapped to an ERROR event).
@@ -70,7 +70,7 @@ class StageTimer:
     """Collects per-stage wall-clock timings (ms) for the DONE event.
 
     Stage names map to timing keys as f"{name}_ms"; timings() adds total_ms
-    measured from construction. The DONE shape {sumo_ms, modules_ms, gemini_ms,
+    measured from construction. The DONE shape {sumo_ms, modules_ms, llm_ms,
     total_ms} is consumed by the frontend -- keep the keys exact.
     """
 

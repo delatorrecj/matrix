@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Jerico (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-09 — reconciled with Phase 4/5/6 integrations (Vercel/Fly.io, Next.js frontend, Playwright & Vitest testing suites).
+**Last reconciled:** 2026-06-09 — reconciled with Phase 4/5/6 integrations (Vercel/Hugging Face Spaces, Next.js frontend, Playwright & Vitest testing suites).
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **SAD:** [sad-matrix.md](sad-matrix.md)
 
 > The spec→code bridge. Materialized to the app monorepo's root **[`../app/AGENTS.md`](../app/AGENTS.md)** at scaffold — the app is **nested at `app/`** in this repo (one clone), not a separate repo. Owners per [PRD §10](prd-matrix.md).
@@ -54,7 +54,7 @@ Specialist build agents are in the [SAD](sad-matrix.md), materialized to `.claud
 |-------|------------|-----|--------------------|
 | Language | Python · TypeScript | 3.12 · 5.x | ✔ |
 | Sim kernel | Eclipse SUMO (TraCI) + OSMnx | latest stable | eclipse.dev/sumo |
-| LLM | **Gemini 3.1 Pro + Flash-Lite** via **`google-genai`** SDK | 3.1 | ai.google.dev |
+| LLM | **Azure OpenAI GPT-5.4 + Flash-Lite** via **`openai`** SDK | 3.1 | ai.google.dev |
 | Frontend | Next.js (App Router) + Tailwind + shadcn/ui | 14+ / v4 | nextjs.org, tailwindcss.com |
 | Map/3D | Mapbox GL JS + Deck.gl (TripsLayer) | current | deck.gl |
 | Backend | FastAPI + uvicorn + websockets | current | fastapi.tiangolo.com |
@@ -65,8 +65,8 @@ Specialist build agents are in the [SAD](sad-matrix.md), materialized to `.claud
 ### Deprecations — DO NOT use the stale form (overrides memory)
 | ❌ Stale | ✅ Current | Why |
 |---------|-----------|-----|
-| Gemini **1.5 / 2.0** | **Gemini 3.1** (Pro + Flash-Lite) | 1.5 shut down; 2.0 shut down 2026-06-01 — before submission (MATRIX.md §6) |
-| `google-generativeai` SDK | **`google-genai`** (unified SDK) | verify import shape against current docs |
+| Azure OpenAI GPT-5.4 **1.5 / 2.0** | **Azure OpenAI GPT-5.4** (Pro + Flash-Lite) | 1.5 shut down; 2.0 shut down 2026-06-01 — before submission (MATRIX.md §6) |
+| `google-generativeai` SDK | **`openai`** (unified SDK) | verify import shape against current docs |
 | **OASIS / MiroFish** as the simulator | **SUMO** | OASIS/MiroFish simulate social media, not urban agents (MATRIX.md §6) |
 | Tailwind v3 PostCSS plugin (`tailwindcss`) | **`@tailwindcss/postcss`** (v4) | taste-skill §3.A |
 | `framer-motion` import | **`motion/react`** | taste-skill §3.A |
@@ -74,7 +74,7 @@ Specialist build agents are in the [SAD](sad-matrix.md), materialized to `.claud
 | Five independent simulators | **one unified kernel → 5 modules** | cross-dimension consistency (PRD-F1) |
 | A number emitted without provenance | **always `equation_id` + `input_dataset_ids` + confidence** | glass-box (PRD-F14) |
 
-**Verify-live-before-coding:** the Gemini SDK, Next.js, Deck.gl, Tailwind. **Self-anneal:** add a row whenever drift is caught.
+**Verify-live-before-coding:** the Azure OpenAI GPT-5.4 SDK, Next.js, Deck.gl, Tailwind. **Self-anneal:** add a row whenever drift is caught.
 
 ---
 
@@ -97,8 +97,8 @@ def score(dim_input, datasets) -> DimensionResult:
 ```
 *Why:* no number ships without its equation, inputs, and confidence. The `glass-box-auditor` (SAD-A2) rejects results missing these.
 
-### Gemini call (synthesis) — *shape only; verify `google-genai` API before coding*
-Pattern: cached static system prefix (Iloilo context + mode-share anchors) + retrieved GraphRAG chunks; **the narrative must cite `equation_id` + `dataset_ids`** for any number (citation guard, methods §4); on 429 → backoff + cached parse. *Confirm the exact SDK call shape against current `google-genai` docs (§3) — do not copy from memory.*
+### Azure OpenAI GPT-5.4 call (synthesis) — *shape only; verify `openai` API before coding*
+Pattern: cached static system prefix (Iloilo context + mode-share anchors) + retrieved GraphRAG chunks; **the narrative must cite `equation_id` + `dataset_ids`** for any number (citation guard, methods §4); on 429 → backoff + cached parse. *Confirm the exact SDK call shape against current `openai` docs (§3) — do not copy from memory.*
 
 ### WebSocket streaming consumer (frontend) — *verify Deck.gl/Next version*
 Pattern: consume `WS /simulate/{id}` events (RFC §3); start TripsLayer playback on first `PLAYBACK_FRAME`; fill each Dimension Card on its `DIMENSION_RESULT`; every rendered number gets an Inspect affordance (DSD §12). *Confirm Deck.gl TripsLayer + Next App Router conventions against pinned versions.*
@@ -110,11 +110,11 @@ Follow [`data/fetch/fetch_open.py`](../data/fetch/fetch_open.py): stdlib, idempo
 
 ## 5. Conventions & Guardrails
 
-**Repo layout (nested monorepo at `app/`, as built):** `apps/web` (Next.js 14 + Deck.gl, built — InspectDrawer, TripsLayer, e2e) · `apps/api` (FastAPI + WS: health + `/scenario` + streaming `/simulate` + Gemini orchestrator/synthesis) · `packages/kernel` (SUMO/TraCI + 5 glass-box modules) · `packages/data` (processing pipeline → `build_network.py`) · `data/` (this repo's raw data + fetch scripts) · `docs/` (this suite).
+**Repo layout (nested monorepo at `app/`, as built):** `apps/web` (Next.js 14 + Deck.gl, built — InspectDrawer, TripsLayer, e2e) · `apps/api` (FastAPI + WS: health + `/scenario` + streaming `/simulate` + Azure OpenAI GPT-5.4 orchestrator/synthesis) · `packages/kernel` (SUMO/TraCI + 5 glass-box modules) · `packages/data` (processing pipeline → `build_network.py`) · `data/` (this repo's raw data + fetch scripts) · `docs/` (this suite).
 
 **Always:** validate external input at the boundary (Pydantic/Zod); **every emitted number carries `equation_id` + `input_dataset_ids` + confidence**; tag confidence on every dimension; cite sources in narratives.
 
-**Never:** commit secrets or `data/raw`; use **Gemini 1.5/2.0**; use **OASIS/MiroFish**; emit a number the LLM originated; fake precision; use a §3-deprecated API from memory.
+**Never:** commit secrets or `data/raw`; use **older models**; use **OASIS/MiroFish**; emit a number the LLM originated; fake precision; use a §3-deprecated API from memory.
 
 **Tests:** every Must-Have ships with QAD happy + sad + abuse coverage; the **glass-box gate (TRACE-01..04)** and **validation gates** must pass. Run the eval suite before "done."
 
@@ -133,8 +133,8 @@ Follow [`data/fetch/fetch_open.py`](../data/fetch/fetch_open.py): stdlib, idempo
 | Target | File | Notes |
 |--------|------|-------|
 | Canonical | `docs/build-matrix.md` | edit here |
-| App agents | `app/AGENTS.md` | quick-reference materialized from this doc at scaffold; auto-read by Codex/Cursor/Gemini/Claude Code when in `app/` |
+| App agents | `app/AGENTS.md` | quick-reference materialized from this doc at scaffold; auto-read by Codex/Cursor/Claude Code when in `app/` |
 | Claude Code | `CLAUDE.md` (repo root) | full code-orientation guide (Working in `app/`, commands, guardrails) — not a thin pointer |
-| Cursor / Gemini | `.cursor/rules/build.mdc` · `GEMINI.md` | pointers |
+| Cursor / Azure OpenAI GPT-5.4 | `.cursor/rules/build.mdc` · `GEMINI.md` | pointers |
 
 Materialize `app/AGENTS.md` from this doc on any significant guardrail change; re-check `CLAUDE.md` for drift. Root copies are build artifacts, not sources of truth.

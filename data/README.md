@@ -41,7 +41,7 @@ Scripts are **idempotent** — they skip files already present. Re-run any time 
 ## API keys (Tier B only)
 
 Some sources need a free key. Copy `.env.example` → `.env` (gitignored) and fill in:
-`TOMTOM_API_KEY`, `OPENWEATHER_API_KEY`, `OPENAQ_API_KEY`, `GEMINI_API_KEY`, `HERE_API_KEY`.
+`TOMTOM_API_KEY`, `OPENWEATHER_API_KEY`, `OPENAQ_API_KEY`, `AZURE_OPENAI_API_KEY`, `HERE_API_KEY`.
 
 ## Principles
 

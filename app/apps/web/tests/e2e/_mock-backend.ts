@@ -34,7 +34,7 @@ const SYNTHESIS = {
 const DONE = {
   type: "DONE",
   duration_ms: 8200,
-  timings: { sumo_ms: 3000, modules_ms: 2000, gemini_ms: 3200, total_ms: 8200 },
+  timings: { sumo_ms: 3000, modules_ms: 2000, llm_ms: 3200, total_ms: 8200 },
 } as const;
 
 /** Full canned stream, in server-event order. */

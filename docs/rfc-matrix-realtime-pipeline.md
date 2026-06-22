@@ -39,7 +39,7 @@ Four levers (MATRIX.md §5.2), composed:
 
 ```mermaid
 graph LR
-  Q[scenario] --> O[Gemini Pro parse+plan]
+  Q[scenario] --> O[Azure OpenAI parse+plan]
   O --> D{baseline exists?}
   D -->|yes| P[perturb baseline: re-route affected agents]
   D -->|no| C[cold run - falls outside 90s, flagged]
@@ -49,7 +49,7 @@ graph LR
   T --> M[5 modules in parallel]
   T -. stream .-> UI[playback frames]
   M -. stream .-> UI[dimension cards + confidence]
-  M --> S[Gemini Pro synthesis - cited] --> UI
+  M --> S[Azure OpenAI synthesis - cited] --> UI
 ```
 
 **Architecture changes (all within SDD §2):** a nightly **baseline job**; Redis keys for **persona pool** + **baseline trajectory**; a **WebSocket streaming protocol** (below); a **parallel module executor**; `run_trace` logging for glass-box.
@@ -88,20 +88,20 @@ Client consumes the WS via a store; **progressive render** — playback starts o
 | Full re-simulation per scenario | City-scale SUMO + persona regen = minutes; blows the 90 s budget by an order of magnitude |
 | Async / batch (return results later) | Kills the real-time judging moment (Option C); the animated playback is the differentiator |
 | Pure-LLM "simulate the city" (no SUMO) | **Black box** + non-reproducible + slow; the numbers wouldn't be traceable — violates the glass-box mandate (`PRD-F14`) |
-| Regenerate personas per scenario | Gemini latency + cost; defeated by pre-warm + reweight |
+| Regenerate personas per scenario | Azure OpenAI GPT-5.4 latency + cost; defeated by pre-warm + reweight |
 | Sequential module execution | ~5× module time; blows budget; parallel on one dataset is both faster and consistency-preserving |
 
 ---
 
 ## 5. AI / Agent Implementation Notes
 
-**Models:** Gemini 3.1 Pro (parse + synthesis), Flash-Lite (persona pool, cached). **Glass-box constraint:** synthesis claims that assert a number must cite an `equation_id` + `dataset_ids`; the numbers come from the kernel/equations, never the LLM (see [methods-matrix.md](methods-matrix.md) §4 citation guard). **Prompt strategy:** cached static system prefix (Iloilo context + mode-share anchors). **Edge cases:** unparseable scenario → clarification, no run; data-sparse dimension → `directional:true`; Gemini 429 → backoff + cached parse for reference scenarios. **Token budget:** persona work on Flash-Lite free tier (cached); Pro low call count (1 parse + 1 synthesis/run).
+**Models:** Azure OpenAI GPT-5.4 (parse + synthesis), Flash-Lite (persona pool, cached). **Glass-box constraint:** synthesis claims that assert a number must cite an `equation_id` + `dataset_ids`; the numbers come from the kernel/equations, never the LLM (see [methods-matrix.md](methods-matrix.md) §4 citation guard). **Prompt strategy:** cached static system prefix (Iloilo context + mode-share anchors). **Edge cases:** unparseable scenario → clarification, no run; data-sparse dimension → `directional:true`; Azure OpenAI GPT-5.4 429 → backoff + cached parse for reference scenarios. **Token budget:** persona work on Flash-Lite free tier (cached); Pro low call count (1 parse + 1 synthesis/run).
 
 ---
 
 ## 6. Security, Privacy & Performance
 
-- **Security:** scenario text is untrusted → structured-plan parse only, no free-form execution (SDD §8.1 LLM01); WS keyed by scenario_id; scenario submission rate-limited to protect the Gemini budget.
+- **Security:** scenario text is untrusted → structured-plan parse only, no free-form execution (SDD §8.1 LLM01); WS keyed by scenario_id; scenario submission rate-limited to protect the Azure OpenAI GPT-5.4 budget.
 - **Performance:** delta keeps SUMO in the 15–60 s band; parallel modules in 60–80 s. **90 s holds for single-user; multi-user → queue (deferred debt).** Cold run (no baseline) is flagged as outside-budget, not hidden.
 - **Privacy:** no PII (open/aggregated data; synthetic personas). PWA traces are a separate, consented surface (CLR).
 

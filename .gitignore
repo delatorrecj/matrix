@@ -65,3 +65,4 @@ presentation/deck/PPT Template AAIH (student).pptx
 # Note: data/raw and data/interim are ignored by data/.gitignore (nested).
 # Note: app/.gitignore covers .venv, node_modules, .next, dist, etc. for app/.
 
+.env

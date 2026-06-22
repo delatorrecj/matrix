@@ -32,7 +32,7 @@
 **2.1 System Components:**
 
 * **Inputs (The Data Ingestion Layer):** Real-time API integrations via OpenStreetMap (topology), OpenWeather API (environmental triggers), and public traffic APIs (TomTom/Google Maps) to establish baseline conditions. User inputs define the "What-If" parameters (e.g., closing a lane, changing toll prices).  
-* **Processing Core (The Simulation Engine):** A hybrid ML/Agentic cloud backend. A Time-Series ML engine (XGBoost) predicts baseline volume. A Generative AI Orchestration Layer (Gemini 1.5 Pro) powers the Agentic Simulation, calculating how simulated commuter personas deviate from the baseline when exposed to the user's "What-If" variables.  
+* **Processing Core (The Simulation Engine):** A hybrid ML/Agentic cloud backend. A Time-Series ML engine (XGBoost) predicts baseline volume. A Generative AI Orchestration Layer (Azure OpenAI GPT-5.4) powers the Agentic Simulation, calculating how simulated commuter personas deviate from the baseline when exposed to the user's "What-If" variables.  
 * **Outputs:** *A web-based Digital Twin Dashboard (Next.js/WebGL) for urban planners detailing simulated congestion severity, environmental impact, and AI-recommended policy interventions.*
 
 **2.2 Architecture Diagram:**  
@@ -45,7 +45,7 @@
 * **Primary AI Approach:** \[x\] Machine Learning \[x\] Generative AI \[x\] Other: Agentic Simulation  
 * **Model Selection:**   
   * ***Predictive Layer:** XGBoost for lightweight, high-accuracy baseline time-series forecasting.*  
-  * ***Simulation & Prescriptive Layer:** Gemini 1.5 Pro (or Claude 3 Opus) via API. Used to simulate complex human behavioral economics (Agentic AI) and generate contextual, human-readable intervention reports based on the numeric predictions.*  
+  * ***Simulation & Prescriptive Layer:** Azure OpenAI GPT-5.4 (or Claude 3 Opus) via API. Used to simulate complex human behavioral economics (Agentic AI) and generate contextual, human-readable intervention reports based on the numeric predictions.*  
 * **Reasoning:** *Pure ML fails when historical data is absent or flawed. By injecting an Agentic LLM layer, we can synthesize realistic behavioral data based on economic and psychological principles, allowing planners to simulate the impact of unbuilt infrastructure or new policies without needing decades of prior data.*
 
 ### **SECTION 4: DATA STRATEGY & ETHICS**
@@ -65,8 +65,8 @@
 
 | Phase | Activity / Task | Tools Used | Expected Outcome |
 | :---- | :---- | :---- | :---- |
-| **Sprint 1  (May 1-15)** | API Aggregation, Data Collection, Data Cleaning, Data Pipeline, & Environment Setup | Python, Postman, Supabase, GitHub, Antigravity, Gemini CLI, Claude Code | Automated ingestion of Map, Weather, and Traffic baselines with clean dataset. |
-| **Sprint 2  (May 16-31)** | MVP / Agentic Simulation Engine & ML Training | Python, XGBoost, Gemini API, Antigravity, Gemini CLI, Claude Code, Google Colab | Functional AI core capable of running "What-If" scenarios. |
+| **Sprint 1  (May 1-15)** | API Aggregation, Data Collection, Data Cleaning, Data Pipeline, & Environment Setup | Python, Postman, Supabase, GitHub, Antigravity, Azure OpenAI CLI, Claude Code | Automated ingestion of Map, Weather, and Traffic baselines with clean dataset. |
+| **Sprint 2  (May 16-31)** | MVP / Agentic Simulation Engine & ML Training | Python, XGBoost, Azure OpenAI API, Antigravity, Azure OpenAI CLI, Claude Code, Google Colab | Functional AI core capable of running "What-If" scenarios. |
 | **Sprint 3  (June 1-15)** | Interactive Dashboard UI/UX & WebGL rendering | React/Next.js, Tailwind, Deck.gl | Working interactive prototype allowing parameter adjustments. |
 | **Sprint 4  (June 16-25)** | System stress testing, prompt refinement, and Pitch recording | Vercel, OBS, GitKraken | Final Demo Video & Codebase ready for submission. |
 

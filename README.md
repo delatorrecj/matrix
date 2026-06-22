@@ -19,7 +19,7 @@ Our AI system's core functionality allows users to input a proposed infrastructu
 ## 3. AI TOOLS & METHODS USED
 
 Our prototype leverages several advanced AI tools and frameworks:
-* **Gemini 3.1 Pro and Flash-Lite**: Used as the core orchestration agents to understand natural language scenarios, generate diverse commuter personas, and write the final impact reports with strict citation tracking.
+* **Azure OpenAI GPT-5.4 and Flash-Lite**: Used as the core orchestration agents to understand natural language scenarios, generate diverse commuter personas, and write the final impact reports with strict citation tracking.
 * **Eclipse SUMO**: An open-source traffic simulation suite used to model the physical movement of vehicles and pedestrians.
 * **FastAPI and Next.js**: Provide the robust backend API and the interactive frontend dashboard for users to run simulations and view results.
 * **Deck.gl**: Used for rendering the 3D map and displaying vehicle movements.

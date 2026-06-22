@@ -15,7 +15,7 @@
 
 **One sentence:** a structured Iloilo scenario produces a real `DimensionResult` for **Behavioral / BEH‑1** (Δ trips/day per corridor) — computed from a SUMO delta-vs-baseline run, carrying `equation_id` + `input_dataset_ids` + a *computed* confidence — and the API streams it as `ACCEPTED → PLAYBACK_FRAME* → DIMENSION_RESULT → SYNTHESIS → DONE`.
 
-**Why this slice and not more:** it exercises every architectural commitment once — unified kernel → one trajectory → a module → the glass-box contract → the progressive WS stream — so every later module and dimension is "more of the same," not "new architecture." It deliberately **excludes** the Gemini orchestrator (accept a structured scenario, not NL), the other four modules, and the real frontend. Those come after the slice proves out (§6).
+**Why this slice and not more:** it exercises every architectural commitment once — unified kernel → one trajectory → a module → the glass-box contract → the progressive WS stream — so every later module and dimension is "more of the same," not "new architecture." It deliberately **excludes** the Azure OpenAI GPT-5.4 orchestrator (accept a structured scenario, not NL), the other four modules, and the real frontend. Those come after the slice proves out (§6).
 
 **Critical path, one line:**
 
@@ -63,7 +63,7 @@ Each step names the **real file**, the **function to fill**, its **inputs** (INV
 
 ### S4 — Persona pool + bias auditor  *(gated-plan 2.3, 2.4; PRD‑F6)*
 - **Files:** persona generation (new, in kernel) → Redis **`personas:iloilo:v1`**; `app/packages/kernel/matrix_kernel/bias_auditor.py` → fill `audit_personas(observed, target)`.
-- **Do:** generate ~500 commuter archetypes (income / mode / trip-purpose weights). **Milestone A may seed the pool from a static weighted distribution** matched to Iloilo mode share — the **Gemini 3.1 Flash-Lite** generator is a §6 upgrade, not a slice blocker. `audit_personas` compares observed vs. target mode share; deviation beyond `MODE_SHARE_TOLERANCE` (±3%) sets `reweighted=True` and appends a `BiasAuditEntry` to the append-only `bias_audit` log (Postgres).
+- **Do:** generate ~500 commuter archetypes (income / mode / trip-purpose weights). **Milestone A may seed the pool from a static weighted distribution** matched to Iloilo mode share — the **Azure OpenAI GPT-5.4** generator is a §6 upgrade, not a slice blocker. `audit_personas` compares observed vs. target mode share; deviation beyond `MODE_SHARE_TOLERANCE` (±3%) sets `reweighted=True` and appends a `BiasAuditEntry` to the append-only `bias_audit` log (Postgres).
 - **Done-when:** an intentionally skewed batch is **caught and reweighted** (the ±3% rule demonstrated in a test); one audit row is written. **[x] Completed 2026-06-06: Validated by 5 tests in `test_bias_auditor.py`.**
 
 ### S5 — TraCI delta runner  *(gated-plan 2.6; PRD‑F1 — the "one kernel" promise)*
@@ -89,7 +89,7 @@ Each step names the **real file**, the **function to fill**, its **inputs** (INV
 
 ### S8 — Stream it over the wire  *(gated-plan 4.1; RFC §3)*
 - **File:** `app/apps/api/matrix_api/main.py` → replace the Phase-0 placeholder handshake in `simulate(ws, scenario_id)`.
-- **Do:** on connect, look up/run the scenario, then emit the real progressive sequence using the already-frozen `EVENT_TYPES`: `ACCEPTED` → a few `PLAYBACK_FRAME` (sampled trajectory ticks for the Deck.gl TripsLayer) → `DIMENSION_RESULT` (the Behavioral result as JSON, provenance intact) → `SYNTHESIS` (a **templated** one-liner for now — Gemini synthesis is §6) → `DONE`. Run the module(s) under `asyncio.gather` so the parallel-streaming shape is real from day one.
+- **Do:** on connect, look up/run the scenario, then emit the real progressive sequence using the already-frozen `EVENT_TYPES`: `ACCEPTED` → a few `PLAYBACK_FRAME` (sampled trajectory ticks for the Deck.gl TripsLayer) → `DIMENSION_RESULT` (the Behavioral result as JSON, provenance intact) → `SYNTHESIS` (a **templated** one-liner for now — Azure OpenAI GPT-5.4 synthesis is §6) → `DONE`. Run the module(s) under `asyncio.gather` so the parallel-streaming shape is real from day one.
 - **Done-when:** a WS client (or `pytest` + `httpx`/`websockets`) connects to `/simulate/{id}` and receives the five event types in order, with a `DIMENSION_RESULT` payload that still carries `equation_id` + `input_dataset_ids`. **[x] Completed 2026-06-06: Test in `test_ws_stream.py` passes with all 5 module results.**
 
 ---
@@ -111,8 +111,8 @@ When all boxes are checked, the architecture is proven end-to-end on one number.
 
 Cut now; pick up per the gated plan when the team returns or the slice is solid:
 
-- **Gemini orchestrator (NL → scenario).** Accept a structured `Scenario` directly for Milestone A. (gated-plan 4.2)
-- **Gemini synthesis narrative.** Use a templated string; swap to Gemini 3.1 Pro with the citation guard later. (gated-plan 4.3)
+- **Azure OpenAI orchestrator (NL → scenario).** Accept a structured `Scenario` directly for Milestone A. (gated-plan 4.2)
+- **Azure OpenAI synthesis narrative.** Use a templated string; swap to Azure OpenAI GPT-5.4 with the citation guard later. (gated-plan 4.3)
 - **The other four modules** (Ecological → Social → Economic → Societal), in that confidence order. They reuse S5 trajectory + S6 confidence verbatim. (gated-plan Phase 3)
 - **Real frontend** (`apps/web`) — stays unscaffolded; the WS shapes from S8 are the contract it will mock against. (gated-plan Phase 5)
 - **PWA companion, multi-district breadth, GraphRAG retrieval, cloud deploy, PDF export.** All additive.
@@ -137,7 +137,7 @@ This keeps the demoable glass-box story intact even in the worst SUMO case, and 
 Once Milestone A is green, the work converges back onto the gated plan:
 
 1. **Width:** Ecological → Social → Economic → Societal modules (Phase 3 order), each on the frozen trajectory.
-2. **Ask-able:** Gemini 3.1 Pro orchestrator turns a real NL query ("3,000-seat school at Molo") into a `Scenario` (Phase 4.2); Flash-Lite generates the real persona pool (upgrade S4).
+2. **Ask-able:** Azure OpenAI GPT-5.4 orchestrator turns a real NL query ("3,000-seat school at Molo") into a `Scenario` (Phase 4.2); Flash-Lite generates the real persona pool (upgrade S4).
 3. **Watchable:** scaffold `apps/web` per [SCAFFOLD.md](../app/apps/web/SCAFFOLD.md), wire the live WS, Deck.gl TripsLayer playback, the five-dimension panel, the **confidence layer**, and **Inspect on every number** (Phase 5).
 4. **Fast:** profile to the **90 s** warm-delta budget (Phase 6) — persona pool + nightly baseline hot, modules parallel, streaming first paint early.
 5. **Honest:** surface the Calderon-2014 / 2024-flood back-test in-product (PRD‑F18).

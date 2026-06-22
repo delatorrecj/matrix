@@ -1,4 +1,4 @@
-"""Gemini 3.1 Pro NL -> Scenario parser (PRD-F2, PRD-F8).
+"""Azure OpenAI 3.1 Pro NL -> Scenario parser (PRD-F2, PRD-F8).
 
 Turns a natural-language query ("what if we close JM Basa St for the Dinagyang festival?")
 into a structured Scenario v2 (matrix_kernel.scenario): the model classifies the

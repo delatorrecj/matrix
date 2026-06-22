@@ -132,7 +132,7 @@ Severity ladder = QAD P0–P3. When an incident fires:
    git remote add hf https://huggingface.co/spaces/<your-username>/<your-space-name>
    git push hf main
    ```
-5. Ensure that the `app/packages/kernel/data` folder containing `iloilo.net.xml` and `iloilo.rou.xml` is pushed along with the repository, or downloaded during the Docker build process, as Hugging Face Spaces do not use Fly.io's persistent volumes in the same way.
+5. Ensure that the `app/packages/kernel/data` folder containing `iloilo.net.xml` and `iloilo.rou.xml` is pushed along with the repository, or downloaded during the Docker build process, as Hugging Face Spaces do not use Hugging Face Spaces's persistent volumes in the same way.
 
 ### 7.3 First-time web deploy (Vercel)
 

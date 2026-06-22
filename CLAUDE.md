@@ -85,7 +85,7 @@ No Python linter/formatter is wired yet, and `apps/web` brings its own ESLint �
 These were chosen deliberately with documented justification (MATRIX.md §6). Treat them as invariants unless the user explicitly reopens the decision:
 
 - **Simulation engine: Eclipse SUMO** (via TraCI Python API) — *not* OASIS or MiroFish (those simulate social-media dynamics, not physical urban agents).
-- **LLMs: Azure OpenAI (gpt-5.4)** (orchestration/synthesis) + **Azure OpenAI (gpt-5.4)** (high-volume persona generation). **Never** Azure OpenAI 1.5 (shut down) or 2.0 (shut down June 1, 2026). The PUP-ATLAN roadmap's "Gemini 1.5 Pro" is stale.
+- **LLMs: Azure OpenAI (gpt-5.4)** (orchestration/synthesis) + **Azure OpenAI (gpt-5.4)** (high-volume persona generation). **Never** Azure OpenAI 1.5 (shut down) or 2.0 (shut down June 1, 2026). The PUP-ATLAN roadmap's "Azure OpenAI GPT-5.4" is stale.
 - **Unified kernel → five modules**, not five independent simulators (avoids cross-dimension contradictions).
 - **Real-time interactive visualization** with a hard **90-second end-to-end latency budget** (Option C). Hit it via pre-warmed persona pool, delta simulations against a nightly baseline, parallel modules, and streaming/progressive UI.
 - **Planned stack:** Next.js 14 (App Router) + Tailwind + shadcn/ui frontend; Mapbox GL JS + Deck.gl (TripsLayer) for animated playback; FastAPI + WebSocket backend; Supabase Postgres + ChromaDB (GraphRAG/LightRAG) + Redis; XGBoost baseline forecaster. Deploy targets: Vercel + Hugging Face Spaces.
