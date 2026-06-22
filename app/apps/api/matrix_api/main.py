@@ -481,7 +481,7 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
 
         # Azure OpenAI synthesis narrative (Phase 4.3). Must cite equation_id + dataset_ids.
         stage = "synthesis"
-        with timer.stage("gemini"):  # Key must remain 'gemini' for frontend contract
+        with timer.stage("gemini"):  # stage label 'gemini' -> timing key 'llm_ms' (StageTimer alias)
             narrative, citations = await runtime.run_stage(
                 asyncio.to_thread(synthesize, results),
                 stage="synthesis",

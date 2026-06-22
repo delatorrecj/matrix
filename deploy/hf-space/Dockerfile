@@ -1,41 +1,48 @@
+# HF Docker Space — MATRIX API backend (Eclipse SUMO + FastAPI/WebSocket).
+#
+# HF free Spaces give you ONE container with no persistent volume and no managed Redis,
+# so this image is self-contained:
+#   • app code is cloned from the public repo at build time (kernel + API),
+#   • the SUMO net/demand files are baked in from this Space repo (carried via Git LFS),
+#   • Redis runs inside the container (start.sh; caches are ephemeral, re-seeded each boot).
+# The only things you supply are the Azure OpenAI secrets (Space Settings → Secrets).
 FROM python:3.12-slim
 
-# System libs only
+# System libs: build tools + GDAL/PROJ/libxml2 for the eclipse-sumo wheel, redis-server
+# (bundled), git+curl to clone the app at build time.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgdal-dev \
     libproj-dev \
     libxml2 \
+    redis-server \
+    git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up a new user named "user" with user ID 1000
-RUN useradd -m -u 1000 user
-
-# Switch to the "user" user
-USER user
-
-# Set home to the user's home directory
-ENV HOME=/home/user \
-	PATH=/home/user/.local/bin:$PATH
-
-# Set the working directory to the user's home directory
-WORKDIR $HOME/app
-
-# Install uv (no global pip pollution)
 RUN pip install --no-cache-dir uv
 
-# Copy the app to the working directory, as the "user" user
-COPY --chown=user ../../app/packages/kernel/pyproject.toml ./packages/kernel/pyproject.toml
-COPY --chown=user ../../app/apps/api/pyproject.toml ./apps/api/pyproject.toml
-COPY --chown=user ../../app/packages/kernel ./packages/kernel
-COPY --chown=user ../../app/apps/api ./apps/api
+WORKDIR /srv
 
-# Install kernel + API
-RUN uv pip install --system --no-cache -e packages/kernel -e apps/api
+# App code from the public repo (the SUMO net/demand are gitignored there — baked below).
+# Repo root lands at /srv; the uv monorepo is /srv/app. Rebuild the Space to pull new commits.
+RUN git clone --depth 1 https://github.com/delatorrecj/matrix.git . \
+    && uv pip install --system --no-cache -e app/packages/kernel -e app/apps/api
 
-ENV MATRIX_NET_PATH=/data/iloilo.net.xml \
-    MATRIX_ROU_PATH=/data/iloilo.rou.xml
+# SUMO net + demand, carried in THIS Space repo (Git LFS) and baked in — no volume needed.
+COPY iloilo.net.xml /srv/data/iloilo.net.xml
+COPY iloilo.rou.xml /srv/data/iloilo.rou.xml
+
+# Runtime config. Redis is local (start.sh); Chroma + HF model cache go to writable paths.
+ENV MATRIX_NET_PATH=/srv/data/iloilo.net.xml \
+    MATRIX_ROU_PATH=/srv/data/iloilo.rou.xml \
+    MATRIX_REDIS_URL=redis://localhost:6379/0 \
+    CHROMA_PATH=/srv/.chroma \
+    HF_HOME=/srv/.cache/huggingface \
+    MATRIX_PERSONA_LLM=0
+
+COPY start.sh /srv/start.sh
+RUN chmod +x /srv/start.sh
 
 EXPOSE 7860
-
-CMD ["uvicorn", "matrix_api.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
+CMD ["/srv/start.sh"]

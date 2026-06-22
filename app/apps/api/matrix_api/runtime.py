@@ -69,10 +69,17 @@ T = TypeVar("T")
 class StageTimer:
     """Collects per-stage wall-clock timings (ms) for the DONE event.
 
-    Stage names map to timing keys as f"{name}_ms"; timings() adds total_ms
-    measured from construction. The DONE shape {sumo_ms, modules_ms, llm_ms,
-    total_ms} is consumed by the frontend -- keep the keys exact.
+    Stage names map to timing keys as f"{name}_ms", except for the aliases below;
+    timings() adds total_ms measured from construction. The DONE shape
+    {sumo_ms, modules_ms, llm_ms, total_ms} is consumed by the frontend -- keep
+    the keys exact.
     """
+
+    # The LLM stage is still *invoked* as "gemini" (and its timeout keyed as
+    # "gemini" in _TIMEOUT_DEFAULTS_S) for back-compat, but after the Azure OpenAI
+    # migration the DONE/frontend contract key is "llm_ms" (RunProgress.tsx reads
+    # llm_ms). Map the stage name to the contract key here so they stay consistent.
+    _KEY_ALIASES = {"gemini": "llm_ms"}
 
     def __init__(self) -> None:
         self._t0 = time.perf_counter()
@@ -84,7 +91,8 @@ class StageTimer:
         try:
             yield
         finally:
-            self._stages[f"{name}_ms"] = round((time.perf_counter() - t) * 1000)
+            key = self._KEY_ALIASES.get(name, f"{name}_ms")
+            self._stages[key] = round((time.perf_counter() - t) * 1000)
 
     def timings(self) -> dict[str, int]:
         out = dict(self._stages)

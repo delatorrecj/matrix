@@ -84,13 +84,20 @@ def make_client(timeout_s: float | None = None) -> openai.AzureOpenAI:
     try:
         api_key = os.environ.get("AZURE_OPENAI_API_KEY")
         endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-        
+
         if not api_key or not endpoint:
             raise ValueError("AZURE_OPENAI_API_KEY or AZURE_OPENAI_ENDPOINT missing")
-            
+
+        # api_version gates feature availability. The orchestrator + persona generation use
+        # structured outputs (response_format=json_schema via beta.chat.completions.parse),
+        # which Azure only supports on 2024-08-01-preview or later — so the default is a
+        # current GA that includes them. Override per-resource with AZURE_OPENAI_API_VERSION
+        # if your deployment needs a different one.
+        api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-10-21")
+
         return openai.AzureOpenAI(
             api_key=api_key,
-            api_version="2024-02-01",
+            api_version=api_version,
             azure_endpoint=endpoint,
             timeout=timeout_s,
         )
