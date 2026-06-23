@@ -26,7 +26,7 @@ export default function RunStatusBanner({ runState, onRetry }: RunStatusBannerPr
           {runState.queuePosition !== null
             ? ` at position ${runState.queuePosition}`
             : ""}
-          {" — the run will start automatically."}
+          {". The run will start automatically."}
         </div>
       );
 
@@ -41,7 +41,7 @@ export default function RunStatusBanner({ runState, onRetry }: RunStatusBannerPr
           <div className="flex items-center justify-between gap-2">
             <span className="font-semibold text-error">
               Simulation error
-              {err ? ` — ${err.stage} stage` : ""}
+              {err ? `: ${err.stage} stage` : ""}
             </span>
             <button
               onClick={onRetry}
@@ -53,8 +53,8 @@ export default function RunStatusBanner({ runState, onRetry }: RunStatusBannerPr
           {err && <p className="mt-1 text-foreground">{err.message}</p>}
           <p className="mt-1 text-xs text-text-muted">
             {err?.recoverable
-              ? "The server marked this error as recoverable — retrying is likely to succeed."
-              : "The server marked this error as non-recoverable — retrying may fail again."}
+              ? "The server marked this error as recoverable. Retrying is likely to succeed."
+              : "The server marked this error as non-recoverable. Retrying may fail again."}
           </p>
         </div>
       );
@@ -107,7 +107,7 @@ export default function RunStatusBanner({ runState, onRetry }: RunStatusBannerPr
             </button>
           </div>
           <p className="mt-1 text-xs text-text-muted">
-            You stopped this run — results above are partial, not a failure.
+            You stopped this run. Results above are partial, not a failure.
           </p>
         </div>
       );

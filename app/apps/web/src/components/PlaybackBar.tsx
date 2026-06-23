@@ -28,7 +28,7 @@ export function PlaybackBar({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
   return (
-    <div className="h-14 bg-surface/95 backdrop-blur-md shadow-lg border border-border rounded-xl flex items-center px-4 gap-4">
+    <div className="glass-strong h-14 rounded-xl flex items-center px-4 gap-4">
       {/* Transport controls */}
       <div className="flex items-center gap-1.5">
         <button

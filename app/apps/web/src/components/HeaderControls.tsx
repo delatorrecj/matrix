@@ -12,7 +12,7 @@ export function HeaderControls() {
       <button
         onClick={toggle}
         aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-        className="w-9 h-9 flex items-center justify-center rounded-lg bg-surface border border-border text-text-muted hover:text-text hover:bg-surface-elevated transition-all duration-150"
+        className="glass w-9 h-9 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:border-primary/40 transition-all duration-150 active:scale-95"
       >
         {theme === "dark" ? (
           <Sun className="w-4 h-4" />
@@ -24,7 +24,7 @@ export function HeaderControls() {
       {/* Help button */}
       <button
         aria-label="Help"
-        className="w-9 h-9 flex items-center justify-center rounded-full bg-surface border border-border text-text-muted hover:text-text hover:bg-surface-elevated transition-all duration-150"
+        className="glass w-9 h-9 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:border-primary/40 transition-all duration-150 active:scale-95"
       >
         <HelpCircle className="w-4 h-4" />
       </button>

@@ -68,7 +68,7 @@ function isProvisional(gate: ValidationGate): boolean {
 function GateCard({ gate }: { gate: ValidationGate }) {
   return (
     <div
-      className="p-3 bg-background border border-border rounded"
+      className="p-3 bg-background border border-border rounded-lg"
       data-testid={`gate-${gate.gate_id}`}
     >
       <div className="flex justify-between items-start gap-2 mb-1">
@@ -133,7 +133,7 @@ function GateCard({ gate }: { gate: ValidationGate }) {
           <div>
             <dt className="inline font-semibold">Fixture: </dt>
             <dd className="inline">
-              {gate.fixture_id || "not provided"} — {gate.fixture_provenance || "not provided"}
+              {gate.fixture_id || "not provided"} · {gate.fixture_provenance || "not provided"}
             </dd>
           </div>
           <div>
@@ -216,7 +216,7 @@ export default function ValidationPanel() {
 
       {state.status === "loaded" && state.gates.length === 0 && (
         <div className="text-sm text-text-muted" data-testid="validation-empty">
-          <p>No validation gates reported — validation has not yet been run.</p>
+          <p>No validation gates reported. Validation has not yet been run.</p>
           {state.note && <p className="text-xs italic mt-1">{state.note}</p>}
         </div>
       )}

@@ -12,7 +12,9 @@ import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
 import SynthesisNarrative, { SynthesisCitation } from "@/components/SynthesisNarrative";
 import ValidationPanel from "@/components/ValidationPanel";
 import BiasAuditLog from "@/components/BiasAuditLog";
-import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
+import { DimensionResultGroup } from "@/components/DimensionResultGroup";
+import type { ResultCardData } from "@/components/ResultCard";
+import { MapAttribution } from "@/components/MapAttribution";
 import RunProgress from "@/components/RunProgress";
 import RunStatusBanner from "@/components/RunStatusBanner";
 import { IconNavRail } from "@/components/IconNavRail";
@@ -40,7 +42,7 @@ import type {
   FeatureCollection,
   MapLayerToggles,
 } from "@/components/map";
-import { Route, Activity, Gauge, Waves, X, LayoutList } from "lucide-react";
+import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
@@ -62,20 +64,6 @@ const handleViewStateChange = ({ viewState }: any) => {
   viewState.zoom = Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom);
   return viewState;
 };
-
-/** One DIMENSION_RESULT rendered as a glass-box metric card. */
-interface ResultCard {
-  key: string;
-  dimension: string;
-  metric: string;
-  value: string;
-  unit: string;
-  conf: string;
-  range: string;
-  provData: ProvenanceData;
-}
-
-
 
 export default function ScenarioSimulation() {
   const router = useRouter();
@@ -128,7 +116,7 @@ export default function ScenarioSimulation() {
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [runAttempt, setRunAttempt] = useState(0);
 
-  const [results, setResults] = useState<ResultCard[]>([]);
+  const [results, setResults] = useState<ResultCardData[]>([]);
   const [tripsData, setTripsData] = useState<{ id: string, path: [number, number][], timestamps: number[] }[]>([]);
   const [maxTime, setMaxTime] = useState(1000);
 
@@ -411,7 +399,7 @@ export default function ScenarioSimulation() {
         <div className="absolute top-24 right-4 z-20 pointer-events-auto print:hidden">
           <button
             onClick={() => setShowResultsPanel(true)}
-            className="flex items-center gap-2 bg-surface/60 backdrop-blur-xl border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
+            className="glass flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all active:scale-[0.98]"
           >
             <LayoutList className="w-4 h-4" />
             Show Results
@@ -421,8 +409,8 @@ export default function ScenarioSimulation() {
 
       {/* 5-Dimension Impact Panel (Right Side, normally overlay but docked here) */}
       {showResultsPanel && (
-        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/50 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-white/10 order-2 md:order-1 overflow-hidden relative print:w-full print:border-none print:shadow-none print:bg-white print:overflow-visible print:h-auto">
-          <div className="p-4 border-b border-white/10 bg-transparent flex justify-between items-center gap-2 print:border-black">
+        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/85 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-border order-2 md:order-1 overflow-hidden relative print:w-full print:border-none print:shadow-none print:bg-white print:overflow-visible print:h-auto">
+          <div className="p-4 border-b border-border bg-transparent flex justify-between items-center gap-2 print:border-black">
             <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground print:text-black">Scenario Results</h2>
             <p className="text-xs text-text-muted font-mono truncate print:text-black">{scenarioId}</p>
@@ -464,62 +452,18 @@ export default function ScenarioSimulation() {
             <RunStatusBanner runState={runState} onRetry={retryRun} />
           </div>
 
-          {!isDrawerOpen && DIMENSIONS.map((dim) => {
-            const dimResults = results.filter((r) => r.dimension === dim);
-            if (dimResults.length === 0) {
-              return (
-                <div className="print:hidden" key={dim}>
-                  <DimensionCardSkeleton
-                    name={dim}
-                    colorClass={getDimensionColor(dim)}
-                    expectedResults={EXPECTED_RESULTS[dim]}
-                    active={isRunActive}
-                  />
-                </div>
-              );
-            }
-            return (
-              <div key={dim} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${getDimensionColor(dim)} print:border print:border-black print:bg-black`} />
-                    <span className="text-sm font-semibold capitalize print:text-black">{dim}</span>
-                  </div>
-                  <span className="text-xs font-mono text-text-muted print:text-black">
-                    {dimResults.length}/{EXPECTED_RESULTS[dim]} results
-                  </span>
-                </div>
-
-                {dimResults.map((card) => (
-                  <div
-                    key={card.key}
-                    className="border border-border rounded-xl p-4 bg-surface-elevated hover:border-primary/50 transition-all cursor-pointer group print:border-black print:bg-white print:break-inside-avoid"
-                    onClick={() => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium print:text-black">{card.metric}</span>
-                      {/* Confidence Chip */}
-                      <div className={`text-xs px-2 py-0.5 border rounded-full font-mono ${
-                        card.conf === 'H' ? 'bg-success/10 text-success border-success/20' :
-                        card.conf === 'M' ? 'bg-warning/10 text-warning border-warning/20' :
-                        'bg-destructive/10 text-destructive border-destructive/20 border-dashed'
-                      } print:bg-white print:text-black print:border-black print:border-solid`}>
-                        {card.conf}
-                      </div>
-                    </div>
-                    <div className="flex items-end gap-2 mb-1">
-                      <span className="text-2xl font-bold font-mono tracking-tight print:text-black">{card.value}</span>
-                      <span className="text-xs text-text-muted mb-1 print:text-black">{card.unit}</span>
-                    </div>
-                    <div className="text-xs text-text-muted font-mono flex justify-between print:text-black">
-                      <span>R: {card.range}</span>
-                      <span className="opacity-0 group-hover:opacity-100 text-primary transition-opacity print:hidden">Inspect →</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
+          {!isDrawerOpen && DIMENSIONS.map((dim) => (
+            <DimensionResultGroup
+              key={dim}
+              dim={dim}
+              dimResults={results.filter((r) => r.dimension === dim)}
+              expectedResults={EXPECTED_RESULTS[dim]}
+              isRunActive={isRunActive}
+              colorClass={getDimensionColor(dim)}
+              variant="panel"
+              onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
+            />
+          ))}
 
           {synthesis && (
             <SynthesisNarrative
@@ -538,6 +482,11 @@ export default function ScenarioSimulation() {
           )}
         </div>
 
+        {/* Map attribution — replaces MapLibre's default white control (ODbL/OpenMapTiles). */}
+        <div className="px-4 py-2.5 border-t border-border shrink-0 print:hidden">
+          <MapAttribution />
+        </div>
+
         <InspectDrawer
           isOpen={isDrawerOpen}
           onClose={() => { setIsDrawerOpen(false); setInspectingMetric(null); }}
@@ -548,56 +497,18 @@ export default function ScenarioSimulation() {
             <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
               Category Breakdown
             </h4>
-            {DIMENSIONS.map((dim) => {
-              const dimResults = results.filter((r) => r.dimension === dim);
-              if (dimResults.length === 0) {
-                return (
-                  <DimensionCardSkeleton
-                    key={dim}
-                    name={dim}
-                    colorClass={getDimensionColor(dim)}
-                    expectedResults={EXPECTED_RESULTS[dim]}
-                    active={isRunActive}
-                  />
-                );
-              }
-              return (
-                <div key={dim} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${getDimensionColor(dim)}`} />
-                      <span className="text-sm font-semibold capitalize">{dim}</span>
-                    </div>
-                    <span className="text-xs font-mono text-text-muted">
-                      {dimResults.length}/{EXPECTED_RESULTS[dim]} results
-                    </span>
-                  </div>
-
-                  {dimResults.map((card) => (
-                    <div
-                      key={card.key}
-                      className="border border-border rounded-xl p-4 bg-surface-elevated hover:border-primary/50 transition-all cursor-pointer group"
-                      onClick={() => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">{card.metric}</span>
-                        <div className={`text-xs px-2 py-0.5 border rounded-full font-mono ${
-                          card.conf === 'H' ? 'bg-success/10 text-success border-success/20' :
-                          card.conf === 'M' ? 'bg-warning/10 text-warning border-warning/20' :
-                          'bg-destructive/10 text-destructive border-destructive/20 border-dashed'
-                        }`}>
-                          {card.conf}
-                        </div>
-                      </div>
-                      <div className="flex items-end gap-2 mb-1">
-                        <span className="text-2xl font-bold font-mono tracking-tight">{card.value}</span>
-                        <span className="text-xs text-text-muted mb-1">{card.unit}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+            {DIMENSIONS.map((dim) => (
+              <DimensionResultGroup
+                key={dim}
+                dim={dim}
+                dimResults={results.filter((r) => r.dimension === dim)}
+                expectedResults={EXPECTED_RESULTS[dim]}
+                isRunActive={isRunActive}
+                colorClass={getDimensionColor(dim)}
+                variant="drawer"
+                onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
+              />
+            ))}
           </div>
         </InspectDrawer>
       </div>
@@ -619,6 +530,7 @@ export default function ScenarioSimulation() {
             ref={mapRef}
             mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
             mapLib={maplibregl}
+            attributionControl={false}
             reuseMaps
           />
         </DeckGL>
@@ -637,12 +549,13 @@ export default function ScenarioSimulation() {
         </div>
 
         {/* Timeline Scrubber */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface/60 backdrop-blur-xl px-6 py-3 rounded-xl shadow-lg border border-border flex items-center gap-4 min-w-[300px] print:hidden">
+        <div className="glass absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl flex items-center gap-4 min-w-[300px] print:hidden">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
+            aria-label={isPlaying ? "Pause playback" : "Play playback"}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors active:scale-95"
           >
-            {isPlaying ? "⏸" : "▶"}
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
           </button>
           <input
             type="range"

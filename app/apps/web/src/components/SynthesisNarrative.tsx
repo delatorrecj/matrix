@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Zap } from "lucide-react";
 import { GlossaryTooltip } from "./GlossaryTooltip";
 
 /**
@@ -79,7 +80,7 @@ function CitationChip({
       aria-label={
         enabled
           ? `Inspect provenance for ${equationId}`
-          : `Citation ${equationId} — no matching result received`
+          : `Citation ${equationId}, no matching result received`
       }
       data-testid={`cite-${equationId}`}
       className={
@@ -122,10 +123,8 @@ export default function SynthesisNarrative({
       data-testid="synthesis-narrative"
     >
       <div className="flex items-center gap-2 mb-3">
-        <svg className="w-5 h-5 text-primary print:text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        <h4 className="text-sm font-bold text-primary uppercase tracking-wide print:text-black">Synthesis & Interpretations</h4>
+        <Zap className="w-5 h-5 text-primary print:text-black" aria-hidden="true" />
+        <h4 className="text-sm font-bold text-primary uppercase tracking-wide print:text-black">Synthesis &amp; Interpretations</h4>
       </div>
       <div className="text-[15px] text-foreground leading-relaxed whitespace-pre-wrap print:text-black">
         {segments.map((segment, i) => {

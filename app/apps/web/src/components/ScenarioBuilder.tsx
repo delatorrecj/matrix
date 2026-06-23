@@ -58,6 +58,7 @@ import {
   SignpostBig,
   Ban,
   Waypoints,
+  ChevronDown,
 } from "lucide-react";
 
 import {
@@ -369,7 +370,7 @@ export default function ScenarioBuilder() {
                       type="button"
                       aria-pressed={active}
                       onClick={() => update("interventionType", type)}
-                      className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
+                      className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-all active:scale-[0.99] ${
                         active
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary hover:bg-primary/5"
@@ -406,7 +407,7 @@ export default function ScenarioBuilder() {
             </label>
             <textarea
               id="location-name"
-              className="w-full bg-surface-elevated/50 backdrop-blur-md border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
+              className="w-full bg-surface-elevated/50 border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
               placeholder="e.g., Diversion Road (from the Iloilo Esplanade bridge up to the Jaro flyover, service lanes only)"
               value={state.locationName}
               onChange={(e) => update("locationName", e.target.value)}
@@ -426,7 +427,7 @@ export default function ScenarioBuilder() {
                     key={sug}
                     type="button"
                     onClick={() => update("locationName", sug)}
-                    className="text-xs bg-secondary border border-border px-2.5 py-1.5 rounded-full hover:border-primary/50 hover:bg-primary/5 transition-colors text-text"
+                    className="text-xs bg-secondary border border-border px-2.5 py-1.5 rounded-full hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95 text-text"
                   >
                     {sug}
                   </button>
@@ -463,7 +464,7 @@ export default function ScenarioBuilder() {
 
               {state.interventionType === "full_closure" && (
                 <p className="text-sm text-text-muted">
-                  A full closure has no extra parameters — the corridor at the chosen
+                  A full closure has no extra parameters. The corridor at the chosen
                   location is closed entirely.
                 </p>
               )}
@@ -538,7 +539,7 @@ export default function ScenarioBuilder() {
               </h2>
 
               <p className="text-xs text-text-muted mb-2">
-                This exact query is sent to the orchestrator — nothing is rewritten.
+                This exact query is sent to the orchestrator. Nothing is rewritten.
               </p>
               <div
                 data-testid="review-query"
@@ -589,7 +590,7 @@ export default function ScenarioBuilder() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="mt-5 w-full bg-primary text-primary-foreground font-medium py-2.5 rounded-md hover:bg-primary-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="mt-5 w-full bg-primary text-primary-foreground font-medium py-2.5 rounded-md hover:bg-primary-hover transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -610,7 +611,7 @@ export default function ScenarioBuilder() {
           type="button"
           onClick={() => setStep((s) => (s > 0 ? ((s - 1) as StepIndex) : s))}
           disabled={step === 0 || isSubmitting}
-          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 disabled:active:scale-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
         </button>
@@ -624,7 +625,7 @@ export default function ScenarioBuilder() {
             type="button"
             onClick={() => setStep((s) => ((s + 1) as StepIndex))}
             disabled={!canAdvance}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 disabled:active:scale-100"
           >
             Next <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -740,11 +741,16 @@ function CustomSelect<T extends string | number>({
 
     updateMenuPosition();
     window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
+    // Repositioning the fixed menu on every scroll frame is jank-prone (and a
+    // per-frame scroll handler is banned). The fixed menu would drift from its
+    // button on scroll, so close it once instead — native <select> behaves the
+    // same. `once` auto-removes the listener after the first scroll.
+    const closeOnScroll = () => setIsOpen(false);
+    window.addEventListener("scroll", closeOnScroll, { capture: true, once: true });
 
     return () => {
       window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
+      window.removeEventListener("scroll", closeOnScroll, { capture: true });
     };
   }, [isOpen]);
 
@@ -763,7 +769,10 @@ function CustomSelect<T extends string | number>({
         className="w-full flex items-center justify-between bg-surface border border-border rounded-md px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-left"
       >
         <span>{selectedOption ? selectedOption.label : String(value)}</span>
-        <span className="ml-2 text-text-muted pointer-events-none text-[10px]">▼</span>
+        <ChevronDown
+          className={`ml-2 h-4 w-4 text-text-muted shrink-0 pointer-events-none transition-transform ${isOpen ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
       </button>
 
       {isOpen && (

@@ -111,7 +111,7 @@ export function IconNavRail({ activeId = "home", onNavigate }: IconNavRailProps)
       {/* Tooltip Overlay */}
       {hoveredItem && (
         <div
-          className="fixed z-50 pointer-events-none px-3 py-1.5 rounded-md bg-surface/80 border border-border text-sm font-medium text-foreground shadow-lg backdrop-blur-md whitespace-nowrap"
+          className="glass fixed z-50 pointer-events-none px-3 py-1.5 rounded-md text-sm font-medium text-foreground whitespace-nowrap"
           style={{
             top: hoveredItem.top,
             left: 72,

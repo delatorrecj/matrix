@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "MATRIX — Urban Planning Simulator",
+  title: "MATRIX · Urban Planning Simulator",
   description: "Multi-Agent Twin for Routing & Infrastructure eXchange. AI-powered urban impact simulator for Iloilo City.",
 };
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ConfidenceChip, ConfidenceLevel } from "@/components/ConfidenceChip";
-import { X } from "lucide-react";
+import { ConfidenceChip, ConfidenceLevel, toConfidenceLevel } from "@/components/ConfidenceChip";
+import { X, ChevronDown } from "lucide-react";
 
 interface InspectDrawerProps {
   isOpen: boolean;
@@ -40,13 +40,6 @@ export interface ProvenanceData {
   inputs: InputDataset[];
   assumptions: string[];
   references: string[];
-}
-
-/** Map the wire's H/M/L letter onto the ConfidenceChip vocabulary. */
-function toConfidenceLevel(confidence: string | undefined): ConfidenceLevel {
-  if (confidence === "H" || confidence === "High") return "High";
-  if (confidence === "M" || confidence === "Medium") return "Medium";
-  return "Low";
 }
 
 const CONFIDENCE_BOX_STYLES: Record<ConfidenceLevel, string> = {
@@ -156,7 +149,7 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       aria-labelledby="inspect-drawer-title"
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="absolute right-6 top-24 w-[360px] md:w-[400px] z-30 flex flex-col bg-surface shadow-2xl border border-border rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
+      className="glass-strong absolute inset-x-2 top-20 w-auto md:inset-x-auto md:right-6 md:top-24 md:w-[400px] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
       style={{
         maxHeight: isExpanded ? 'calc(100vh - 12rem)' : 'var(--panel-peek-height, 270px)'
       }}
@@ -221,7 +214,7 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
             <div className="p-4 bg-surface-elevated border border-border rounded-lg font-mono text-sm overflow-x-auto">
               {data?.equationText || (
                 <span className="text-text-muted italic font-sans">
-                  Equation text not provided over the stream — {data?.equationId || "this equation"}{" "}
+                  Equation text not provided over the stream. {data?.equationId || "This equation"}{" "}
                   is registered in the methods ledger (methods-matrix §3).
                 </span>
               )}
@@ -261,9 +254,10 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
                           <div className="text-xs text-text-muted truncate">{input.name}</div>
                         )}
                       </div>
-                      <span className="text-text-muted text-xs shrink-0 ml-2" aria-hidden="true">
-                        {isItemExpanded ? "▲" : "▼"}
-                      </span>
+                      <ChevronDown
+                        className={`text-text-muted shrink-0 ml-2 h-4 w-4 transition-transform ${isItemExpanded ? "rotate-180" : ""}`}
+                        aria-hidden="true"
+                      />
                     </button>
                     {isItemExpanded && (
                       <dl

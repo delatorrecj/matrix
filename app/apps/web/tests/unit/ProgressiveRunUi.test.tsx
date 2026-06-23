@@ -69,7 +69,7 @@ describe("RunStatusBanner", () => {
     const banner = screen.getByTestId("error-banner");
     expect(banner).toHaveTextContent("sumo stage");
     expect(banner).toHaveTextContent("TraCI crashed");
-    expect(banner).toHaveTextContent(/recoverable — retrying is likely to succeed/i);
+    expect(banner).toHaveTextContent(/recoverable\. Retrying is likely to succeed/i);
 
     fireEvent.click(screen.getByRole("button", { name: /retry run/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);

@@ -13,7 +13,7 @@ interface LayerLegendProps {
 
 export function LayerLegend({ layers, onToggleLayer }: LayerLegendProps) {
   return (
-    <div className="bg-surface/60 backdrop-blur-xl shadow-lg rounded-xl p-3 border border-border w-64 pointer-events-auto">
+    <div className="glass rounded-xl p-3 w-64 pointer-events-auto">
       <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
         <Layers className="w-3.5 h-3.5" />
         Map Layers

@@ -113,7 +113,7 @@ describe('MatrixCockpit scenario submission', () => {
     expect(screen.queryByText(/Sample mode/i)).not.toBeInTheDocument();
   });
 
-  it('shows the labeled "Sample mode — API offline" state on network failure', async () => {
+  it('shows the labeled "Sample mode: API offline" state on network failure', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
     render(<MatrixCockpit />);
 
@@ -122,7 +122,7 @@ describe('MatrixCockpit scenario submission', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Simulate Scenario/i }));
 
-    expect(await screen.findByText(/Sample mode — API offline/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Sample mode: API offline/i)).toBeInTheDocument();
     // Sample cards are explicitly labeled — never presented as real results.
     expect(screen.getByText('Economic (sample)')).toBeInTheDocument();
     expect(screen.getByText('Behavioral (sample)')).toBeInTheDocument();

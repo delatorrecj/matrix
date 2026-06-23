@@ -69,6 +69,15 @@
     --input: var(--color-border);
     --ring: var(--color-primary);
     --radius: 0.5rem;
+
+    /* ── Glass system (theme-aware; one source of truth for floating panels) ──
+       Light opacity kept high enough that muted text clears WCAG AA even when a
+       mid-toned map feature shows through the panel. */
+    --glass-bg: rgb(255 255 255 / 0.82);        /* translucent surface */
+    --glass-bg-strong: rgb(255 255 255 / 0.94); /* control bars needing legibility */
+    --glass-border: rgb(24 24 27 / 0.10);       /* dark hairline reads on light bg */
+    --glass-highlight: rgb(255 255 255 / 0.65); /* top inner-edge refraction */
+    --glass-blur: 18px;
   }
 
   /* ── Dark mode ── */
@@ -108,6 +117,13 @@
     --border: var(--color-border);
     --input: var(--color-border);
     --ring: var(--color-primary);
+
+    /* ── Glass system (dark) ── */
+    --glass-bg: rgb(17 24 39 / 0.62);           /* --color-surface @ .62 */
+    --glass-bg-strong: rgb(10 14 26 / 0.90);    /* --color-bg, near-opaque */
+    --glass-border: rgb(255 255 255 / 0.08);    /* light hairline reads on dark bg */
+    --glass-highlight: rgb(255 255 255 / 0.07);
+    --glass-blur: 18px;
   }
 
   * {
@@ -183,9 +199,34 @@ input[type="range"]::-moz-range-thumb:hover {
   box-shadow: 0 0 0 5px rgb(59 111 224 / 0.3);
 }
 
-/* ── Glow utility for water/accent elements ── */
-.glow-blue {
-  text-shadow: 0 0 8px rgb(59 111 224 / 0.6), 0 0 20px rgb(59 111 224 / 0.3);
+/* ── Glass surfaces (floating panels, control bars, popovers) ──
+   One material, theme-aware. `glass` for panels, `glass-strong` for bars
+   that overlay the map and must stay legible. The inset highlight gives a
+   real top-edge refraction instead of a flat blur. */
+.glass {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-highlight);
+}
+
+.glass-strong {
+  background-color: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-highlight);
+}
+
+/* Accessibility: users who ask for reduced transparency get a solid fill. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    background-color: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 /* ── Scrollbar styling for dark theme ── */
@@ -206,18 +247,24 @@ input[type="range"]::-moz-range-thumb:hover {
   background: var(--color-text-muted);
 }
 
-/* ── Wizard step transition animation ── */
-.wizard-step {
-  animation: wizard-fade-in 0.25s ease-out;
+/* ── Motion: gated behind prefers-reduced-motion (Section 6.B) ──
+   wizard-step = step changes in the builder; card-reveal = results arriving
+   one dimension at a time (state-transition storytelling, Section 5). */
+@keyframes wizard-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes wizard-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+@keyframes card-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wizard-step {
+    animation: wizard-fade-in 0.25s ease-out;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .card-reveal {
+    animation: card-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }

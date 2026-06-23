@@ -18,6 +18,7 @@ import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
 import { LayerLegend } from "@/components/LayerLegend";
 import { IconNavRail } from "@/components/IconNavRail";
 import { HeaderControls } from "@/components/HeaderControls";
+import { MapAttribution } from "@/components/MapAttribution";
 import { PlaybackBar } from "@/components/PlaybackBar";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
@@ -60,11 +61,11 @@ const PRESETS: { label: string; query: string; icon: React.ElementType }[] = [
 // Shown ONLY in the explicitly-labeled "Sample mode — API offline" state.
 // These are illustrative sample values, never presented as simulation output.
 const SAMPLE_PROVENANCE: ProvenanceData = {
-  metric: "Economic Impact (SAMPLE — not a simulation result)",
+  metric: "Economic Impact (SAMPLE, not a simulation result)",
   value: "₱12.5M",
-  range: "₱8M – ₱15M",
+  range: "₱8M to ₱15M",
   confidence: "Medium",
-  confidenceBasis: "SAMPLE DATA — the MATRIX API is offline; this value is illustrative only and was not computed by the kernel.",
+  confidenceBasis: "SAMPLE DATA. The MATRIX API is offline; this value is illustrative only and was not computed by the kernel.",
   equationId: "ECO-1",
   equationText: "ΔCost = Σ(Area_k * UnitCost_k) + Contingency",
   inputs: [
@@ -72,7 +73,7 @@ const SAMPLE_PROVENANCE: ProvenanceData = {
     { id: "DS-02", name: "PSA ASPBI Construction Costs", confidence: "Medium", vintage: "2022" }
   ],
   assumptions: [
-    "SAMPLE MODE: API offline — every value shown is an illustrative placeholder, not kernel output.",
+    "SAMPLE MODE: API offline. Every value shown is an illustrative placeholder, not kernel output.",
     "Contingency buffer set at 15%",
     "Inflation adjustment of 4.5% applied to 2022 data"
   ],
@@ -91,6 +92,9 @@ export default function MatrixCockpit() {
   }, [theme]);
 
   const [showResultsPanel, setShowResultsPanel] = useState(true);
+  // Mobile only: the scenario panel is a bottom sheet that peeks (query visible)
+  // and expands on a tap of the grab handle. Ignored at md+ (it docks left).
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
 
@@ -205,11 +209,12 @@ export default function MatrixCockpit() {
             onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
             layers={[]}
           >
-            <Map 
+            <Map
               ref={mapRef}
-              mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT} 
-              mapLib={maplibregl} 
-              reuseMaps 
+              mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
+              mapLib={maplibregl}
+              attributionControl={false}
+              reuseMaps
             />
           </DeckGL>
         </div>
@@ -219,29 +224,47 @@ export default function MatrixCockpit() {
           <HeaderControls />
         </div>
 
-        {/* LEFT RAIL: Scenario Bar */}
-        <div className="absolute left-4 top-4 bottom-20 w-[320px] bg-surface/50 backdrop-blur-xl shadow-lg rounded-xl border border-white/10 flex flex-col z-10 pointer-events-auto overflow-hidden">
+        {/* SCENARIO PANEL — docked left rail at md+, a peek/expand bottom sheet on mobile. */}
+        <div
+          className={`glass absolute z-20 flex flex-col pointer-events-auto overflow-hidden
+            inset-x-0 bottom-0 rounded-t-2xl transition-[height] duration-300 ${sheetExpanded ? "h-[85dvh]" : "h-[46dvh]"}
+            md:inset-x-auto md:left-4 md:top-4 md:bottom-20 md:h-auto md:w-[320px] md:rounded-xl md:z-10 md:transition-none`}
+        >
+          {/* Mobile grab handle — tap to expand/collapse the sheet. */}
+          <button
+            type="button"
+            onClick={() => setSheetExpanded((v) => !v)}
+            aria-label={sheetExpanded ? "Collapse scenario panel" : "Expand scenario panel"}
+            aria-expanded={sheetExpanded}
+            className="md:hidden w-full pt-2.5 pb-1.5 flex items-center justify-center shrink-0"
+          >
+            <span className="h-1 w-10 rounded-full bg-text-muted/40" aria-hidden="true" />
+          </button>
+
           {/* Sidebar Header with Logo */}
-          <div className="p-4 border-b border-white/10 bg-transparent">
-            <h1 className="text-4xl font-black uppercase tracking-widest text-text">MATRIX</h1>
-            <p className="text-[10px] text-text-muted leading-tight mt-1">
+          <div className="px-5 pt-3 pb-4 md:pt-5 border-b border-border/60">
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-2xl font-bold uppercase tracking-[0.28em] text-text">MATRIX</h1>
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+            </div>
+            <p className="text-[11px] text-text-muted leading-snug mt-1.5">
               Multi-Agent Twin for Routing <br className="hidden sm:block" />
-              & Infrastructure eXchange
+              &amp; Infrastructure eXchange
             </p>
           </div>
 
-          <div className="p-4 flex-1 overflow-y-auto">
+          <div className="p-5 flex-1 overflow-y-auto">
             <label htmlFor="scenario-query" className="text-sm font-semibold mb-2 block text-text">Scenario Query</label>
             <textarea
               id="scenario-query"
-              className="w-full bg-surface-elevated/50 backdrop-blur-md border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
+              className="w-full bg-surface-elevated/50 border border-border rounded-lg p-3 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[100px] transition-colors"
               placeholder="e.g., What if we build a 3,000-seat school in Molo?"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               disabled={isSubmitting}
             />
             <button
-              className="w-full mt-3 bg-primary/80 backdrop-blur-xl text-white font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+              className="w-full mt-3 bg-primary text-white font-semibold py-2.5 rounded-lg hover:bg-primary-hover transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md shadow-primary/20"
               onClick={() => handleSimulate()}
               disabled={isSubmitting || !query.trim()}
             >
@@ -310,11 +333,16 @@ export default function MatrixCockpit() {
               </div>
             </div>
           </div>
+
+          {/* Map attribution — replaces MapLibre's default white control (ODbL/OpenMapTiles). */}
+          <div className="px-5 py-2.5 border-t border-border/60 shrink-0">
+            <MapAttribution />
+          </div>
         </div>
 
         {/* LAYER LEGEND — closed by default, toggle via Layers nav icon */}
         {showLayers && (
-          <div className="absolute left-[340px] top-4 z-10">
+          <div className="absolute left-2 top-20 md:left-[340px] md:top-4 z-30">
             <LayerLegend
               layers={[
                 { id: "buildings", label: "3D Buildings", icon: Layers, active: activeLayers.buildings },
@@ -332,7 +360,7 @@ export default function MatrixCockpit() {
           <div className="absolute right-4 top-24 z-20 pointer-events-auto">
             <button
               onClick={() => setShowResultsPanel(true)}
-              className="flex items-center gap-2 bg-surface/60 backdrop-blur-xl border border-border shadow-lg rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all"
+              className="glass flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-text hover:text-primary hover:border-primary/50 transition-all active:scale-[0.98]"
             >
               <LayoutList className="w-4 h-4" />
               Show Results
@@ -340,7 +368,7 @@ export default function MatrixCockpit() {
           </div>
         )}
         {sampleMode && showResultsPanel && !inspectMetric && (
-          <div className="absolute right-6 top-24 bottom-20 w-[360px] flex flex-col gap-4 z-10 pointer-events-auto overflow-y-auto overflow-x-hidden pb-6">
+          <div className="absolute inset-x-2 top-20 bottom-[48dvh] w-auto md:inset-x-auto md:right-6 md:top-24 md:bottom-20 md:w-[360px] flex flex-col gap-4 z-10 pointer-events-auto overflow-y-auto overflow-x-hidden pb-6">
             <div className="flex justify-end sticky top-0 bg-background/40 backdrop-blur-xl z-20 -mx-4 -mt-4 px-4 py-2 rounded-t-xl">
               <button
                 onClick={() => setShowResultsPanel(false)}
@@ -353,39 +381,44 @@ export default function MatrixCockpit() {
             <div role="alert" className="bg-warning/10 border border-warning/40 border-dashed rounded-xl p-4 shadow-sm mt-2">
               <div className="flex items-center gap-2 font-bold text-warning text-sm">
                 <WifiOff className="w-4 h-4" aria-hidden="true" />
-                Sample mode — API offline
+                Sample mode: API offline
               </div>
               <p className="text-xs text-text mt-2">
                 The MATRIX API could not be reached. The cards below show <strong>illustrative sample
-                values only</strong> — they are <strong>not</strong> simulation results. Start the API
+                values only</strong>. They are <strong>not</strong> simulation results. Start the API
                 and re-run the scenario for live, glass-box numbers.
               </p>
             </div>
             <DimensionCard
+              className="card-reveal" style={{ animationDelay: "0ms" }}
               id="dim-behavioral" name="Behavioral (sample)" icon={Route} colorVar="--color-dim-behavioral"
               score={-12.4} rangeMin={-14} rangeMax={-10} unit="%" confidence="Low"
               confidenceReason="Sample mode: illustrative value, not computed by the kernel"
               onInspect={setInspectMetric}
             />
             <DimensionCard
+              className="card-reveal" style={{ animationDelay: "60ms" }}
               id="dim-social" name="Social (sample)" icon={Users} colorVar="--color-dim-social"
               score={4.2} rangeMin={2} rangeMax={6} unit="%" confidence="Low"
               confidenceReason="Sample mode: illustrative value, not computed by the kernel"
               onInspect={setInspectMetric}
             />
             <DimensionCard
+              className="card-reveal" style={{ animationDelay: "120ms" }}
               id="dim-economic" name="Economic (sample)" icon={Briefcase} colorVar="--color-dim-economic"
               score={12500000} rangeMin={8000000} rangeMax={15000000} unit="₱" confidence="Low"
               confidenceReason="Sample mode: illustrative value, not computed by the kernel"
               onInspect={setInspectMetric}
             />
             <DimensionCard
+              className="card-reveal" style={{ animationDelay: "180ms" }}
               id="dim-ecological" name="Ecological (sample)" icon={Leaf} colorVar="--color-dim-ecological"
               score={-840} rangeMin={-900} rangeMax={-750} unit=" tCO₂e" confidence="Low"
               confidenceReason="Sample mode: illustrative value, not computed by the kernel"
               onInspect={setInspectMetric}
             />
             <DimensionCard
+              className="card-reveal" style={{ animationDelay: "240ms" }}
               id="dim-societal" name="Societal (sample)" icon={HeartHandshake} colorVar="--color-dim-societal"
               score={8.1} rangeMin={6.5} rangeMax={9.2} unit=" index" confidence="Low"
               confidenceReason="Sample mode: illustrative value, not computed by the kernel"
@@ -394,8 +427,9 @@ export default function MatrixCockpit() {
           </div>
         )}
 
-        {/* BOTTOM BAR: Enhanced Playback Bar */}
-        <div className="absolute bottom-4 left-4 right-4 z-10 pointer-events-auto">
+        {/* BOTTOM BAR: Playback Bar — hidden on mobile (no trajectories on the home
+            map yet, and it would collide with the scenario bottom sheet). */}
+        <div className="hidden md:block absolute bottom-4 left-4 right-4 z-10 pointer-events-auto">
           <PlaybackBar
             isPlaying={isPlaying}
             onTogglePlay={() => setIsPlaying(!isPlaying)}

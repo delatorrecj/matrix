@@ -14,6 +14,7 @@ interface DimensionCardProps {
   unit?: string;
   onInspect: (id: string) => void;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function DimensionCard({
@@ -29,13 +30,15 @@ export function DimensionCard({
   unit = "",
   onInspect,
   className = "",
+  style,
 }: DimensionCardProps) {
   const isPositive = score > 0;
   const isNegative = score < 0;
 
   return (
-    <div 
-      className={`bg-surface-elevated/60 backdrop-blur-xl border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group cursor-pointer ${className}`}
+    <div
+      className={`glass rounded-xl p-5 transition-all hover:border-primary/40 active:scale-[0.99] relative overflow-hidden group cursor-pointer ${className}`}
+      style={style}
       onClick={() => onInspect(id)}
       role="button"
       tabIndex={0}
