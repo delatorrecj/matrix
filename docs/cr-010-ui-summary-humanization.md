@@ -1,11 +1,14 @@
 # CR-010 — Summary-First UI & Plain-Language Humanization
 
 **Change Record ID:** CR-010
-**Status:** Phase 1 implemented (branch `feat/cr010-ui-humanization`); Phase 2 pending
+**Status:** **Applied** — Phase 1 (`f323e42`) + Phase 2 (`6c3351f`) merged to `main` & deployed to production (2026-06-24)
 **Date opened:** 2026-06-24
 **Owner:** Carlos (delatorrecj)
 
-> **Implementation status (2026-06-24).** Phase 1 (frontend-only) is built on branch `feat/cr010-ui-humanization`: number formatter + metric registry, plain-language Summary dock, dedicated interpreted Analytics view, nav-rail cleanup (logo→home, disabled-with-reason items, AU avatar removed, dead Help removed), and a minimal real Settings (theme + language). Verified by `next lint` (clean) and `tsc --noEmit` (clean for all changed files; the only `tsc` errors are pre-existing deck.gl accessor-typing ones in `tests/unit/mapLayers.test.ts`, excluded from `next build`). `next build`/`next dev` OOM **locally** (physical-RAM exhaustion bundling deck.gl/maplibre — a known local limit; CI is the build gate). **Not yet committed** (owner commits). Phase 2 (kernel synthesis rewrite + dedicated brief generator + bilingual consumption) is unstarted.
+> **Implementation status (2026-06-24) — DONE; both phases live in production.**
+> **Phase 1** (PR #30, merge `f323e42`): `lib/format.ts` + `lib/metrics.ts` number humanization (no false precision; near-zero → "No meaningful change"), plain-language Summary dock (`SummaryView`/`SummaryCard`) + a dedicated, *interpreted* `AnalyticsView`, nav-rail cleanup (logo→home, disabled-with-reason items, **AU avatar + dead Help removed**), and a minimal real Settings (`SettingsPanel` + `LanguageProvider`: theme + EN/Hiligaynon).
+> **Phase 2** (PR #31, merge `6c3351f`): synthesis prompt rewritten to a plain-language **BLUF** brief (HEADLINE → WHAT WE SIMULATED → KEY FINDINGS → RECOMMENDATION → KEY RISK), **delimited bilingual** (`=== HILIGAYNON ===`, kernel `HILIGAYNON_MARKER` + web `lib/bilingual.ts`) consumed via the language toggle, a print-scoped one-page `ScenarioBrief` (with an EVIDENCE appendix), and a tightened citation guard (newline-split — strictly stronger).
+> Both gating agents (`glass-box-auditor`, `eval-test-runner`) **PASS**; all CI green (kernel/api pytest, web vitest+build, Playwright e2e); both Vercel **production deploys succeeded**. The Locked docs `methods-matrix.md` §4/§4.3 + `prd-matrix.md` PRD-F7 were amended and **re-locked** with owner approval (`cc46b78`). Glass box (PRD-F14) preserved throughout: humanization is display-only; every number still resolves to its `equation_id` + datasets + computed confidence in Analytics/Inspect, and the LLM still originates no number.
 **Trigger:** Live production QA of [matrix-atlan.vercel.app](https://matrix-atlan.vercel.app/) surfaced (a) dead/stub navigation controls, (b) false-precision raw-float numbers, and (c) a dense, jargon-heavy "brief". The product owner wants a **summary-first** results experience, full statistics moved behind a working **Analytics** tab, plain-language output instead of jargon/stats, and removal/repair of non-functional controls (Settings, the "AU" admin avatar).
 
 > **North star:** a city planner should grasp *"does this intervention help or hurt, and by how much?"* in under 30 seconds — without reading an equation code or a 19-digit float. The glass box (PRD-F14) is **preserved, not deleted**: every humanized number still resolves to its `equation_id` + datasets + computed confidence one click away (Analytics tab / Inspect drawer).
@@ -201,13 +204,13 @@ Presentation aliases only. **Polarity** = does a positive Δ read as better (+) 
 
 ## 10. Definition of Done
 
-- [ ] Summary view is the default; plain-language cards (human label + formatted number + "so what" + spelled-out confidence); zero equation codes/raw floats on Summary.
-- [ ] `Summary | Analytics` toggle works; Analytics holds full stats + codes + ranges + bias + validation; Analytics rail icon works (no silent no-op anywhere).
-- [ ] `src/lib/format.ts` + metric registry land with unit tests; near-zero → "No meaningful change"; Inspect/Analytics keep raw precision.
-- [ ] AU avatar removed; minimal Settings (theme + language) works on every page; no dead rail/header controls remain.
-- [ ] Phase 2: synthesis prompt is BLUF plain-language with delimited bilingual; dedicated brief generator replaces panel-print; `glass-box-auditor` + `eval-test-runner` PASS; `methods-matrix.md` re-locked.
-- [ ] Playwright e2e + `next build` green; DSD compliance checked.
-- [ ] Change Log in [docs/index.md](docs/index.md) entry added and marked **Applied** on merge.
+- [x] Summary view is the default; plain-language cards (human label + formatted number + "so what" + spelled-out confidence); zero equation codes/raw floats on Summary.
+- [x] Summary dock + dedicated Analytics view; Analytics holds full stats + codes + ranges + bias + validation; Analytics rail icon works (no silent no-op anywhere).
+- [x] `src/lib/format.ts` + metric registry land with unit tests; near-zero → "No meaningful change"; Inspect/Analytics keep raw precision.
+- [x] AU avatar removed; minimal Settings (theme + language) works on every page; no dead rail/header controls remain.
+- [x] Phase 2: synthesis prompt is BLUF plain-language with delimited bilingual; dedicated brief generator replaces panel-print; `glass-box-auditor` + `eval-test-runner` PASS; `methods-matrix.md` re-locked.
+- [x] Playwright e2e + `next build` green (CI). *(Formal DSD-compliance audit of the new components is recommended as a follow-up — not blocking.)*
+- [x] Change Log in [docs/index.md](docs/index.md) entry added and marked **Applied** (CR-010 reconcile, 2026-06-24).
 
 ## 11. Risks & open questions
 
