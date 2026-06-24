@@ -191,7 +191,12 @@ export default function MatrixCockpit() {
     <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex">
 
       {/* ICON NAV RAIL */}
-      <IconNavRail activeId={activeNavId} onNavigate={handleNavigation} />
+      <IconNavRail
+        activeId={activeNavId}
+        onNavigate={handleNavigation}
+        disabledIds={["trajectories", "analytics"]}
+        disabledReason="Run a scenario first"
+      />
 
       {/* MAP STAGE (Background) */}
       <div className="flex-1 relative">

@@ -2,6 +2,7 @@
 
 import { Home, Network, BarChart3, Layers, Settings, Box } from "lucide-react";
 import { useState, useRef } from "react";
+import { SettingsPanel } from "@/components/SettingsPanel";
 
 interface NavItem {
   id: string;
@@ -12,7 +13,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: "home", icon: Home, label: "Home" },
-  { id: "trajectories", icon: Network, label: "Trajectories" },
+  { id: "trajectories", icon: Network, label: "Summary" },
   { id: "analytics", icon: BarChart3, label: "Analytics" },
   { id: "layers", icon: Layers, label: "Layers" },
   { id: "settings", icon: Settings, label: "Settings", position: "bottom" },
@@ -21,13 +22,24 @@ const NAV_ITEMS: NavItem[] = [
 interface IconNavRailProps {
   activeId?: string;
   onNavigate?: (id: string) => void;
+  /** Items that aren't actionable in this context (rendered disabled, not silent no-ops). */
+  disabledIds?: string[];
+  /** Tooltip shown for a disabled item. */
+  disabledReason?: string;
 }
 
-export function IconNavRail({ activeId = "home", onNavigate }: IconNavRailProps) {
+export function IconNavRail({
+  activeId = "home",
+  onNavigate,
+  disabledIds = [],
+  disabledReason = "Not available here",
+}: IconNavRailProps) {
   const topItems = NAV_ITEMS.filter((item) => item.position !== "bottom");
   const bottomItems = NAV_ITEMS.filter((item) => item.position === "bottom");
+  const disabled = new Set(disabledIds);
 
   const [hoveredItem, setHoveredItem] = useState<{ label: string; top: number } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = (label: string, e: React.MouseEvent<HTMLButtonElement>) => {
@@ -44,26 +56,40 @@ export function IconNavRail({ activeId = "home", onNavigate }: IconNavRailProps)
     setHoveredItem(null);
   };
 
+  // Settings is handled in-rail (its own panel); everything else is routed by the parent.
+  const activate = (id: string) => {
+    handleMouseLeave();
+    if (id === "settings") {
+      setSettingsOpen(true);
+      return;
+    }
+    onNavigate?.(id);
+  };
+
   const renderItem = (item: NavItem) => {
     const Icon = item.icon;
     const isActive = activeId === item.id;
+    const isDisabled = disabled.has(item.id);
 
     return (
       <button
         key={item.id}
         onClick={() => {
-          onNavigate?.(item.id);
-          handleMouseLeave();
+          if (!isDisabled) activate(item.id);
         }}
-        onMouseEnter={(e) => handleMouseEnter(item.label, e)}
+        onMouseEnter={(e) => handleMouseEnter(isDisabled ? `${item.label} — ${disabledReason}` : item.label, e)}
         onMouseLeave={handleMouseLeave}
         aria-label={item.label}
         aria-current={isActive ? "page" : undefined}
+        aria-disabled={isDisabled || undefined}
+        disabled={isDisabled}
         className={`
           w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-150 mx-auto
           ${isActive
             ? "bg-primary/15 text-primary"
-            : "text-text-muted hover:text-text hover:bg-surface-elevated"
+            : isDisabled
+              ? "text-text-muted/40 cursor-not-allowed"
+              : "text-text-muted hover:text-text hover:bg-surface-elevated"
           }
         `}
       >
@@ -78,11 +104,15 @@ export function IconNavRail({ activeId = "home", onNavigate }: IconNavRailProps)
         className="w-16 h-full bg-surface border-r border-border flex flex-col py-4 shrink-0 relative z-20"
         aria-label="Main navigation"
       >
-        {/* Logo */}
+        {/* Logo → Home */}
         <div className="flex items-center justify-center pb-6 mb-2 border-b border-border/50">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shrink-0">
+          <button
+            onClick={() => activate("home")}
+            aria-label="MATRIX home"
+            className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shrink-0 hover:bg-primary-hover transition-colors active:scale-95"
+          >
             <Box className="w-5 h-5" />
-          </div>
+          </button>
         </div>
 
         {/* Top icons */}
@@ -93,18 +123,6 @@ export function IconNavRail({ activeId = "home", onNavigate }: IconNavRailProps)
         {/* Bottom-pinned icons */}
         <div className="flex flex-col gap-2 pt-4 mt-auto border-t border-border/50">
           {bottomItems.map(renderItem)}
-
-          {/* User avatar */}
-          <button
-            aria-label="User profile"
-            onMouseEnter={(e) => handleMouseEnter("Admin User", e)}
-            onMouseLeave={handleMouseLeave}
-            className="w-10 h-10 flex items-center justify-center mx-auto rounded-full hover:bg-surface-elevated transition-all duration-150 mt-1"
-          >
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0">
-              AU
-            </div>
-          </button>
         </div>
       </nav>
 
@@ -121,6 +139,8 @@ export function IconNavRail({ activeId = "home", onNavigate }: IconNavRailProps)
           {hoveredItem.label}
         </div>
       )}
+
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

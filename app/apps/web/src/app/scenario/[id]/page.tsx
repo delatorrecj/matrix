@@ -9,10 +9,10 @@ import DeckGL from "@deck.gl/react";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import type { Layer } from "@deck.gl/core";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
-import SynthesisNarrative, { SynthesisCitation } from "@/components/SynthesisNarrative";
-import ValidationPanel from "@/components/ValidationPanel";
-import BiasAuditLog from "@/components/BiasAuditLog";
+import { type SynthesisCitation } from "@/components/SynthesisNarrative";
 import { DimensionResultGroup } from "@/components/DimensionResultGroup";
+import { SummaryView } from "@/components/SummaryView";
+import { AnalyticsView } from "@/components/AnalyticsView";
 import type { ResultCardData } from "@/components/ResultCard";
 import { MapAttribution } from "@/components/MapAttribution";
 import RunProgress from "@/components/RunProgress";
@@ -42,7 +42,7 @@ import type {
   FeatureCollection,
   MapLayerToggles,
 } from "@/components/map";
-import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause } from "lucide-react";
+import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
@@ -101,6 +101,9 @@ export default function ScenarioSimulation() {
   const [isPlaying, setIsPlaying] = useState(true);
 
   const [showResultsPanel, setShowResultsPanel] = useState(true);
+  // CR-010: the dock is summary-only by default; "analytics" opens the full,
+  // interpreted detail view (driven by the nav rail + the "View full analytics" link).
+  const [panelView, setPanelView] = useState<"summary" | "analytics">("summary");
   const [inspectingMetric, setInspectingMetric] = useState<string | null>(null);
 
   const [viewState, setViewState] = useState({
@@ -270,20 +273,29 @@ export default function ScenarioSimulation() {
           setEdgeCounts(msg.edge_counts as EdgeCounts);
         }
       } else if (msg.type === "DIMENSION_RESULT") {
-        // Build provenance data payload format expected by InspectDrawer
+        // Build provenance data payload format expected by InspectDrawer.
+        // The raw value/range stay untouched here (Inspect = glass box, full
+        // precision); the Summary/Analytics views format them at render via
+        // src/lib/format.ts (CR-010) — no pre-rounding, no false precision.
         const value = typeof msg.value === "number" ? msg.value : Number(msg.value);
-        const range = Array.isArray(msg.range) && msg.range.length === 2
-          ? `${msg.range[0]}..${msg.range[1]}`
-          : "";
+        const rawRange: [number, number] | null =
+          Array.isArray(msg.range) &&
+          msg.range.length === 2 &&
+          typeof msg.range[0] === "number" &&
+          typeof msg.range[1] === "number"
+            ? [msg.range[0], msg.range[1]]
+            : null;
+        const range = rawRange ? `${rawRange[0]}..${rawRange[1]}` : "";
         const confidence = typeof msg.confidence === "string" ? msg.confidence : "L";
-        const metric = typeof msg.metric === "string" ? msg.metric : String(msg.equation_id ?? "metric");
+        const equationId = String(msg.equation_id ?? "");
+        const metric = typeof msg.metric === "string" ? msg.metric : (equationId || "metric");
         const provData: ProvenanceData = {
           metric,
           value: String(msg.value),
           range,
           confidence,
           confidenceBasis: "Computed from input dataset confidences per methods §2",
-          equationId: String(msg.equation_id ?? ""),
+          equationId,
           // No equation text or per-dataset metadata arrives over the stream yet —
           // the drawer renders honest "not provided" fallbacks (never invented).
           inputs: (Array.isArray(msg.input_dataset_ids) ? msg.input_dataset_ids : []).map(
@@ -297,10 +309,11 @@ export default function ScenarioSimulation() {
           key: `${msg.dimension}:${metric}:${prev.length}`,
           dimension: String(msg.dimension ?? "unknown"),
           metric,
-          value: Number.isFinite(value) && value > 0 ? `+${msg.value}` : String(msg.value),
+          equationId,
           unit: typeof msg.unit === "string" ? msg.unit : "",
           conf: confidence,
-          range,
+          rawValue: value,
+          rawRange,
           provData
         }]);
       } else if (msg.type === "SYNTHESIS") {
@@ -384,11 +397,20 @@ export default function ScenarioSimulation() {
     <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex print:h-auto print:block print:bg-white">
       {/* ICON NAV RAIL */}
       <div className="print:hidden">
-        <IconNavRail activeId="trajectories" onNavigate={(id) => {
-          if (id === "home") {
-            router.push("/");
-          }
-        }} />
+        <IconNavRail
+          activeId={panelView === "analytics" ? "analytics" : "trajectories"}
+          onNavigate={(id) => {
+            if (id === "home") {
+              router.push("/");
+            } else if (id === "trajectories") {
+              setPanelView("summary");
+              setShowResultsPanel(true);
+            } else if (id === "analytics") {
+              setPanelView("analytics");
+              setShowResultsPanel(true);
+            }
+          }}
+        />
       </div>
 
       {/* Main layout contents */}
@@ -407,14 +429,28 @@ export default function ScenarioSimulation() {
         </div>
       )}
 
-      {/* 5-Dimension Impact Panel (Right Side, normally overlay but docked here) */}
+      {/* Results panel — summary dock by default; widens into the full analytics view */}
       {showResultsPanel && (
-        <div className="w-full md:w-[360px] lg:w-[400px] h-full bg-surface/85 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-border order-2 md:order-1 overflow-hidden relative print:w-full print:border-none print:shadow-none print:bg-white print:overflow-visible print:h-auto">
+        <div className={`w-full h-full bg-surface/85 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-border order-2 md:order-1 overflow-hidden relative print:w-full print:border-none print:shadow-none print:bg-white print:overflow-visible print:h-auto ${panelView === "analytics" ? "md:w-[680px] lg:w-[860px]" : "md:w-[360px] lg:w-[400px]"}`}>
           <div className="p-4 border-b border-border bg-transparent flex justify-between items-center gap-2 print:border-black">
-            <div className="min-w-0">
-            <h2 className="text-lg font-bold text-foreground print:text-black">Scenario Results</h2>
-            <p className="text-xs text-text-muted font-mono truncate print:text-black">{scenarioId}</p>
-          </div>
+            <div className="min-w-0 flex items-center gap-2">
+              {panelView === "analytics" && (
+                <button
+                  onClick={() => setPanelView("summary")}
+                  className="p-1 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors print:hidden shrink-0"
+                  aria-label="Back to summary"
+                  title="Back to summary"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-foreground print:text-black">
+                  {panelView === "analytics" ? "Full analytics" : "Scenario summary"}
+                </h2>
+                <p className="text-xs text-text-muted font-mono truncate print:text-black">{scenarioId}</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2 shrink-0 print:hidden">
               <button
                 onClick={() => window.print()}
@@ -452,34 +488,25 @@ export default function ScenarioSimulation() {
             <RunStatusBanner runState={runState} onRetry={retryRun} />
           </div>
 
-          {!isDrawerOpen && DIMENSIONS.map((dim) => (
-            <DimensionResultGroup
-              key={dim}
-              dim={dim}
-              dimResults={results.filter((r) => r.dimension === dim)}
-              expectedResults={EXPECTED_RESULTS[dim]}
-              isRunActive={isRunActive}
-              colorClass={getDimensionColor(dim)}
-              variant="panel"
-              onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
-            />
-          ))}
-
-          {synthesis && (
-            <SynthesisNarrative
-              narrative={synthesis.narrative}
-              citations={synthesis.citations}
-              resolvableEquationIds={results.map((r) => r.provData.equationId)}
-              onCiteClick={handleCiteClick}
-            />
-          )}
-
-          {!isDrawerOpen && (
-            <>
-              <ValidationPanel />
-              <BiasAuditLog runId={scenarioId} />
-            </>
-          )}
+          {!isDrawerOpen &&
+            (panelView === "analytics" ? (
+              <AnalyticsView
+                results={results}
+                synthesis={synthesis}
+                scenarioId={scenarioId}
+                isRunActive={isRunActive}
+                onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(card.dimension); }}
+                onCiteClick={handleCiteClick}
+              />
+            ) : (
+              <SummaryView
+                results={results}
+                narrative={synthesis?.narrative}
+                isRunActive={isRunActive}
+                onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(card.dimension); }}
+                onOpenAnalytics={() => setPanelView("analytics")}
+              />
+            ))}
         </div>
 
         {/* Map attribution — replaces MapLibre's default white control (ODbL/OpenMapTiles). */}

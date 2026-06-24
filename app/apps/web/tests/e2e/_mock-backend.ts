@@ -17,12 +17,15 @@
 import type { Page } from "@playwright/test";
 
 /** One canned DIMENSION_RESULT per dimension (shape: matrix_kernel.results.DimensionResult). */
+// Aligned with the CR-010 metric registry (src/lib/metrics.ts): equation ids carry
+// their real metric names/units/magnitudes so the Summary formatter produces sensible
+// humanized output (e.g. BEH-1 = trips, not %).
 const DIMENSION_RESULTS = [
-  { type: "DIMENSION_RESULT", dimension: "behavioral", metric: "Mode shift to transit", value: 12.5, unit: "%", range: [9.0, 16.0], confidence: "M", equation_id: "BEH-1", input_dataset_ids: ["PERSONA-POOL", "OSM-ILO"], assumptions: ["illustrative e2e fixture"], references: [] },
-  { type: "DIMENSION_RESULT", dimension: "ecological", metric: "CO2e change", value: -3.2, unit: "t/day", range: [-4.1, -2.3], confidence: "M", equation_id: "ECO-1", input_dataset_ids: ["CCHAIN"], assumptions: [], references: [] },
-  { type: "DIMENSION_RESULT", dimension: "social", metric: "Displacement risk count", value: 24, unit: "count", range: [18, 30], confidence: "M", equation_id: "SOC-2", input_dataset_ids: ["CCHAIN", "OSM-ILO"], assumptions: [], references: [] },
-  { type: "DIMENSION_RESULT", dimension: "economic", metric: "Footfall Δ per zone", value: 140, unit: "visits/day", range: [110, 170], confidence: "M", equation_id: "ECON-2", input_dataset_ids: ["PERSONA-POOL", "OVERTURE"], assumptions: [], references: [] },
-  { type: "DIMENSION_RESULT", dimension: "societal", metric: "Societal composite", value: 68, unit: "0-100", range: [60, 75], confidence: "M", equation_id: "SOCI-1", input_dataset_ids: ["NHCP"], assumptions: [], references: [] },
+  { type: "DIMENSION_RESULT", dimension: "behavioral", metric: "Δ trips on affected corridor (AM-peak)", value: -14, unit: "trips/window", range: [-17, -10], confidence: "H", equation_id: "BEH-1", input_dataset_ids: ["PERSONA-POOL", "OSM-ILO"], assumptions: ["illustrative e2e fixture"], references: [] },
+  { type: "DIMENSION_RESULT", dimension: "ecological", metric: "Transport CO₂e Δ", value: -0.05, unit: "ktCO₂e/yr", range: [-0.08, -0.03], confidence: "M", equation_id: "ECO-1", input_dataset_ids: ["CCHAIN"], assumptions: [], references: [] },
+  { type: "DIMENSION_RESULT", dimension: "social", metric: "Displacement risk count", value: 12, unit: "count", range: [10, 14], confidence: "H", equation_id: "SOC-2", input_dataset_ids: ["CCHAIN", "OSM-ILO"], assumptions: [], references: [] },
+  { type: "DIMENSION_RESULT", dimension: "economic", metric: "Footfall Δ per zone", value: -16.8, unit: "visits/day", range: [-20, -13], confidence: "H", equation_id: "ECON-2", input_dataset_ids: ["PERSONA-POOL", "OVERTURE"], assumptions: [], references: [] },
+  { type: "DIMENSION_RESULT", dimension: "societal", metric: "Societal composite", value: -0.5, unit: "0-100", range: [-0.8, -0.2], confidence: "M", equation_id: "SOCI-1", input_dataset_ids: ["NHCP"], assumptions: [], references: [] },
 ] as const;
 
 const SYNTHESIS = {
