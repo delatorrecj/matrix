@@ -80,7 +80,7 @@ export function formatMetricValue(
 /** Heuristic decimals when a metric isn't in the registry. */
 function defaultDecimals(value: number): number {
   const a = Math.abs(value);
-  if (a === 0 || a >= 100) return 0;
+  if (a === 0 || a >= 10) return 0; // whole-ish magnitudes read cleaner without a decimal
   if (a >= 1) return 1;
   if (a >= 0.01) return 2;
   return 4;
