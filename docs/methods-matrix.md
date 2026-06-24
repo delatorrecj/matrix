@@ -1,6 +1,6 @@
 # MATRIX — Methods & Traceability Registry (Glass-Box Ledger)
 
-**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Pending re-lock:** §4 + §4.3 amended 2026-06-24 by **CR-010** (synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged) — **Draft until re-locked**
+**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Re-locked:** §4 + §4.3 amended & re-locked 2026-06-24 by **CR-010** (owner-approved; synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged)
 **Backs:** [prd-matrix.md](prd-matrix.md) `PRD-F14` · [sdd-matrix.md](sdd-matrix.md) · data IDs from [../data/INVENTORY.md](../data/INVENTORY.md)
 
 > **MATRIX is a glass box, not a black box.** Every number it outputs is **derived by an explicit equation from named data**, carries a **confidence tier computed by a rule**, and is **reproducible and citable**. If a number cannot be traced through this ledger, it does not ship. The LLM (Azure OpenAI) *orchestrates and narrates with citations* — it **never originates a number**; all scores come from the deterministic kernel and the equations below.
@@ -167,7 +167,7 @@ Each non-trivial component documents what it does and how its output is made tra
 
 ### 4.3 Synthesis Brief Structure (BLUF + delimited bilingual)
 
-> *(CR-010 — added 2026-06-24. **PENDING RE-LOCK under CR-010** — this subsection and the amended Synthesis row + citation-guard note above are **Draft** until the owner re-locks methods-matrix. They replace the prior `EXECUTIVE SUMMARY / ACTIONABLE RECOMMENDATIONS / PERSONA PERSPECTIVES` structure.)*
+> *(CR-010 — added 2026-06-24, **re-locked 2026-06-24 under CR-010** (owner-approved). This subsection and the amended Synthesis row + citation-guard note above are **Locked**. They replace the prior `EXECUTIVE SUMMARY / ACTIONABLE RECOMMENDATIONS / PERSONA PERSPECTIVES` structure.)*
 
 The synthesis agent emits a **plain-language BLUF brief** (bottom line up front) written for a non-expert city planner — short active sentences, no methodology, no equation names in the prose — with these uppercase section headers, in order:
 
