@@ -3,6 +3,8 @@
 import React from "react";
 import { Zap } from "lucide-react";
 import { GlossaryTooltip } from "./GlossaryTooltip";
+import { useLanguage } from "@/components/LanguageProvider";
+import { BLUF_HEADERS, narrativeForLanguage } from "@/lib/bilingual";
 
 /**
  * Synthesis narrative with interactive citation chips (glass box, PRD-F14).
@@ -13,7 +15,15 @@ import { GlossaryTooltip } from "./GlossaryTooltip";
  * chip fires `onCiteClick(equationId)` so the page can open the Inspect drawer
  * on the matching result. A citation with no matching received result renders
  * as a DISABLED chip — never a dead link, never an invented target.
+ *
+ * CR-010: the kernel now emits a plain-language BLUF brief, bilingual by the
+ * `=== HILIGAYNON ===` delimiter. This component renders ONE language at a time
+ * (driven by LanguageProvider) and bolds the BLUF section headers. The citation
+ * chips behave identically in either language — every shown number stays traceable.
  */
+
+// BLUF section headers (stay English in both halves); used to bold them in the prose.
+const HEADER_SPLIT_RE = new RegExp(`(${BLUF_HEADERS.join("|")})`);
 
 export interface SynthesisCitation {
   claim?: string;
@@ -103,10 +113,15 @@ export default function SynthesisNarrative({
   resolvableEquationIds,
   onCiteClick,
 }: SynthesisNarrativeProps) {
+  const { language } = useLanguage();
   const resolvable = new Set(resolvableEquationIds ?? []);
 
+  // Render only the chosen language's half (delimited bilingual, never interleaved).
+  // Falls back to English when no Hiligaynon half is present.
+  const shown = narrativeForLanguage(narrative, language);
+
   // split() with a capture group alternates [text, id, text, id, ..., text].
-  const segments = narrative.split(CITATION_PATTERN);
+  const segments = shown.split(CITATION_PATTERN);
   const inlineIds = new Set<string>(
     segments.filter((_, i) => i % 2 === 1)
   );
@@ -146,8 +161,8 @@ export default function SynthesisNarrative({
           } else {
             return (
               <span key={`text-${i}`}>
-                {segment.split(/(EXECUTIVE SUMMARY|ACTIONABLE RECOMMENDATIONS|PERSONA PERSPECTIVES)/).map((part, j) => {
-                  if (['EXECUTIVE SUMMARY', 'ACTIONABLE RECOMMENDATIONS', 'PERSONA PERSPECTIVES'].includes(part)) {
+                {segment.split(HEADER_SPLIT_RE).map((part, j) => {
+                  if ((BLUF_HEADERS as readonly string[]).includes(part)) {
                     return <strong key={j} className="block mt-4 mb-1 text-primary/80 font-bold tracking-wide print:text-black">{part}</strong>;
                   }
                   return <React.Fragment key={j}>{renderTextWithGlossary(part)}</React.Fragment>;

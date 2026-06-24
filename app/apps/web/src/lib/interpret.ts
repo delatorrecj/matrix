@@ -10,16 +10,27 @@ import type { ResultCardData } from "@/components/ResultCard";
 import { directionFor, formatMetricValue } from "@/lib/format";
 import { getMetricMeta, DIMENSION_LABELS } from "@/lib/metrics";
 import type { DimensionId } from "@/lib/simulationRun";
+import type { Language } from "@/components/LanguageProvider";
+import { narrativeForLanguage, parseBlufSections } from "@/lib/bilingual";
 
 const CITATION = /\s*\[[A-Z]{2,8}-\d+\]/g;
 
-/** First 1–2 sentences of the synthesis EXECUTIVE SUMMARY, equation codes stripped. */
-export function narrativeLead(narrative: string | undefined, maxSentences = 2): string {
+/**
+ * The BLUF HEADLINE for the Summary dock — the synthesis brief's lead sentences with
+ * equation codes stripped (CR-010). Honors the language toggle: returns the chosen
+ * language's HEADLINE, falling back to English. If the narrative predates the BLUF
+ * rewrite (no HEADLINE section), falls back to its first sentences so older runs still
+ * show a lead rather than nothing.
+ */
+export function narrativeLead(
+  narrative: string | undefined,
+  maxSentences = 2,
+  language: Language = "en",
+): string {
   if (!narrative) return "";
-  const m = narrative.match(
-    /EXECUTIVE SUMMARY([\s\S]*?)(ACTIONABLE RECOMMENDATIONS|PERSONA PERSPECTIVES|$)/i,
-  );
-  const lead = (m?.[1] ?? narrative).replace(CITATION, "").trim();
+  const shown = narrativeForLanguage(narrative, language);
+  const headline = parseBlufSections(shown).HEADLINE;
+  const lead = (headline || shown).replace(CITATION, "").trim();
   const sentences = lead.split(/(?<=[.!?])\s+/).filter(Boolean);
   return sentences.slice(0, maxSentences).join(" ").trim();
 }

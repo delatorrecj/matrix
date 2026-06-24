@@ -28,9 +28,34 @@ const DIMENSION_RESULTS = [
   { type: "DIMENSION_RESULT", dimension: "societal", metric: "Societal composite", value: -0.5, unit: "0-100", range: [-0.8, -0.2], confidence: "M", equation_id: "SOCI-1", input_dataset_ids: ["NHCP"], assumptions: [], references: [] },
 ] as const;
 
+// CR-010: a plain-language BLUF brief, bilingual by the `=== HILIGAYNON ===` delimiter
+// (English first, then the marker, then Hiligaynon). Numbers carry inline [EQN-ID]
+// citations exactly as the kernel's citation guard requires.
 const SYNTHESIS = {
   type: "SYNTHESIS",
-  narrative: "Illustrative synthesis for e2e: closing the lane shifts mode share toward transit (BEH-1) and lowers CO2e (ECO-1).",
+  narrative: [
+    "HEADLINE",
+    "Closing the lane eases the morning rush but trims local footfall; proceed with support for affected businesses.",
+    "",
+    "WHAT WE SIMULATED",
+    "A lane closure on the affected corridor near the Molo school.",
+    "",
+    "KEY FINDINGS",
+    "Morning traffic on the affected road eases, with trips falling by 14 [BEH-1].",
+    "",
+    "RECOMMENDATION",
+    "Proceed with the closure, paired with footfall support for nearby businesses.",
+    "",
+    "KEY RISK",
+    "A small number of nearby businesses may see fewer visitors.",
+    "",
+    "=== HILIGAYNON ===",
+    "HEADLINE",
+    "Ang pagsira sang dalan nagapahapos sang trapiko sa aga; padayuna upod ang bulig sa mga negosyo.",
+    "",
+    "KEY FINDINGS",
+    "Nagnubo ang biyahe sa dalan sang 14 [BEH-1].",
+  ].join("\n"),
   citations: [{ equation_id: "BEH-1" }, { equation_id: "ECO-1" }],
 } as const;
 

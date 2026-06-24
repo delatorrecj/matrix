@@ -24,7 +24,10 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
 
     // Analytics carries the raw metric names, the synthesis narrative, validation + bias.
     await expect(page.getByText('Displacement risk count')).toBeVisible();
-    await expect(page.getByText(/Illustrative synthesis for e2e/)).toBeVisible();
+    // CR-010: the synthesis narrative is the plain-language BLUF brief; the English half
+    // shows by default (the Hiligaynon half sits behind the delimiter + language toggle).
+    await expect(page.getByText(/Closing the lane eases the morning rush/)).toBeVisible();
+    await expect(page.getByText(/nagapahapos sang trapiko/)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Validation & Back-Testing' })).toBeVisible();
     await expect(page.getByTestId('gate-VAL-01')).toBeVisible();
     await expect(page.getByText('Bias Audit Log (Public)')).toBeVisible();
