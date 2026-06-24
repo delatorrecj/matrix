@@ -13,6 +13,7 @@ import { type SynthesisCitation } from "@/components/SynthesisNarrative";
 import { DimensionResultGroup } from "@/components/DimensionResultGroup";
 import { SummaryView } from "@/components/SummaryView";
 import { AnalyticsView } from "@/components/AnalyticsView";
+import { ScenarioBrief } from "@/components/ScenarioBrief";
 import type { ResultCardData } from "@/components/ResultCard";
 import { MapAttribution } from "@/components/MapAttribution";
 import RunProgress from "@/components/RunProgress";
@@ -394,7 +395,7 @@ export default function ScenarioSimulation() {
   const isRunActive = !isTerminal(runState.phase) && runState.phase !== "disconnected";
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex print:h-auto print:block print:bg-white">
+    <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex print:h-auto print:block print:overflow-visible print:bg-white">
       {/* ICON NAV RAIL */}
       <div className="print:hidden">
         <IconNavRail
@@ -413,8 +414,13 @@ export default function ScenarioSimulation() {
         />
       </div>
 
-      {/* Main layout contents */}
-      <div className="flex-1 flex h-screen w-full flex-col md:flex-row overflow-hidden relative print:h-auto print:block">
+      {/* Print-only executive brief (CR-010 WS-5 T5.4). The dedicated, one-page,
+          BLUF-ordered brief with an evidence appendix. window.print() is scoped to
+          this by hiding the live UI below at print time. */}
+      <ScenarioBrief results={results} narrative={synthesis?.narrative} scenarioId={scenarioId} />
+
+      {/* Main layout contents — hidden at print so only the brief above prints. */}
+      <div className="flex-1 flex h-screen w-full flex-col md:flex-row overflow-hidden relative print:hidden">
 
       {/* Floating Restore Button when panel is dismissed */}
       {!showResultsPanel && (

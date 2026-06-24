@@ -30,7 +30,7 @@ export function AnalyticsView({
   onCiteClick: (equationId: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" data-testid="analytics-view">
       {DIMENSIONS.map((dim: DimensionId) => {
         const dimResults = results.filter((r) => r.dimension === dim);
         return (

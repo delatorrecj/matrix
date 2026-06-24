@@ -1,3 +1,5 @@
+"use client";
+
 import { BarChart3 } from "lucide-react";
 import { SummaryCard } from "@/components/SummaryCard";
 import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
@@ -5,6 +7,7 @@ import type { ResultCardData } from "@/components/ResultCard";
 import { DIMENSIONS, EXPECTED_RESULTS, type DimensionId } from "@/lib/simulationRun";
 import { DIMENSION_LABELS, DIMENSION_DOT } from "@/lib/metrics";
 import { narrativeLead, overallHeadline } from "@/lib/interpret";
+import { useLanguage } from "@/components/LanguageProvider";
 
 /**
  * Summary dock (CR-010) — the default scenario view. A plain-language headline
@@ -24,7 +27,8 @@ export function SummaryView({
   onInspect: (card: ResultCardData) => void;
   onOpenAnalytics: () => void;
 }) {
-  const headline = narrativeLead(narrative) || overallHeadline(results);
+  const { language } = useLanguage();
+  const headline = narrativeLead(narrative, 2, language) || overallHeadline(results);
 
   return (
     <div className="flex flex-col gap-4">
