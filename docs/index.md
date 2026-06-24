@@ -68,6 +68,7 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 | CR-009 | [cr-009-azure-foundry-client.md](cr-009-azure-foundry-client.md) | Azure AI Foundry v1 Client Compatibility | **Applied** | 2026-06-22 |
 | CR-010 | [cr-010-ui-summary-humanization.md](cr-010-ui-summary-humanization.md) | Summary-first UI & plain-language humanization (Phase 1 web humanization + Phase 2 BLUF synthesis / delimited bilingual / one-page brief) | **Applied** | 2026-06-24 |
 | CR-011 | [cr-011-huggingface-migration.md](cr-011-huggingface-migration.md) | Deployment migration - Fly.io → Hugging Face Spaces (self-contained Docker; Vercel frontend unchanged) | **Applied** | 2026-06-22 |
+| CR-012 | [cr-012-validation-calibration.md](cr-012-validation-calibration.md) | Validation & calibration — honest VAL-01/VAL-02 + mode-share (un-withhold VAL-01: proxy/unit reconciliation + demand calibration; flood ground-truth; bias-reweight worked example) | Proposed | 2026-06-24 |
 
 > **CR-number note:** `cr-009-qa-frontend-fixes.md` (Yushin's QA pass) self-declares **CR-009** — distinct from the Azure-Foundry CR-009 above (two unrelated CRs share the 009 number; likewise `cr-008-azure-openai-migration.md` shares 008 with the judges-feedback CR-008). These are pre-existing numbering collisions in the as-filed history, surfaced here for the owner; not renumbered (governance call).
 
