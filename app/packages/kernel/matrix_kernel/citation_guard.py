@@ -27,9 +27,33 @@ from typing import Mapping, Sequence
 _CITATION_RE = re.compile(r"\[([A-Z0-9-]+)\]")
 _DIGIT_RE = re.compile(r"\d")
 
+# Break after sentence-final punctuation AND on newlines, so a numeric claim cannot hide
+# on the same line/block as a cited sibling. This granularity matters for the CR-010 BLUF
+# brief, whose findings/headers are separated by line breaks rather than ". " — a
+# newline-joined block would otherwise be one "sentence" and pass on a single valid
+# citation. Splitting on newlines only tightens the guard (smaller units = stricter). The
+# separator is captured so strip_uncited_claims can re-attach it and preserve the brief's
+# layout (notably the `=== HILIGAYNON ===` delimiter line and the uppercase headers).
+_SPLIT_RE = re.compile(r"((?<=[.!?]) +|\n+)")
+
 
 def _split_sentences(narrative: str) -> list[str]:
-    return re.split(r"(?<=[.!?]) +", narrative)
+    """Claim-sized units, separators dropped (for inspection only)."""
+    return [u for u in _SPLIT_RE.split(narrative) if not _SPLIT_RE.fullmatch(u)]
+
+
+def _split_with_separators(narrative: str) -> list[tuple[str, str]]:
+    """Claim-sized units paired with the verbatim separator that followed each one
+    (empty for the final unit). Re-joining `unit + sep` for every kept pair reproduces
+    the original whitespace/newlines exactly — so removing one uncited claim never
+    collapses the surrounding brief structure."""
+    parts = _SPLIT_RE.split(narrative)
+    pairs: list[tuple[str, str]] = []
+    for i in range(0, len(parts), 2):
+        unit = parts[i]
+        sep = parts[i + 1] if i + 1 < len(parts) else ""
+        pairs.append((unit, sep))
+    return pairs
 
 
 def _asserts_number(sentence: str) -> bool:
@@ -87,17 +111,27 @@ def strip_uncited_claims(
     citation it carries is a known equation_id and — when `citation_datasets` is supplied —
     resolves to a non-empty input-dataset basis (methods §4). See the module docstring for
     why the dataset basis is enforced through the equation id rather than via inline tokens.
+
+    Kept units retain the verbatim separator that followed them, so dropping one uncited
+    claim leaves the surrounding layout — paragraph breaks, the `=== HILIGAYNON ===`
+    delimiter, the uppercase section headers — intact (CR-010 bilingual brief).
     """
-    valid_sentences: list[str] = []
-    for sentence in _split_sentences(narrative):
-        if not sentence.strip():
+    out: list[str] = []
+    for unit, sep in _split_with_separators(narrative):
+        if not unit.strip():
+            # Preserve a standalone blank/whitespace run only if real content surrounds it
+            # later; trailing/leading blanks are trimmed by the final strip().
             continue
-        if not _asserts_number(sentence):
-            valid_sentences.append(sentence)
+        if not _asserts_number(unit):
+            out.append(unit + sep)
             continue
-        citations_found = _CITATION_RE.findall(sentence)
+        citations_found = _CITATION_RE.findall(unit)
         if citations_found and all(
             _citation_ok(c, valid_citations, citation_datasets) for c in citations_found
         ):
-            valid_sentences.append(sentence)
-    return " ".join(valid_sentences)
+            out.append(unit + sep)
+    # Collapse runs of whitespace introduced by dropped units, but keep newline structure:
+    # join verbatim, then squeeze 3+ consecutive newlines to a paragraph break.
+    joined = "".join(out)
+    joined = re.sub(r"\n{3,}", "\n\n", joined)
+    return joined.strip()
