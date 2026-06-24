@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Jerico (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-09 — reconciled with Phase 4/5/6 integrations (Vercel/Hugging Face Spaces, Next.js frontend, Playwright & Vitest testing suites).
+**Last reconciled:** 2026-06-24 (Significant code changes reconciled through CR-010 and CR-012)
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **SAD:** [sad-matrix.md](sad-matrix.md)
 
 > The spec→code bridge. Materialized to the app monorepo's root **[`../app/AGENTS.md`](../app/AGENTS.md)** at scaffold — the app is **nested at `app/`** in this repo (one clone), not a separate repo. Owners per [PRD §10](prd-matrix.md).
@@ -135,6 +135,6 @@ Follow [`data/fetch/fetch_open.py`](../data/fetch/fetch_open.py): stdlib, idempo
 | Canonical | `docs/build-matrix.md` | edit here |
 | App agents | `app/AGENTS.md` | quick-reference materialized from this doc at scaffold; auto-read by Codex/Cursor/Claude Code when in `app/` |
 | Claude Code | `CLAUDE.md` (repo root) | full code-orientation guide (Working in `app/`, commands, guardrails) — not a thin pointer |
-| Cursor / Azure OpenAI GPT-5.4 | `.cursor/rules/build.mdc` · `GEMINI.md` | pointers |
+| Cursor / Azure OpenAI GPT-5.4 | `.cursor/rules/build.mdc` · `AGENTS.md` | pointers |
 
 Materialize `app/AGENTS.md` from this doc on any significant guardrail change; re-check `CLAUDE.md` for drift. Root copies are build artifacts, not sources of truth.

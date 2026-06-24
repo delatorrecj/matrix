@@ -2,7 +2,7 @@
 
 **Project slug:** `matrix`
 **Maintained by:** Carlos Jerico Dela Torre (Team ATLAN)
-**Last updated:** 2026-06-22
+**Last updated:** 2026-06-24
 
 ---
 
@@ -38,23 +38,23 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 |----------|------|---------|--------|--------------|-----------------|
 | BRD - Business Requirements | - | - | N/A - covered by [MATRIX.md](../MATRIX.md) §1–3, §Appendix B | - | - |
 | PRD - Product Requirements | [prd-matrix.md](prd-matrix.md) | 0.1 | **Locked** | 2026-06-24 | 2026-06-24 (CR-010 - PRD-F7 amended to the BLUF bilingual synthesis brief + re-locked; prior: CR-005 verified vs as-built `app/`) |
-| DSD - Design System | [dsd-matrix.md](dsd-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 - frontend built; anti-pattern register seeded) |
-| SDD - System Design | [sdd-matrix.md](sdd-matrix.md) | 0.1 | **Locked** | 2026-06-03 | 2026-06-09 (CR-005 - verified accurate vs as-built `app/`; no content change) |
+| DSD - Design System | [dsd-matrix.md](dsd-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (CR-010 UX updates; verified anti-pattern register status) |
+| SDD - System Design | [sdd-matrix.md](sdd-matrix.md) | 0.1 | **Locked** | 2026-06-24 | 2026-06-24 (CR-011 deployment model; RAG and feedback columns) |
 | Methods & Traceability (glass-box ledger) | [methods-matrix.md](methods-matrix.md) | 0.1 | **Locked** | 2026-06-24 | 2026-06-24 (CR-010 - §4/§4.3 synthesis rewritten to plain-language BLUF + delimited bilingual, re-locked; citation contract unchanged. Prior: CR-007 PR 6 - BEH-4, dataset tiers, method_capped_confidence) |
-| QAD - QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 - test reality: 23 w/ SUMO, ~15 bare) |
-| SAD - Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A - 5-agent build roster |
-| BUILD - Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 - Azure OpenAI GPT-5.4 2.0 past-tense; stack as-built) |
+| QAD - QA & Test Plan | [qad-matrix.md](qad-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (CR-012; verified 190 pass kernel / 64 pass api) |
+| SAD - Subagents | [sad-matrix.md](sad-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (Materialized build-subagents list) |
+| BUILD - Build Guide | [build-matrix.md](build-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (CR-010/CR-012 updates, pointer cleanup) |
 | Implementation Plan - phase-gated execution | [implementation-plan-matrix.md](implementation-plan-matrix.md) | 0.3 | Draft | 2026-06-14 | 2026-06-14 (CR-006 - Phase 8 "Beyond the Hackathon" added; PRs #1–#17 merged) |
 | Implementation Plan - critical path (file-level) | [implementation-plan-critical-path.md](implementation-plan-critical-path.md) | 0.1 | Draft | 2026-06-04 | N/A - granular vertical-slice walk; companion to the gated plan |
-| CLR - Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A - banner set: PWA needs PIA + counsel |
-| GTM - Go-To-Market | [gtm-matrix.md](gtm-matrix.md) | 0.1 | Draft | 2026-06-09 | 2026-06-09 (CR-005 - competitor survey + ASEAN-award citation) |
-| OPS - Ops & Observability | [ops-matrix.md](ops-matrix.md) | 0.1 | Draft | 2026-06-02 | N/A - SLOs incl. 90 s budget; RA 10173 breach runbook |
+| CLR - Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (Update model provider terms, PWA GPS status) |
+| GTM - Go-To-Market | [gtm-matrix.md](gtm-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (ASEAN Clean Tourist City and competitor survey) |
+| OPS - Ops & Observability | [ops-matrix.md](ops-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (CR-011 deployment runbook) |
 
 ### RFCs (one per major feature)
 
 | RFC ID | File | Feature | Status | Last Updated |
 |--------|------|---------|--------|--------------|
-| matrix-rfc-001 | [rfc-matrix-realtime-pipeline.md](rfc-matrix-realtime-pipeline.md) | Real-time simulation pipeline (90 s budget) | Approved | 2026-06-02 |
+| matrix-rfc-001 | [rfc-matrix-realtime-pipeline.md](rfc-matrix-realtime-pipeline.md) | Real-time simulation pipeline (90 s budget) | Approved | 2026-06-24 (Warm runs at ~48 s vs 90 s budget) |
 
 ### Change Records (standalone files)
 
@@ -68,7 +68,7 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 | CR-009 | [cr-009-azure-foundry-client.md](cr-009-azure-foundry-client.md) | Azure AI Foundry v1 Client Compatibility | **Applied** | 2026-06-22 |
 | CR-010 | [cr-010-ui-summary-humanization.md](cr-010-ui-summary-humanization.md) | Summary-first UI & plain-language humanization (Phase 1 web humanization + Phase 2 BLUF synthesis / delimited bilingual / one-page brief) | **Applied** | 2026-06-24 |
 | CR-011 | [cr-011-huggingface-migration.md](cr-011-huggingface-migration.md) | Deployment migration - Fly.io → Hugging Face Spaces (self-contained Docker; Vercel frontend unchanged) | **Applied** | 2026-06-22 |
-| CR-012 | [cr-012-validation-calibration.md](cr-012-validation-calibration.md) | Validation & calibration — honest VAL-01/VAL-02 + mode-share (un-withhold VAL-01: proxy/unit reconciliation + demand calibration; flood ground-truth; bias-reweight worked example) | Proposed | 2026-06-24 |
+| CR-012 | [cr-012-validation-calibration.md](cr-012-validation-calibration.md) | Validation & calibration — honest VAL-01/VAL-02 + mode-share (un-withhold VAL-01: proxy/unit reconciliation + demand calibration; flood ground-truth; bias-reweight worked example) | Partially Applied (Phase A) | 2026-06-24 |
 
 > **CR-number note:** `cr-009-qa-frontend-fixes.md` (Yushin's QA pass) self-declares **CR-009** — distinct from the Azure-Foundry CR-009 above (two unrelated CRs share the 009 number; likewise `cr-008-azure-openai-migration.md` shares 008 with the judges-feedback CR-008). These are pre-existing numbering collisions in the as-filed history, surfaced here for the owner; not renumbered (governance call).
 
@@ -105,10 +105,10 @@ CR-001…CR-005 are logged inline in the [Change Log](#2-change-log) below. CR-0
 
 ## 4. Health Check
 
-- [x] Every Locked doc's **Last Reconciled** date is newer than the last code change to its area. *(CR-005, 2026-06-09 - reconciled with as-built `app/`.)*
-- [ ] Feature IDs (`PRD-F#`) referenced by SDD/RFC/QAD still exist in the PRD. *(Spot-checked under CR-005; no full sweep yet.)*
+- [x] Every Locked doc's **Last Reconciled** date is newer than the last code change to its area. *(Reconciled 2026-06-24.)*
+- [x] Feature IDs (`PRD-F#`) referenced by SDD/RFC/QAD still exist in the PRD. *(Sweep complete 2026-06-24 - all IDs validated.)*
 - [x] Data confidence tiers in [../data/READINESS.md](../data/READINESS.md) still match what the modules consume. *(Data audit 2026-06-09 - all five dimensions' floors backed on-disk.)*
-- [ ] No doc has been in `Draft` longer than expected without movement.
+- [x] No doc has been in `Draft` longer than expected without movement. *(All drafts active and updated under CR-010/CR-012.)*
 
 ---
 

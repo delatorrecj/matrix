@@ -4,7 +4,7 @@
 **Date:** 2026-06-02
 **Author:** Jerico (Team ATLAN)
 **Status:** `Approved` (solo-operator: author = reviewer)
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-24 (The realtime pipeline is implemented with WS streaming, progressive UI, and trajectory cache. Warm run takes ~48 s vs 90 s budget)
 **PRD Reference:** [prd-matrix.md](prd-matrix.md) §5.4, `PRD-F1`, `PRD-F4`
 **SDD Reference:** [sdd-matrix.md](sdd-matrix.md) §2, §7
 **RFC ID:** `matrix-rfc-001`

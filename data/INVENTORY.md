@@ -80,7 +80,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 | TOMTOM | [TomTom Traffic API](https://developer.tomtom.com/) | real-time congestion baseline | key |
 | HERE | [HERE Traffic API](https://developer.here.com/) | TomTom backup | key |
 | OPENWEATHER | [OpenWeather API](https://openweathermap.org/api) | weather-trigger scenarios | key |
-| LLM | [Azure OpenAI GPT-5.4 (AI Studio)](https://aistudio.google.com/) | persona gen + orchestration | key |
+| LLM | [Azure OpenAI GPT-5.4 (Azure AI Foundry)](https://ai.azure.com/) | persona gen + orchestration | key |
 | NAMRIA | [NAMRIA topo/coastline](https://www.namria.gov.ph/) | storm-surge, official base | direct |
 | MOBILITY-ARCHIVE | [Google](https://www.google.com/covid19/mobility/) / Apple mobility archives | baseline behavior calibration (2020-22) | direct |
 

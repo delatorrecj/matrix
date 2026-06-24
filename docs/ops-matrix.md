@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Yushin (platform) · Jerico (incident lead) — [PRD §10](prd-matrix.md)
 **Status:** Draft
-**Last reconciled:** N/A — not yet reconciled with prod
+**Last reconciled:** 2026-06-24 (Deploy runbook §7 was written by CR-011 and is current; §6 performance numbers are from CR-007)
 **SDD:** [sdd-matrix.md](sdd-matrix.md)
 
 > Keeps MATRIX alive once it's deployed (public demo + any post-hackathon deployment). SLO targets come from [SDD §7](sdd-matrix.md); the RA 10173 breach path comes from [CLR](clr-matrix.md). Hackathon-scale: small-team best-effort, no formal rotation — alerts go to the team.

@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Jerico (Team ATLAN)
 **Status:** Draft
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-24 (The 5 agents are materialized under `.claude/agents/` and used actively during build)
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **QAD:** [qad-matrix.md](qad-matrix.md)
 
 > Canonical, platform-agnostic roster of **AI build-subagents** that help the 5-person team ([PRD §10](prd-matrix.md)) build MATRIX. Each agent is owned/operated by a team member. Materialize to Claude Code at monorepo scaffold (§5). These are *build helpers* — they execute within boundaries the PRD/SDD/RFC already set; they do not make product or architecture decisions.

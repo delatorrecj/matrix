@@ -464,7 +464,7 @@ We build everything in Tier 1 before touching Tier 2, and Tier 2 before Tier 3. 
 - DLR Institute of Transportation Systems. *Eclipse SUMO.* https://eclipse.dev/sumo/
 - Microsoft. *GraphRAG.* https://github.com/microsoft/graphrag
 - ChromaDB. https://www.trychroma.com/
-- Google. *Azure OpenAI (gpt-5.4)* (Feb 19, 2026). https://blog.google/innovation-and-ai/models-and-research/openai/azure-openai/
+- Microsoft. *Azure OpenAI Service (gpt-5.4)* (Feb 2026). https://learn.microsoft.com/azure/ai-services/openai/
 - National Privacy Commission. *RA 10173 IRR.* https://privacy.gov.ph/
 
 ---
@@ -479,7 +479,7 @@ For team transparency, key changes from the Foundation Document:
 - **Explicit confidence levels:** Per-dimension, per-simulation
 - **Visualization commitment:** Real-time interactive (Option C) — agents animate, scenarios playback, comparison sliders work
 - **Simulation engine:** MiroFish/OASIS (wrong — social media simulators) → SUMO (correct — urban mobility standard)
-- **LLM models:** Azure OpenAI 1.5/2.0 (deprecated) → Azure OpenAI (gpt-5.4) + Pro
+- **LLM models:** Azure OpenAI 1.5/2.0 (deprecated) → Azure OpenAI (gpt-5.4)
 - **Removed false claims:** DILG MC 2020-036 fare percentage, fabricated 2026 citations, MiroFish-as-architecture-reference
 - **Added Iloilo-specific institutional anchors:** Clean Air Asia SMMR, UNESCAP electric mobility, ICLEI roadmap, JICA STRADA-3 baseline
 - **Destination reframed (2026-06-14):** Hackathon submission → **real-world product**, with the hackathon as a milestone/showcase. Demo-grade seams were hardened or honestly labeled PROVISIONAL — typed scenario engine + geometry, computed validation (VAL-01/VAL-02), persistence + auth, city-agnostic `CityConfig`, interactive glass-box provenance — per [CR-006](docs/cr-006-beyond-hackathon.md). *Honesty (computed validation, clickable provenance, labeled provisional data) is the product story.*

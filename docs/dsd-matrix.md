@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-07 — reconciled with Next.js 14 + Tailwind v4 implementation.
+**Last reconciled:** 2026-06-24 (Updated to Next.js 14 + Tailwind v4 under CR-009 frontend hardening, and CR-010 summary-first results UX)
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
 > **Design read (taste-skill §0):** *Reading this as a **trust-first, data-dense decision instrument** for government + technical planners — not a marketing site. Dials: VARIANCE 3 (coherent, austere), MOTION 4 (the agent playback is the only motion that matters), DENSITY 7 (a cockpit). Foundation: shadcn/ui + Radix primitives on the locked Next.js 14 / Tailwind stack; Geist + Geist Mono; one cobalt accent; light-first (planners use daylight/projectors). The taste-skill's landing-page rules apply to the **marketing/pitch site**, not this app.*
@@ -149,9 +149,9 @@ VISUAL_DENSITY:     7   (cockpit — five dimensions + map + controls)
 |---|---|---|---|
 | Confidence rendered with the same visual weight/channel as the 5-dimension palette (must be a **separate** channel — opacity/pattern, PRD-F5) | to-check | scenario results panel; map overlays | give confidence its own non-color channel; never let it read as a 6th category |
 | A rendered number with **no working Inspect** affordance (PRD-F14 / TRACE-02) | to-check | dimension result cards, synthesis narrative | every metric opens `InspectDrawer` to equation + datasets + confidence |
-| Metric values not using `next/font` **tabular-nums** (numbers jitter on update) | to-check | dimension cards, timeline scrubber | apply tabular-nums to all numeric displays |
+| Metric values not using `next/font` **tabular-nums** (numbers jitter on update) | resolved | globals.css, ResultCard.tsx, SummaryCard.tsx | apply tabular-nums to all numeric displays |
 | Motion without a `prefers-reduced-motion` guard | to-check | TripsLayer playback, result enter animations | gate all non-essential motion on the reduced-motion query |
-| **False-precision point estimates** shown instead of confidence-anchored ranges | to-check | economic / societal result cards | render ranges (e.g. "−₱8M to −₱14M"), never a single false-precise number |
+| **False-precision point estimates** shown instead of confidence-anchored ranges | resolved | format.ts, ResultCard.tsx range display | render ranges (e.g. "−₱8M to −₱14M"), never a single false-precise number |
 | **Low-confidence result rendered without visible trigger reason** (CR-008 Item 4) | to-check | dimension cards (L-tier results), Inspect drawer | Inspect drawer must print the specific capping factor (e.g. "Capped by: PROVISIONAL constant `_PHP_PER_TRIP_PROXY`") — not just the L chip; see [methods-matrix.md §2 Low-Confidence Protocol](methods-matrix.md#low-confidence-protocol) |
 
 ---

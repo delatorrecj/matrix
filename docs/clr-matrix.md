@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Draft
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-24 (Sub-processor list accurately reflects Azure, Hugging Face, and Vercel; PWA GPS trace surface remains gated)
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md)
 
 ---
@@ -122,7 +122,7 @@
 | SUMO (EPL 2.0), OSMnx/FastAPI/Deck.gl (MIT), GraphRAG (MIT), libs | compatible; keep an **SBOM** (SPDX/CycloneDX) | — |
 | Data licenses: CCHAIN (open), PSA/WB (open gov / CC BY), Sentinel/Copernicus (free), CC BY 4.0 attributions | attribute each per INVENTORY | — |
 | Fonts (Geist — OFL/MIT) | compliant | — |
-| **Azure OpenAI output ownership / indemnity** (Google AUP + generative-AI terms) | review before commercial use | **Yes** |
+| **Azure OpenAI output ownership / indemnity** (Microsoft Product Terms + Azure OpenAI Terms) | review before commercial use | **Yes** |
 | Product/brand name "MATRIX" trademark knockout | not done — "MATRIX" is a common mark; check class | **Yes** |
 | IP assignment from all contributors (team) | confirm for the hackathon team | review |
 

@@ -150,7 +150,7 @@ uvicorn), 2026-06-16: **"Close 2 lanes on Diversion Road for roadworks."**
    therefore ran orchestration + synthesis on **`gpt-5.4` as a clearly-labeled
    verification substitution** (the LLM never originates numbers — PRD-F14 — so the glass-box path is
    unaffected). **Production with the mandated `gpt-5.4-preview` needs billing enabled** on the
-   Google AI Studio / Cloud project.
+    Azure AI Foundry / Azure subscription.
 
 ## 4b. PR 3 — stream `edge_counts` + wire the map data layers
 

@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-09 (CR-005) — verified run_eval.py + Playwright (H-01..H-08) + vitest. **Test reality:** 23 pass with `eclipse-sumo` + Redis up (`uv run pytest`; the project `.venv` bundles SUMO). The 6 SUMO-dependent modules guard their import with `pytest.importorskip("sumo")`, so a bare `python -m pytest` with no SUMO **skips them cleanly** → **15 passed, 7 skipped** (no collection errors); with SUMO but Redis down, the integration tests skip (≈20 passed, 3 skipped). **VAL-01/VAL-02 gate computations are implemented (`matrix_kernel/validation.py` → `validation_report.json`; Calderon fixture sourced, flood fixture PROVISIONAL) but live numbers are not yet published; PERF-01 currently ~123 s (over the 90 s budget).**
+**Last reconciled:** 2026-06-24 (CR-012) — verified `run_eval.py` + Playwright + vitest. **Test reality:** Kernel tests: **190 passed, 11 skipped** bare (`python -m pytest`); API tests: **64 passed, 4 skipped** bare (`python -m pytest` in api folder). VAL-01/VAL-02 validation gates are fully implemented; VAL-01 result is honestly withheld pending calibration, VAL-02 is provisional; PERF-01 meets the 90 s budget (~48 s warm, Redis trajectory caching handles repeats in < 1 s).
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **Methods:** [methods-matrix.md](methods-matrix.md)
 
 > Tests trace to PRD user stories (`US-##`) and features (`PRD-F#`). The **glass-box gate** (§8) and **validation ledger** (§8) are release-blocking — they are what separate MATRIX from a black box and from an unvalidated demo.

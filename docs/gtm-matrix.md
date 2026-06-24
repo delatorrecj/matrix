@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Jerico — lead/pitch · **Research & Marketing:** Rica Mae Mago + Russell Jay Fajardo ([PRD §10](prd-matrix.md))
 **Status:** Draft
-**Last reconciled:** N/A
+**Last reconciled:** 2026-06-24 (Competitor survey §2.1 and ASEAN Clean Tourist City award citation are verified in CR-005)
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
 > "Launch" here = the **ASEAN AI Hackathon 2026** journey (submission → semi-final → final) *and* the post-hackathon path to real LGU users. Not monetized at this stage — open/public-good. Judging-criteria alignment is in [MATRIX.md Appendix B](../MATRIX.md) (the BRD).

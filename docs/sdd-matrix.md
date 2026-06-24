@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record per [index.md](index.md) §2)
-**Last reconciled:** 2026-06-07 — reconciled with Hugging Face Spaces + Vercel deployment configuration.
+**Last reconciled:** 2026-06-24 (Accurate under CR-005; CR-008 added planner_feedback and RAG §8.1; CR-011 confirmed HF + Vercel deploy model)
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
 > Architecture for the PRD's features (`PRD-F#`). Locked technical decisions come from [MATRIX.md](../MATRIX.md) §5–6; data availability/confidence from [../data/READINESS.md](../data/READINESS.md). Treat the locked stack as invariant unless explicitly reopened.
@@ -306,7 +306,7 @@ User scenario text and retrieved third-party content both reach the model, so th
 | LLM07 Excessive agency / over-permissioning | Yes | Least-privilege tools (read + internal only); no external writes; SUMO sandboxed; Azure OpenAI spend-capped via the static persona-pool default + pool caching | QAD AI-04 |
 | Hallucination causing user harm | Yes | **Numbers come from the deterministic kernel, not the LLM**; narratives cite data sources; confidence floor → "directional only"; bias auditor enforces mode-share anchor | QAD AI-05 |
 
-**Data sent to model providers:** scenario text + retrieved public Iloilo facts → Azure OpenAI (Google AUP). No raw PII. Retention/training terms to be confirmed and recorded in the planned **CLR** (reconcile sub-processors there).
+**Data sent to model providers:** scenario text + retrieved public Iloilo facts → Azure OpenAI (Microsoft Online Services Terms). No raw PII. Retention/training terms to be confirmed and recorded in the planned **CLR** (reconcile sub-processors there).
 **Trust boundary:** anything the user or a third-party source can influence is **untrusted** — it can *request* a simulation but never *command* a tool call.
 
 ---

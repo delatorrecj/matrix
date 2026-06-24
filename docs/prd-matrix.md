@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN, Polytechnic University of the Philippines)
 **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record per [index.md](index.md) §2)
-**Last reconciled:** N/A — not yet reconciled with code
+**Last reconciled:** 2026-06-24 (PRD-F7 amended by CR-010, PRD-F20 added by CR-008, codebase implements all Must-Haves)
 **BRD:** N/A — business case is carried by [MATRIX.md](../MATRIX.md) §1–3 and Appendix B
 
 > **Source of truth:** [MATRIX.md](../MATRIX.md) is canonical; this PRD decomposes it into spec form. Data backing: [../data/READINESS.md](../data/READINESS.md) (per-dimension availability + confidence) and [../data/INVENTORY.md](../data/INVENTORY.md).
@@ -240,7 +240,7 @@ flowchart TD
 - **Single-user demo load** for the 90-second budget; multi-user requires queueing (acceptable for hackathon scope).
 - **Open data is sufficient** to build all five dimensions (validated in [../data/READINESS.md](../data/READINESS.md)); FOI/outreach items are fidelity upgrades, not blockers.
 - **Mode-share calibration** is derived from literature (Calderon 2014 + Iloilo studies), not a live travel survey — carried at **Medium** confidence and enforced by the bias auditor's mode-share anchor.
-- Economic is the thinnest dimension until BIR zonal / establishment data lands (in progress) — until then it carries a Low–Medium confidence floor.
+- **Economic has been upgraded** to a Medium confidence floor since the BIR zonal and establishment data (FIES 2023 / ASPBI 2022) were successfully integrated.
 
 ---
 
@@ -298,4 +298,4 @@ Canonical owner map (refines the DRIs in §9; referenced by SAD/BUILD/OPS/GTM). 
 - [x] §7 filled (AI is central).
 - [x] §9 covers through post-launch with rollout + rollback trigger/mechanism + DRIs.
 - [x] This doc answers *what*, not *how* — architecture goes in `sdd-matrix.md`.
-- [ ] Reconcile with code once the monorepo scaffold exists (Last reconciled → set then).
+- [x] Reconcile with code once the monorepo scaffold exists (Last reconciled → set then).
