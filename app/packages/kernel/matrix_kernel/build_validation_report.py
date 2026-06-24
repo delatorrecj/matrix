@@ -20,11 +20,17 @@ Writes ``app/validation_report.json`` (gitignored; served by GET /validation whe
 live module reports NOT_RUN). When the baseline/net is unavailable both gates are written NOT_RUN —
 never a fabricated number.
 
-STATUS (CR-007 PR 5b): against the current *uncalibrated* synthetic demand, the corridor flow proxy
-runs ~an order of magnitude above the Calderon maxima (NRMSE ~12 — a FAIL). That is a mode-share
-calibration gap (P1-6) + a proxy/unit reconciliation, NOT a model validation, so the report is
-**withheld** (not committed): generate it at deploy once demand is calibrated and the flow proxy is
-reconciled. An unvalidated FAIL is not a validation result (PRD-F14).
+STATUS (CR-007 PR 5b): against the *uncalibrated* synthetic demand the corridor flow proxy ran ~an
+order of magnitude above the Calderon maxima (NRMSE ~12 — a FAIL): a mode-share calibration gap
+(P1-6) + a proxy/unit reconciliation, NOT a model validation, so the report was **withheld**.
+
+CR-012 WS-1 T1.2 (proxy reconciliation): the proxy now measures peak *transit* passenger flow —
+`simulated_corridor_flows_from_baseline` restricts the all-vehicle edge throughput to the
+transit-vehicle share (`validation.transit_vehicle_share`, ~13% from the Iloilo anchor) before
+applying the jeepney occupancy, which removes ~8x of the over-count (anchor math; unit-tested). The
+residual is the demand-volume calibration (WS-1 T1.3 / WS-2). Confirm the live NRMSE at deploy
+(needs the seeded baseline) before un-withholding and re-locking methods §VAL-01; an unvalidated
+FAIL is still not a validation result (PRD-F14).
 """
 from __future__ import annotations
 
@@ -117,7 +123,8 @@ def generate() -> dict:
 
     return run_validation_gates(
         calderon_simulated=flows,
-        calderon_source="live-baseline:redis (peak per-edge veh/h x 14 pax/veh proxy)",
+        calderon_source="live-baseline:redis (peak per-edge transit passenger-flow proxy; "
+                        "CR-012 transit-vehicle-share x 14 pax/jeepney)",
         calderon_quantity=VAL01_QUANTITY,
     )
 
