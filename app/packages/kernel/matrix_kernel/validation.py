@@ -449,8 +449,10 @@ def _check_report(report: dict) -> None:
 # is most of the ~10x. The live NRMSE is confirmed at deploy (needs the seeded baseline);
 # this proxy + its assumptions are unit-tested here and documented for VAL-01 re-lock.
 #
-# Occupancies are documented assumptions — typical PH urban values (tier M: planning norms,
-# NOT an Iloilo survey). Replace with surveyed values when WS-2 lands a calibrated anchor.
+# Occupancies are tier-M planning-norm estimates (NOT an Iloilo survey), REGISTERED in the
+# methods ledger — methods-matrix.md §3.6 `_OCCUPANCY_BY_MODE` (CR-012, PENDING RE-LOCK) —
+# with their named basis. They drive only the VAL-01 validation proxy, never a shipped
+# dimension score. Replace with surveyed values when WS-2 lands a calibrated anchor.
 _OCCUPANCY_BY_MODE: dict[str, float] = {
     "jeepney": 14.0,       # the transit vehicle Calderon publishes
     "private_car": 1.5,

@@ -237,8 +237,10 @@ def test_corridor_flow_proxy_busiest_edge_and_scaling():
 
 
 def test_corridor_flow_proxy_transit_share_cuts_overcount():
-    # Restricting to the ~13% transit-vehicle share cuts the proxy ~8x (the T1.2 fix):
-    # 1400 -> ~182, into the Calderon scenario1 ballpark (90/275 pax) rather than ~10x over.
+    # Arithmetic only (synthetic 100-veh input, no ground-truth claim): restricting to the
+    # ~13% transit-vehicle share cuts the proxy ~8x (1400 -> ~182) — the T1.2 reduction that
+    # removes most of the T1.1 ~10x over-count. Proximity to the Calderon targets (90/275 pax)
+    # is a LIVE-baseline question, confirmed at deploy — not provable by this pure unit test.
     ec = {"a": 100}
     out = corridor_flow_proxy(ec, {"x": ["a"]}, window_s=3600.0,
                               transit_occupancy=14.0, transit_vehicle_fraction=0.13)

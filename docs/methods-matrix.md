@@ -1,6 +1,6 @@
 # MATRIX — Methods & Traceability Registry (Glass-Box Ledger)
 
-**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Re-locked:** §4 + §4.3 amended & re-locked 2026-06-24 by **CR-010** (owner-approved; synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged)
+**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Re-locked:** §4 + §4.3 amended & re-locked 2026-06-24 by **CR-010** (owner-approved; synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged) · **Pending re-lock:** §3.6 + §6 amended 2026-06-24 by **CR-012** (VAL-01 corridor proxy reconciled to peak *transit* passenger flow + `_OCCUPANCY_BY_MODE` constants registered) — **Draft until re-locked** (awaiting the live NRMSE confirmation at deploy)
 **Backs:** [prd-matrix.md](prd-matrix.md) `PRD-F14` · [sdd-matrix.md](sdd-matrix.md) · data IDs from [../data/INVENTORY.md](../data/INVENTORY.md)
 
 > **MATRIX is a glass box, not a black box.** Every number it outputs is **derived by an explicit equation from named data**, carries a **confidence tier computed by a rule**, and is **reproducible and citable**. If a number cannot be traced through this ledger, it does not ship. The LLM (Azure OpenAI) *orchestrates and narrates with citations* — it **never originates a number**; all scores come from the deterministic kernel and the equations below.
@@ -140,6 +140,9 @@ a specific Iloilo measurement; they are order-of-magnitude placeholders declared
 | `_GENERIC_POP_DENSITY` | `modules/societal.py` | 5,843 persons/km² (PSA 2020 CPH Iloilo City: 457,626 persons / 78.34 km²; city-wide average; updated CR-007 PR 7) | SOCI-3 health-exposure proxy | Per-zone WorldPop density wired into the kernel |
 | `FACILITY_PROFILES` | `demand_delta.py` | per-kind `trips_per_capacity`, `redirected_fraction`, `catchment_radius_m` | BEH-4 (all kinds) | Local travel-survey calibration per facility kind |
 | `_INJECTION_WEIGHT` | `bias_auditor.py` | 10.0 | `reweight_pool` weight for modes absent in the observed batch but present in the target (§4.1) | Heuristic; replace with a principled smoothing prior once anchor coverage is complete |
+| `_OCCUPANCY_BY_MODE` | `validation.py` (CR-012 T1.2) | jeepney 14, private_car 1.5, motorcycle 1.2, tricycle 2.5 pax/veh | VAL-01 corridor flow proxy — `transit_vehicle_share` (a mode's vehicle count ∝ trip_share/occupancy) → ~13% transit-vehicle share, reconciling the proxy to Calderon's peak *transit* passenger load (not all-vehicle throughput) | WS-2 calibrated occupancies from the LTFRB OD survey / local household travel survey |
+
+> **`_OCCUPANCY_BY_MODE` basis (tier M — planning-norm estimates, not an Iloilo measurement; CR-012, PENDING RE-LOCK).** jeepney = 14 pax/veh follows the LTFRB/DOTr PUV seated-capacity basis already used kernel-wide and is consistent with the transit vehicle in **Calderon 2014** (LIT-CALDERON). private_car 1.5 / motorcycle 1.2 / tricycle 2.5 are standard PH urban average-occupancy planning estimates (order-of-magnitude; cf. JICA MMUTIS/MUCEP & NCTS-UP travel-survey occupancy ranges), declared honestly as tier-M placeholders pending the WS-2 survey — like the other §3.6 constants. They drive only the VAL-01 validation proxy, never a shipped dimension score.
 
 ### 3.7 Extreme-Event Resilience (CR-008 Item 5)
 
@@ -234,7 +237,7 @@ The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index 
 
 | Check | Method | Target | Status |
 |---|---|---|---|
-| Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | **WITHHELD** (Uncalibrated demand proxy vs ground-truth) |
+| Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | **WITHHELD — pending live confirmation** (CR-012 T1.2: the corridor proxy is reconciled to peak *transit* passenger flow — `transit_vehicle_share` × jeepney occupancy, §3.6 `_OCCUPANCY_BY_MODE` — removing ~8× of the prior all-vehicle over-count; the residual is demand-volume calibration, T1.3/WS-2. Un-withheld + re-locked once the live NRMSE is confirmed at deploy.) |
 | Flood redistribution | back-test vs **2024 Iloilo flood** extent (Sentinel-1 GFM) | spatial overlap (IoU) | **NOT_RUN** (closure helper staged; no real Sentinel-1 extent wired → no IoU computed) |
 | Mode-share anchor | generated vs ground-truth ±3% | within band | enforced (bias auditor) |
 
