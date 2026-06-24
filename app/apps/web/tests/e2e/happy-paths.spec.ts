@@ -12,9 +12,12 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     await expect(page.getByRole('heading', { name: 'Scenario summary' })).toBeVisible();
 
     // Streamed results render with HUMAN labels + rounded values (registry, not raw floats).
-    await expect(page.getByText('Trips on the affected road (morning rush)')).toBeVisible();
-    await expect(page.getByText('People at risk of displacement')).toBeVisible();
-    await expect(page.getByText('+12', { exact: true })).toBeVisible(); // SOC-2 (signed, 0 dp)
+    // Target the summary cards (buttons) — the hidden print brief mirrors the same label
+    // text, so a bare getByText is ambiguous under Playwright strict mode.
+    await expect(page.getByRole('button', { name: /Trips on the affected road/ })).toBeVisible();
+    const displacementCard = page.getByRole('button', { name: /People at risk of displacement/ });
+    await expect(displacementCard).toBeVisible();
+    await expect(displacementCard).toContainText('+12'); // SOC-2 (signed, 0 dp)
 
     // The full lifecycle reached DONE (ACCEPTED → … → DONE through the reducer).
     await expect(page.getByTestId('ws-status')).toContainText('Done');
@@ -22,9 +25,14 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     // The summary defers the deep detail to Analytics — open it.
     await page.getByRole('button', { name: /View full analytics/i }).click();
 
-    // Analytics carries the raw metric names, the synthesis narrative, validation + bias.
-    await expect(page.getByText('Displacement risk count')).toBeVisible();
-    await expect(page.getByText(/Illustrative synthesis for e2e/)).toBeVisible();
+    // Analytics carries the raw metric names + the synthesis narrative. Scope to the
+    // analytics view — the hidden print brief mirrors the same label/headline text in the DOM.
+    const analytics = page.getByTestId('analytics-view');
+    await expect(analytics.getByText('Displacement risk count')).toBeVisible();
+    // CR-010: the synthesis narrative is the plain-language BLUF brief; the English half
+    // shows by default (the Hiligaynon half sits behind the delimiter + language toggle).
+    await expect(analytics.getByText(/Closing the lane eases the morning rush/)).toBeVisible();
+    await expect(page.getByText(/nagapahapos sang trapiko/)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Validation & Back-Testing' })).toBeVisible();
     await expect(page.getByTestId('gate-VAL-01')).toBeVisible();
     await expect(page.getByText('Bias Audit Log (Public)')).toBeVisible();
@@ -34,8 +42,8 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     await mockMatrixBackend(page);
     await page.goto(SCENARIO);
 
-    // Click the humanized summary card; the drawer still surfaces raw provenance.
-    await page.getByText('Trips on the affected road (morning rush)').click();
+    // Click the humanized summary card (button, not the hidden print brief's mirror text).
+    await page.getByRole('button', { name: /Trips on the affected road/ }).click();
 
     const drawer = page.getByTestId('inspect-drawer');
     await expect(drawer).toBeVisible();

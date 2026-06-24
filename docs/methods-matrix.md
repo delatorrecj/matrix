@@ -1,6 +1,6 @@
 # MATRIX — Methods & Traceability Registry (Glass-Box Ledger)
 
-**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6)
+**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Re-locked:** §4 + §4.3 amended & re-locked 2026-06-24 by **CR-010** (owner-approved; synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged)
 **Backs:** [prd-matrix.md](prd-matrix.md) `PRD-F14` · [sdd-matrix.md](sdd-matrix.md) · data IDs from [../data/INVENTORY.md](../data/INVENTORY.md)
 
 > **MATRIX is a glass box, not a black box.** Every number it outputs is **derived by an explicit equation from named data**, carries a **confidence tier computed by a rule**, and is **reproducible and citable**. If a number cannot be traced through this ledger, it does not ship. The LLM (Azure OpenAI) *orchestrates and narrates with citations* — it **never originates a number**; all scores come from the deterministic kernel and the equations below.
@@ -161,9 +161,25 @@ Each non-trivial component documents what it does and how its output is made tra
 | **Bias auditor** (Python) | enforce mode-share fairness | persona batch → pass/reweight | Iloilo ground truth (Calderon2014) | anchor stale → flagged | public `bias_audit_log` |
 | **SUMO kernel** (TraCI) | physical trajectories | net + agents → per-tick dataset | deterministic physics | net gaps → confidence floor | seed + net version in `simulation_runs` |
 | **XGBoost baseline** | corridor volume forecast | history → baseline | trained on open series | extrapolation risk | model version stamped |
-| **Synthesis** (Azure OpenAI GPT-5.4) | narratives + report | scores → prose | GraphRAG retrieval + **must cite numbers + sources** | hallucination → citation guard rejects uncited claims | citations resolve to `equation_id` + `dataset_ids` (not RAG text) |
+| **Synthesis** (Azure OpenAI GPT-5.4) | plain-language BLUF brief (bilingual) | scores → prose | GraphRAG retrieval + **must cite numbers + sources** | hallucination → citation guard rejects uncited claims | citations resolve to `equation_id` + `dataset_ids` (not RAG text) |
 
-**Citation guard:** synthesis narrative claims that assert a number must reference an `equation_id` and its `input_dataset_ids`; uncited quantitative claims are blocked from render.
+**Citation guard:** synthesis narrative claims that assert a number must reference an `equation_id` and its `input_dataset_ids`; uncited quantitative claims are blocked from render. The guard splits the brief into claim-sized units on sentence-final punctuation **and newlines**, so a numeric claim cannot ride on a cited sibling within the same line/block; it re-attaches the original separators when reconstructing, preserving the brief's layout (section headers and the bilingual delimiter).
+
+### 4.3 Synthesis Brief Structure (BLUF + delimited bilingual)
+
+> *(CR-010 — added 2026-06-24, **re-locked 2026-06-24 under CR-010** (owner-approved). This subsection and the amended Synthesis row + citation-guard note above are **Locked**. They replace the prior `EXECUTIVE SUMMARY / ACTIONABLE RECOMMENDATIONS / PERSONA PERSPECTIVES` structure.)*
+
+The synthesis agent emits a **plain-language BLUF brief** (bottom line up front) written for a non-expert city planner — short active sentences, no methodology, no equation names in the prose — with these uppercase section headers, in order:
+
+1. **HEADLINE** — 1–3 sentences: the overall conclusion **and** the call-to-action, first.
+2. **WHAT WE SIMULATED** — one line describing the intervention in plain words.
+3. **KEY FINDINGS** — 3–5 short sentences, each leading with the human-scaled insight *then* the number.
+4. **RECOMMENDATION** — one short paragraph, a clear recommendation, no hedging.
+5. **KEY RISK** — the single most important caveat, in one or two sentences.
+
+**Bilingual by delimiter, not inline interleave.** The full English brief is emitted first, then a marker line `=== HILIGAYNON ===` on its own line, then the same brief rendered fully in Hiligaynon (the section headers stay in English). The web layer splits on the marker and renders **one language at a time**, driven by the user's language toggle (default English; English fallback when the Hiligaynon half is absent). This supersedes the earlier inline parenthetical-translation persona block, which doubled text density and hurt scannability (CR-010 §4).
+
+**Glass box is unchanged (PRD-F14).** The rewrite changes prose and structure only — **not** the citation contract. Every number in *either* language still carries its inline `[EQUATION_ID]`, and the citation guard (above) still blocks any numeric claim lacking a valid, dataset-backed bracket. The numbers remain the kernel's; the LLM never originates one. The marker is defined once as `HILIGAYNON_MARKER` in `packages/kernel/matrix_kernel/synthesis.py` (the single source of truth, mirrored by the web `lib/bilingual.ts`).
 
 ### 4.1 Bias Auditor: Middle-Class-Bias Reweight Example
 
