@@ -149,3 +149,52 @@ def test_warm_persona_pool_runs_the_full_loop():
     # The entry is self-consistent: reweighted iff the realized share drifted past tolerance.
     assert entry.reweighted == (entry.max_delta > MODE_SHARE_TOLERANCE)
     assert entry.as_dict()["observed_mode_share"]  # non-empty realized share
+
+
+def test_methods_4_1_worked_example_matches_doc():
+    """Executable mirror of methods-matrix §4.1 (CR-012 WS-4) — the judges-facing bias
+    worked example. A persona-LLM batch that over-generates private cars is flagged,
+    reweighted, and passes re-audit; the per-mode factors match the documented table.
+    Pins the doc's numbers to reality so they can never silently drift."""
+    class MockPersona:
+        def __init__(self, mode):
+            self.mode = mode
+
+    # §4.1 "Observed" column (the over-indexed LLM batch) as integer counts over n=2000:
+    # shares 0.40 / 0.30 / 0.15 / 0.08 / 0.04 / 0.03 (sum 1.0).
+    observed_counts = {
+        "jeepney": 800, "private_car": 600, "motorcycle": 300,
+        "walk": 160, "bicycle": 80, "tricycle": 60,
+    }
+    pool = [MockPersona(m) for m, c in observed_counts.items() for _ in range(c)]
+    observed = observed_mode_share(pool)
+    assert observed["private_car"] == pytest.approx(0.30)
+
+    # Audit flags it: private_car +0.15 over anchor, far beyond ±3%.
+    flagged = audit_personas(observed, ILOILO_MODE_SHARE, batch_id="methods-4.1")
+    assert flagged.reweighted is True
+    assert flagged.max_delta == pytest.approx(0.15)
+
+    # Reweight → the per-mode factors match the §4.1 table (f_k = target / observed).
+    resampled, factors = reweight_pool(observed, ILOILO_MODE_SHARE, pool, seed=42)
+    assert factors["jeepney"] == pytest.approx(1.25)
+    assert factors["private_car"] == pytest.approx(0.50)
+    assert factors["motorcycle"] == pytest.approx(1.00)
+    assert factors["walk"] == pytest.approx(1.25)
+    assert factors["bicycle"] == pytest.approx(1.25)
+    assert factors["tricycle"] == pytest.approx(5 / 3, abs=0.01)  # 0.05/0.03 ≈ 1.67
+
+    # Re-audit the corrected pool: now within ±3% (the §4.1 "Result" row).
+    corrected = audit_personas(observed_mode_share(resampled), ILOILO_MODE_SHARE)
+    assert corrected.reweighted is False
+    assert corrected.max_delta <= MODE_SHARE_TOLERANCE
+
+
+def test_deployed_static_pool_is_on_anchor_by_construction():
+    """WS-4 / T4.2: the DEPLOYED default pool is sampled straight from the anchor, so it is
+    on-target by construction → the audit passes with no reweight. The reweight is the safety
+    net for the opt-in LLM-persona path (where model bias can appear), not a prod correction."""
+    pool = generate_persona_pool(n=2000, seed=7)  # the deployed-style static pool
+    entry = audit_personas(observed_mode_share(pool), ILOILO_MODE_SHARE, batch_id="deployed-default")
+    assert entry.reweighted is False
+    assert entry.adjustment_factors is None  # no correction was needed
