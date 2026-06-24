@@ -285,7 +285,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
 
     expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
     expect(screen.getByTestId("skeleton-ecological")).toBeInTheDocument();
-    expect(screen.getByText("Mode shift")).toBeInTheDocument();
+    // The summary card shows the plain-language label (CR-010), not the raw metric name.
+    expect(screen.getByText("Trips on the affected road (morning rush)")).toBeInTheDocument();
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
       "1/5 dimensions · 1/17 results",
     );

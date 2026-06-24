@@ -97,6 +97,8 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
       ws.emit(RESULT_BEH_1);
       ws.emit(SYNTHESIS_EVENT);
     });
+    // CR-010: the synthesis narrative + citation chips live in the Analytics view.
+    fireEvent.click(screen.getByRole("button", { name: /view full analytics/i }));
     return ws;
   }
 

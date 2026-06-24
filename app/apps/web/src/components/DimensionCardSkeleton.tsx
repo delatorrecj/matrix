@@ -9,6 +9,8 @@
  */
 interface DimensionCardSkeletonProps {
   name: string;
+  /** Stable id for the testid (raw dimension id); falls back to `name`. */
+  dimId?: string;
   /** Tailwind bg-* class for the dimension hue dot (matches the result cards). */
   colorClass: string;
   expectedResults: number;
@@ -18,6 +20,7 @@ interface DimensionCardSkeletonProps {
 
 export default function DimensionCardSkeleton({
   name,
+  dimId,
   colorClass,
   expectedResults,
   active = true,
@@ -25,7 +28,7 @@ export default function DimensionCardSkeleton({
   return (
     <div
       className="border border-dashed border-border rounded-lg p-4 bg-surface"
-      data-testid={`skeleton-${name}`}
+      data-testid={`skeleton-${dimId ?? name}`}
       aria-label={
         active
           ? `${name} dimension awaiting results`
