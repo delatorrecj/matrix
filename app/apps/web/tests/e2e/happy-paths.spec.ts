@@ -25,11 +25,13 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     // The summary defers the deep detail to Analytics — open it.
     await page.getByRole('button', { name: /View full analytics/i }).click();
 
-    // Analytics carries the raw metric names, the synthesis narrative, validation + bias.
-    await expect(page.getByText('Displacement risk count')).toBeVisible();
+    // Analytics carries the raw metric names + the synthesis narrative. Scope to the
+    // analytics view — the hidden print brief mirrors the same label/headline text in the DOM.
+    const analytics = page.getByTestId('analytics-view');
+    await expect(analytics.getByText('Displacement risk count')).toBeVisible();
     // CR-010: the synthesis narrative is the plain-language BLUF brief; the English half
     // shows by default (the Hiligaynon half sits behind the delimiter + language toggle).
-    await expect(page.getByText(/Closing the lane eases the morning rush/)).toBeVisible();
+    await expect(analytics.getByText(/Closing the lane eases the morning rush/)).toBeVisible();
     await expect(page.getByText(/nagapahapos sang trapiko/)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Validation & Back-Testing' })).toBeVisible();
     await expect(page.getByTestId('gate-VAL-01')).toBeVisible();
