@@ -17,6 +17,7 @@ from matrix_kernel.validation import (
     PROVISIONAL_MARK,
     VAL01_THRESHOLD_NRMSE,
     VAL02_THRESHOLD_IOU,
+    corridor_flow_proxy,
     length_weighted_iou,
     load_fixture,
     load_validation_report,
@@ -24,10 +25,18 @@ from matrix_kernel.validation import (
     rmse,
     run_validation_gates,
     simulated_corridor_flows_from_baseline,
+    transit_vehicle_share,
     validate_calderon,
     validate_flood,
     write_validation_report,
 )
+
+# Iloilo mode-share anchor (config.ILOILO_MODE_SHARE) — kept inline so the proxy test
+# does not depend on the SUMO/config import chain.
+_ILOILO_ANCHOR = {
+    "jeepney": 0.50, "tricycle": 0.05, "private_car": 0.15,
+    "motorcycle": 0.15, "walk": 0.10, "bicycle": 0.05,
+}
 
 
 # ── metric primitives ────────────────────────────────────────────────────────────────
@@ -203,6 +212,48 @@ def test_live_baseline_wrapper_returns_none_when_unavailable(monkeypatch):
     flows = simulated_corridor_flows_from_baseline(
         {"s1_lopez_jaena_flow_max": ["edge1"]}, redis_url="redis://127.0.0.1:1/0")
     assert flows is None
+
+
+# ── CR-012 WS-1 T1.2: corridor passenger-flow proxy reconciliation (pure, no I/O) ────
+
+def test_transit_vehicle_share_from_iloilo_anchor():
+    # Jeepneys carry ~14 pax/veh, so they are a SMALL fraction of road VEHICLES (~13%)
+    # despite carrying half the trips — that gap is most of the VAL-01 ~10x over-read.
+    share = transit_vehicle_share(_ILOILO_ANCHOR)
+    assert 0.10 < share < 0.16  # ~0.127 from the documented occupancies
+
+
+def test_transit_vehicle_share_zero_when_no_road_vehicles():
+    assert transit_vehicle_share({"walk": 0.6, "bicycle": 0.4}) == 0.0
+
+
+def test_corridor_flow_proxy_busiest_edge_and_scaling():
+    # Busiest of the two mapped edges = 100 veh over a 3600 s window -> 100 veh/h.
+    # transit_vehicle_fraction=1.0 + occupancy 14 reproduces the pre-CR-012 proxy: 1400.
+    ec = {"a": 100, "b": 50}
+    out = corridor_flow_proxy(ec, {"x": ["a", "b"]}, window_s=3600.0,
+                              transit_occupancy=14.0, transit_vehicle_fraction=1.0)
+    assert out["x"] == 1400.0
+
+
+def test_corridor_flow_proxy_transit_share_cuts_overcount():
+    # Arithmetic only (synthetic 100-veh input, no ground-truth claim): restricting to the
+    # ~13% transit-vehicle share cuts the proxy ~8x (1400 -> ~182) — the T1.2 reduction that
+    # removes most of the T1.1 ~10x over-count. Proximity to the Calderon targets (90/275 pax)
+    # is a LIVE-baseline question, confirmed at deploy — not provable by this pure unit test.
+    ec = {"a": 100}
+    out = corridor_flow_proxy(ec, {"x": ["a"]}, window_s=3600.0,
+                              transit_occupancy=14.0, transit_vehicle_fraction=0.13)
+    assert abs(out["x"] - 182.0) < 1.0
+
+
+def test_corridor_flow_proxy_empty_corridor_is_zero():
+    assert corridor_flow_proxy({}, {"x": ["a"]}, window_s=3600.0)["x"] == 0.0
+
+
+def test_corridor_flow_proxy_rejects_bad_window():
+    with pytest.raises(ValueError):
+        corridor_flow_proxy({"a": 1}, {"x": ["a"]}, window_s=0.0)
 
 
 # ── end-to-end: full gate computation -> validation_report.json -> re-validate ──────

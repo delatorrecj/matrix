@@ -439,22 +439,92 @@ def _check_report(report: dict) -> None:
             raise ValueError(f"{g['gate_id']}: provisional fixture lost its {PROVISIONAL_MARK!r} marker")
 
 
+# ── Corridor passenger-flow proxy (CR-012 WS-1 T1.2: reconciled to Calderon's quantity) ─
+# Calderon's published `passenger_flow_max` is a peak TRANSIT segment passenger load. The
+# baseline's edge_counts are ALL road vehicles (mixed traffic), so multiplying the whole
+# edge throughput by a jeepney occupancy over-counts ~10x (the T1.1 finding). We reconcile
+# by restricting to the transit (jeepney) share of VEHICLES and applying the transit
+# occupancy. A mode's VEHICLE count is ∝ trip_share / occupancy — jeepneys move many pax per
+# vehicle, so they are a small fraction of vehicles (~13%) despite a large trip share, which
+# is most of the ~10x. The live NRMSE is confirmed at deploy (needs the seeded baseline);
+# this proxy + its assumptions are unit-tested here and documented for VAL-01 re-lock.
+#
+# Occupancies are tier-M planning-norm estimates (NOT an Iloilo survey), REGISTERED in the
+# methods ledger — methods-matrix.md §3.6 `_OCCUPANCY_BY_MODE` (CR-012, re-locked 2026-06-24) —
+# with their named basis. They drive only the VAL-01 validation proxy, never a shipped
+# dimension score. Replace with surveyed values when WS-2 lands a calibrated anchor.
+_OCCUPANCY_BY_MODE: dict[str, float] = {
+    "jeepney": 14.0,       # the transit vehicle Calderon publishes
+    "private_car": 1.5,
+    "motorcycle": 1.2,
+    "tricycle": 2.5,
+}
+_TRANSIT_MODE = "jeepney"
+
+
+def transit_vehicle_share(
+    mode_share: Mapping[str, float],
+    *,
+    occupancy: Mapping[str, float] = _OCCUPANCY_BY_MODE,
+    transit_mode: str = _TRANSIT_MODE,
+) -> float:
+    """Fraction of ROAD VEHICLES that are transit, derived from the trip mode-share anchor.
+
+    A mode's vehicle count is ∝ trip_share / occupancy (a jeepney moves ~14 pax/veh, a car
+    ~1.5, so jeepneys are a small share of vehicles despite a large trip share). Only
+    motor-vehicle modes with a known occupancy participate (walk/bicycle are not road
+    vehicles in the SUMO mixed flow). Returns 0.0 when no transit/road vehicles are present.
+    """
+    veh = {m: mode_share[m] / occupancy[m]
+           for m in occupancy if m in mode_share and occupancy[m] > 0.0}
+    total = sum(veh.values())
+    return veh.get(transit_mode, 0.0) / total if total > 0.0 else 0.0
+
+
+def corridor_flow_proxy(
+    edge_counts: Mapping[str, float],
+    corridor_edges: Mapping[str, Sequence[str]],
+    *,
+    window_s: float,
+    transit_occupancy: float = _OCCUPANCY_BY_MODE[_TRANSIT_MODE],
+    transit_vehicle_fraction: float = 1.0,
+) -> dict[str, float]:
+    """Pure per-corridor peak transit passenger-flow proxy (no I/O — unit-testable).
+
+    For each corridor (fixture obs id), takes the busiest mapped edge's vehicle count over
+    the sim window, scales to veh/h, restricts to the transit share of vehicles, and applies
+    the transit occupancy → a peak transit passenger-flow estimate comparable to Calderon's
+    `passenger_flow_max`. `transit_vehicle_fraction=1.0` reproduces the pre-CR-012 behavior
+    (every vehicle treated as transit); the live wrapper supplies the anchor-derived share.
+    """
+    if window_s <= 0.0:
+        raise ValueError("corridor_flow_proxy: window_s must be > 0")
+    scale = (3600.0 / window_s) * transit_vehicle_fraction * transit_occupancy
+    return {
+        obs_id: max((edge_counts.get(e, 0) for e in edges), default=0) * scale
+        for obs_id, edges in corridor_edges.items()
+    }
+
+
 # ── Thin live-baseline convenience (the only SUMO/Redis-adjacent path; optional) ────
 
 def simulated_corridor_flows_from_baseline(
     corridor_edges: Mapping[str, Sequence[str]],
     *,
-    pax_per_vehicle: float = 14.0,
+    pax_per_vehicle: float | None = None,
+    transit_vehicle_fraction: float | None = None,
     redis_url: str | None = None,
 ) -> dict[str, float] | None:
-    """Map fixture observation ids -> peak passenger-flow proxies from the cached baseline.
+    """Map fixture observation ids -> peak transit passenger-flow proxies from the baseline.
 
-    For each observation id, takes the busiest of its mapped SUMO edges (vehicles entered
-    over the sim window), scales to veh/h, and applies an average-occupancy assumption
-    (`pax_per_vehicle`, default 14 pax/jeepney — an explicit assumption, override with a
-    calibrated value). Returns None when the baseline is unavailable (no eclipse-sumo
-    import chain, no Redis, or no cached baseline) so the gate reports NOT_RUN instead
-    of a guess. Callers should pass simulated_source="live-baseline:redis" to the gate.
+    Pulls the cached baseline, then delegates to the pure `corridor_flow_proxy`. By default
+    the transit occupancy is the jeepney value and the transit-vehicle share is derived from
+    the active city's mode-share anchor (`transit_vehicle_share`) — the CR-012 T1.2
+    reconciliation that stops the all-vehicle × 14 over-count. Pass explicit overrides for
+    calibration experiments; `transit_vehicle_fraction=1.0` restores the pre-CR-012 proxy.
+    Returns None when the baseline is unavailable (no eclipse-sumo import chain, no Redis, or
+    no cached baseline) so the gate reports NOT_RUN instead of a guess. Callers should pass
+    simulated_source="live-baseline:redis" to the gate.
     """
     try:  # lazy: baseline -> sumo_env needs the eclipse-sumo wheel; absent on bare venvs
         from matrix_kernel.baseline import REDIS_URL, SIM_END, load_baseline
@@ -465,11 +535,17 @@ def simulated_corridor_flows_from_baseline(
     except Exception:
         return None
     window_s = float(traj.meta.get("sim_end_s", SIM_END))
-    return {
-        obs_id: max((traj.edge_counts.get(e, 0) for e in edges), default=0)
-        * (3600.0 / window_s) * pax_per_vehicle
-        for obs_id, edges in corridor_edges.items()
-    }
+    occupancy = _OCCUPANCY_BY_MODE[_TRANSIT_MODE] if pax_per_vehicle is None else pax_per_vehicle
+    if transit_vehicle_fraction is None:
+        try:
+            from matrix_kernel.config import get_city_config
+            transit_vehicle_fraction = transit_vehicle_share(get_city_config().mode_share)
+        except Exception:
+            transit_vehicle_fraction = 1.0  # no anchor available -> pre-CR-012 behavior
+    return corridor_flow_proxy(
+        traj.edge_counts, corridor_edges, window_s=window_s,
+        transit_occupancy=occupancy, transit_vehicle_fraction=transit_vehicle_fraction,
+    )
 
 
 def get_all_validations() -> list[dict]:
