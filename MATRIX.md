@@ -142,37 +142,40 @@ Every MATRIX simulation produces calibrated impact scores across five dimensions
 The processing core is structured as **one simulation kernel + five impact modules**. A single SUMO + LLM-persona simulation run produces a unified trajectory dataset; the five impact modules each consume that dataset and emit their dimension-specific scores.
 
 ```
-                    ┌──────────────────────────┐
-                    │   User Scenario Input    │
-                    │  (NL query or map drop)  │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │   Azure OpenAI (gpt-5.4) Orchestrator│
-                    │   (parse → sim plan)     │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-        ┌──────────────────────────────────────────────┐
-        │       UNIFIED SIMULATION KERNEL              │
-        │   SUMO + Persona Pool + Bias Auditor         │
-        │   Produces: trajectory dataset (per-agent,   │
-        │   per-tick: location, mode, action, demo)    │
-        └──────────────────────────────────────────────┘
-                                 │
-        ┌────────┬────────┬──────┴──────┬────────┬─────────┐
-        ▼        ▼        ▼             ▼        ▼         ▼
-    ┌────────┐┌────────┐┌────────┐  ┌────────┐┌────────┐┌────────┐
-    │Behavior││ Social ││Economic│  │Ecology ││Society ││ Synth  │
-    │Module  ││ Module ││ Module │  │ Module ││ Module ││ Agent  │
-    └────────┘└────────┘└────────┘  └────────┘└────────┘└────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │  Next.js + Deck.gl       │
-                    │  Real-Time Visualization │
-                    └──────────────────────────┘
+            ┌─────────────────────────────────┐
+            │       User Scenario Input       │
+            │     (NL query or map drop)      │
+            └────────────────┬────────────────┘
+                             │
+                             ▼
+            ┌─────────────────────────────────┐
+            │     Azure OpenAI (gpt-5.4)      │
+            │          Orchestrator           │
+            │       (parse → sim plan)        │
+            └────────────────┬────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│                UNIFIED SIMULATION KERNEL                │
+│           SUMO + Persona Pool + Bias Auditor            │
+│        Produces: trajectory dataset (per-agent,         │
+│        per-tick: location, mode, action, demo)          │
+└────────────────────────────┬────────────────────────────┘
+                             │
+    ┌─────────┬─────────┬────┴────┬─────────┬─────────┐
+    ▼         ▼         ▼         ▼         ▼         ▼
+┌────────┐┌────────┐┌────────┐┌────────┐┌────────┐┌────────┐
+│Behavior││ Social ││Economic││Ecology ││Societal││ Synth  │
+│ Module ││ Module ││ Module ││ Module ││ Module ││ Agent  │
+└───┬────┘└───┬────┘└───┬────┘└───┬────┘└───┬────┘└───┬────┘
+    └─────────┴─────────┴────┬────┴─────────┴─────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│                    NEXT.JS + DECK.GL                    │
+│                 Real-Time Visualization                 │
+│          (Streams trajectories, scores, brief)          │
+└─────────────────────────────────────────────────────────┘
 ```
 
 **C. Models, Frameworks, Tools**
