@@ -20,7 +20,16 @@ vi.mock("@deck.gl/react", () => ({
   ),
 }));
 vi.mock("@deck.gl/geo-layers", () => ({
-  TripsLayer: vi.fn(),
+  TripsLayer: class MockTripsLayer {
+    id = "trips-layer";
+    props: Record<string, unknown>;
+    constructor(props: Record<string, unknown> = {}) {
+      this.props = props;
+    }
+    clone(overrides: Record<string, unknown> = {}) {
+      return new MockTripsLayer({ ...this.props, ...overrides });
+    }
+  },
 }));
 // Panels with their own fetches are out of scope here; InspectDrawer and
 // SynthesisNarrative stay REAL — the citation→drawer wiring is what's under test.
