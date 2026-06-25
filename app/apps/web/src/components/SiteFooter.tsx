@@ -4,7 +4,7 @@ import { LogoMark } from "@/components/Logo";
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/60 bg-surface/40">
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-2.5">
             <LogoMark className="mt-0.5 h-5 w-5 shrink-0 text-text-muted" />

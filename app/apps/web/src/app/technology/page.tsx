@@ -29,12 +29,12 @@ export default function TechnologyPage() {
 
       {/* Hero */}
       <section className="border-b border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-5xl">
               One kernel. Five modules. Full provenance.
             </h1>
-            <p className="mt-6 max-w-[65ch] text-lg leading-relaxed text-text-muted">
+            <p className="mt-6 max-w-[72ch] text-lg leading-relaxed text-text-muted">
               A single SUMO and LLM-persona simulation produces one unified
               trajectory dataset. Five impact modules score that same reality
               in parallel, streamed to a Next.js and Deck.gl cockpit in under 90
@@ -46,10 +46,10 @@ export default function TechnologyPage() {
 
       {/* Architecture */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Architecture</h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               A natural-language query or map drop flows through the Azure
               OpenAI orchestrator into the unified simulation kernel. All five
               impact modules consume the same trajectory dataset, which is why
@@ -64,7 +64,7 @@ export default function TechnologyPage() {
 
       {/* Why unified kernel */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               Why one unified kernel?
@@ -104,12 +104,12 @@ export default function TechnologyPage() {
 
       {/* 90s pipeline */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               90-second pipeline
             </h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Real-time interactive visualization is the product&apos;s defining
               capability. The architecture targets a hard latency budget:
               pre-warmed persona pool, delta simulations against a nightly
@@ -124,10 +124,10 @@ export default function TechnologyPage() {
 
       {/* Tech stack (definition list, not card grid) */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Tech stack</h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Deliberate technology choices, each made for a documented reason.
             </p>
           </Reveal>
@@ -138,7 +138,7 @@ export default function TechnologyPage() {
                 <div className="grid gap-3 py-6 sm:grid-cols-[10rem_1fr] sm:gap-8">
                   <dt className="font-semibold">{group.category}</dt>
                   <dd>
-                    <ul className="space-y-2">
+                    <ul className="grid gap-2 sm:grid-cols-2 sm:gap-x-8">
                       {group.items.map((item) => (
                         <li
                           key={item}
@@ -158,10 +158,10 @@ export default function TechnologyPage() {
 
       {/* Data sources (horizontal tier strip) */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Data sources</h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Every input dataset carries a confidence tier (High, Medium, or
               Low) propagated through to impact module outputs. The confidence
               layer in the UI surfaces where the simulation is sure versus
@@ -169,23 +169,17 @@ export default function TechnologyPage() {
             </p>
           </Reveal>
 
-          <RevealGroup className="mt-12 space-y-0" stagger={0.06}>
-            {DATA_TIERS.map((tier, i) => (
+          <RevealGroup className="mt-12 grid gap-x-10 gap-y-6 sm:grid-cols-2" stagger={0.06}>
+            {DATA_TIERS.map((tier) => (
               <RevealItem key={tier.tier}>
-                <div
-                  className={
-                    i < DATA_TIERS.length - 1
-                      ? "border-b border-border/60 py-6"
-                      : "py-6"
-                  }
-                >
+                <div className="h-full">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="text-sm font-semibold text-primary">
                       {tier.tier}
                     </span>
                     <span className="font-medium">{tier.label}</span>
                   </div>
-                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-text-muted">
+                  <p className="mt-2 text-sm leading-relaxed text-text-muted">
                     {tier.examples}
                   </p>
                 </div>
@@ -206,12 +200,12 @@ export default function TechnologyPage() {
 
       {/* Glass box + bias */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               Glass-box and bias auditor
             </h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               No number ships without{" "}
               <code className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs">
                 equation_id
@@ -263,26 +257,31 @@ export default function TechnologyPage() {
 
           <Reveal className="mt-14">
             <h3 className="text-lg font-semibold">Bias mitigations</h3>
-            <ul className="mt-6 divide-y divide-border/70">
+            <RevealGroup
+              className="mt-6 grid gap-x-10 gap-y-7 sm:grid-cols-2"
+              stagger={0.06}
+            >
               {BIAS_MITIGATIONS.map((m) => (
-                <li key={m.title} className="py-5 first:pt-0 last:pb-0">
-                  <p className="font-medium">{m.title}</p>
-                  <p className="mt-1 max-w-[65ch] text-sm text-text-muted">
-                    {m.body}
-                  </p>
-                </li>
+                <RevealItem key={m.title}>
+                  <div>
+                    <p className="font-medium">{m.title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-text-muted">
+                      {m.body}
+                    </p>
+                  </div>
+                </RevealItem>
               ))}
-            </ul>
+            </RevealGroup>
           </Reveal>
         </div>
       </section>
 
       {/* Validation */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Validation</h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Validation machinery is shipped and tested. Headline ground-truth
               results are withheld until mode-share and demand calibration is
               complete. Uncalibrated demand cannot produce an honest RMSE yet.
@@ -321,17 +320,19 @@ export default function TechnologyPage() {
           </div>
 
           <Reveal>
-            <div className="mt-10 rounded-xl border border-border bg-surface p-6">
-              <h3 className="font-semibold">Next steps</h3>
-              <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-text-muted">
-                The path to publishing an honest VAL-01 RMSE is calibration:
-                aligning simulated demand and mode share to ground truth. We are
-                in active contact with the Iloilo City government (CPDO) for the
-                corridor and transit data this depends on. As anyone who has
-                worked with Philippine LGUs knows, official data-sharing moves
-                slowly, so we are pacing calibration to that reality rather than
-                overpromising a date.
-              </p>
+            <div className="mt-10 rounded-xl border border-border bg-surface p-6 sm:p-8">
+              <div className="grid gap-4 sm:grid-cols-[12rem_1fr] sm:gap-8 sm:items-start">
+                <h3 className="font-semibold">Next steps</h3>
+                <p className="text-sm leading-relaxed text-text-muted">
+                  The path to publishing an honest VAL-01 RMSE is calibration:
+                  aligning simulated demand and mode share to ground truth. We are
+                  in active contact with the Iloilo City government (CPDO) for the
+                  corridor and transit data this depends on. As anyone who has
+                  worked with Philippine LGUs knows, official data-sharing moves
+                  slowly, so we are pacing calibration to that reality rather than
+                  overpromising a date.
+                </p>
+              </div>
             </div>
           </Reveal>
 

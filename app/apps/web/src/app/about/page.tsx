@@ -78,12 +78,12 @@ export default function AboutPage() {
 
       {/* Hero */}
       <section className="border-b border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-5xl">
               Pre-construction impact intelligence for ASEAN cities
             </h1>
-            <p className="mt-6 max-w-[65ch] text-lg leading-relaxed text-text-muted">
+            <p className="mt-6 max-w-[72ch] text-lg leading-relaxed text-text-muted">
               Cities build infrastructure on instinct. MATRIX gives planners,
               developers, and civic stakeholders a simulator to ask what would
               happen if we build this, before a single peso is spent.
@@ -94,11 +94,11 @@ export default function AboutPage() {
 
       {/* Problem + context image */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-start">
             <Reveal>
               <h2 className="text-3xl font-bold tracking-tight">The problem</h2>
-              <p className="mt-4 max-w-[65ch] leading-relaxed text-text-muted">
+              <p className="mt-4 max-w-[72ch] leading-relaxed text-text-muted">
                 Infrastructure failure in ASEAN suburban cities is not a
                 planning skill problem. It is a planning visibility problem.
               </p>
@@ -155,7 +155,7 @@ export default function AboutPage() {
                   className="absolute inset-0 bg-gradient-to-t from-background/30 to-transparent"
                 />
               </div>
-              <p className="mt-8 max-w-[65ch] text-sm leading-relaxed text-text-muted">
+              <p className="mt-8 max-w-[72ch] text-sm leading-relaxed text-text-muted">
                 The cumulative cost lands on commuters paying for first-mile
                 travel planners never modeled, informal vendors displaced without
                 warning, barangays that flood because runoff was calculated in
@@ -169,10 +169,10 @@ export default function AboutPage() {
 
       {/* Who it's for (lead + list) */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Who it&apos;s for</h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Three constituencies ask the same pre-construction question from
               different angles.
             </p>
@@ -227,7 +227,7 @@ export default function AboutPage() {
 
       {/* Value proposition */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               Value proposition
@@ -236,7 +236,7 @@ export default function AboutPage() {
               Real-time simulators tell a city what is happening. MATRIX tells
               it what will happen if it builds.
             </blockquote>
-            <p className="mt-6 max-w-[65ch] leading-relaxed text-text-muted">
+            <p className="mt-6 max-w-[72ch] leading-relaxed text-text-muted">
               Multi-billion-peso infrastructure is decided on static studies that
               age the day they are filed. MATRIX simulates community impact
               before a single peso is spent: five dimensions, explicit
@@ -245,7 +245,7 @@ export default function AboutPage() {
             </p>
           </Reveal>
 
-          <ul className="mt-10 space-y-4">
+          <ul className="mt-10 grid gap-x-8 gap-y-4 sm:grid-cols-2">
             {PROOF_POINTS.map((point, i) => (
               <Reveal key={point} delay={i * 0.05}>
                 <li className="flex gap-3 text-sm leading-relaxed sm:text-base">
@@ -266,12 +266,12 @@ export default function AboutPage() {
         id="competitive-landscape"
         className="border-t border-border/60"
       >
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               Competitive landscape
             </h2>
-            <p className="mt-4 max-w-[65ch] text-sm leading-relaxed text-text-muted sm:text-base">
+            <p className="mt-4 max-w-[72ch] text-sm leading-relaxed text-text-muted sm:text-base">
               Based on a feature survey of tools planners actually evaluate,
               not an exhaustive procurement audit. The gap is the combination:
               natural-language input, five impact dimensions scored against one
@@ -332,12 +332,12 @@ export default function AboutPage() {
 
       {/* ASEAN scaling */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               Scaling across ASEAN
             </h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Geographic scaling is API-level: new city means a new OSM bounding
               box and municipal data sources. Behavioral scaling is
               prompt-level: persona archetypes reweight from Iloilo jeepney
@@ -377,35 +377,35 @@ export default function AboutPage() {
 
       {/* Why it matters (vertical stack, not card grid) */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">
               Why MATRIX matters
             </h2>
-            <p className="mt-4 max-w-[65ch] text-text-muted">
+            <p className="mt-4 max-w-[72ch] text-text-muted">
               Iloilo&apos;s 2026 ASEAN Clean Tourist City Award (2nd time, awarded
               Jan 30, 2026 in Cebu) anchors the regional pilot.
             </p>
           </Reveal>
 
-          <ol className="mt-12 divide-y divide-border/70">
-            {WHY_WINS.map((item, i) => (
-              <Reveal key={item.title} delay={i * 0.05}>
-                <li className="py-8 first:pt-0 last:pb-0">
+          <RevealGroup className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2" stagger={0.05}>
+            {WHY_WINS.map((item) => (
+              <RevealItem key={item.title}>
+                <div>
                   <h3 className="text-lg font-semibold">{item.title}</h3>
-                  <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-text-muted sm:text-base">
+                  <p className="mt-2 text-sm leading-relaxed text-text-muted sm:text-base">
                     {item.claim}
                   </p>
-                </li>
-              </Reveal>
+                </div>
+              </RevealItem>
             ))}
-          </ol>
+          </RevealGroup>
         </div>
       </section>
 
       {/* Team */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Team ATLAN</h2>
             <p className="mt-4 text-text-muted">

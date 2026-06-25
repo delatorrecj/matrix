@@ -47,7 +47,7 @@ export default function Landing() {
           className="absolute inset-0 bg-gradient-to-b from-background/88 via-background/78 to-background/95 dark:from-background/92 dark:via-background/82 dark:to-background/98"
         />
 
-        <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col justify-center px-5 pb-16 pt-24 sm:px-8">
+        <div className="relative mx-auto flex min-h-[100dvh] max-w-7xl flex-col justify-center px-5 pb-16 pt-24 sm:px-8">
           <Reveal>
             <h1 className="max-w-3xl text-balance text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
               See the impact <span className="text-primary">before</span> you
@@ -80,7 +80,7 @@ export default function Landing() {
 
       {/* Problem (editorial list) */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
               Infrastructure fails on visibility, not intent.
@@ -129,7 +129,7 @@ export default function Landing() {
 
       {/* One kernel, five dimensions (split + bento) */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_1.1fr] lg:items-start">
             <Reveal>
               <LogoMark className="h-14 w-14 text-primary" />
@@ -175,7 +175,7 @@ export default function Landing() {
 
       {/* Glass box (1 + 2 asymmetric) */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <h2 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
               No black boxes. Every number, accountable.
@@ -230,7 +230,7 @@ export default function Landing() {
 
       {/* Differentiation snapshot */}
       <section className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 to-transparent p-6 sm:p-10">
               <p className="max-w-3xl text-xl font-semibold leading-snug sm:text-2xl">
@@ -257,7 +257,7 @@ export default function Landing() {
 
       {/* Closing CTA */}
       <section className="border-t border-border/60 bg-surface/40">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
