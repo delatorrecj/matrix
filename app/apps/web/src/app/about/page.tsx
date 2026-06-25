@@ -26,6 +26,20 @@ export const metadata: Metadata = {
     "Why MATRIX exists: the planning visibility problem, who it serves, competitive differentiation, ASEAN scaling, and Team ATLAN.",
 };
 
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+    </svg>
+  );
+}
+
 function CellValue({ value }: { value: boolean | "partial" }) {
   if (value === true) {
     return (
@@ -369,22 +383,16 @@ export default function AboutPage() {
               Why MATRIX matters
             </h2>
             <p className="mt-4 max-w-[65ch] text-text-muted">
-              Aligned to AAIH 2026 judging criteria, with Iloilo&apos;s 2026
-              ASEAN Clean Tourist City Award (2nd time, awarded Jan 30, 2026 in
-              Cebu) as the regional anchor.
+              Iloilo&apos;s 2026 ASEAN Clean Tourist City Award (2nd time, awarded
+              Jan 30, 2026 in Cebu) anchors the regional pilot.
             </p>
           </Reveal>
 
           <ol className="mt-12 divide-y divide-border/70">
             {WHY_WINS.map((item, i) => (
-              <Reveal key={item.criterion} delay={i * 0.05}>
+              <Reveal key={item.title} delay={i * 0.05}>
                 <li className="py-8 first:pt-0 last:pb-0">
-                  <p className="text-xs font-medium text-primary">
-                    {item.weight}
-                  </p>
-                  <h3 className="mt-1 text-lg font-semibold">
-                    {item.criterion}
-                  </h3>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
                   <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-text-muted sm:text-base">
                     {item.claim}
                   </p>
@@ -401,17 +409,27 @@ export default function AboutPage() {
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Team ATLAN</h2>
             <p className="mt-4 text-text-muted">
-              Polytechnic University of the Philippines, ASEAN AI Hackathon
-              2026, Smart Cities track
+              Polytechnic University of the Philippines
             </p>
           </Reveal>
 
           <RevealGroup className="mt-10 divide-y divide-border/70" stagger={0.06}>
             {TEAM.map((member) => (
               <RevealItem key={member.name}>
-                <div className="py-5">
-                  <p className="font-semibold">{member.name}</p>
-                  <p className="mt-1 text-sm text-text-muted">{member.roles}</p>
+                <div className="flex items-center justify-between gap-4 py-5">
+                  <div>
+                    <p className="font-semibold">{member.name}</p>
+                    <p className="mt-1 text-sm text-text-muted">{member.roles}</p>
+                  </div>
+                  <a
+                    href={member.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${member.name} on LinkedIn`}
+                    className="shrink-0 rounded-lg p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <LinkedInIcon className="h-5 w-5" />
+                  </a>
                 </div>
               </RevealItem>
             ))}

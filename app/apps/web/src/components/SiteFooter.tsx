@@ -13,9 +13,7 @@ export function SiteFooter() {
                 Built by <span className="text-text">Team ATLAN</span> ·
                 Polytechnic University of the Philippines
               </p>
-              <p className="mt-1 text-xs">
-                ASEAN AI Hackathon 2026 · Smart Cities track · Pilot: Iloilo City
-              </p>
+              <p className="mt-1 text-xs">Pilot: Iloilo City</p>
             </div>
           </div>
 

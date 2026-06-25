@@ -110,10 +110,10 @@ export default function TechnologyPage() {
               90-second pipeline
             </h2>
             <p className="mt-4 max-w-[65ch] text-text-muted">
-              Real-time interactive visualization is the highest-impact judging
-              moment. The architecture targets a hard latency budget: pre-warmed
-              persona pool, delta simulations against a nightly baseline,
-              parallel module execution, and progressive UI streaming.
+              Real-time interactive visualization is the product&apos;s defining
+              capability. The architecture targets a hard latency budget:
+              pre-warmed persona pool, delta simulations against a nightly
+              baseline, parallel module execution, and progressive UI streaming.
             </p>
           </Reveal>
           <Reveal delay={0.08} className="mt-10">
@@ -128,8 +128,7 @@ export default function TechnologyPage() {
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Tech stack</h2>
             <p className="mt-4 max-w-[65ch] text-text-muted">
-              Locked decisions from MATRIX.md section 6. Do not silently revert
-              without documented justification.
+              Deliberate technology choices, each made for a documented reason.
             </p>
           </Reveal>
 

@@ -191,26 +191,31 @@ export const ASEAN_CITIES: {
   },
 ];
 
-export const TEAM: { name: string; roles: string }[] = [
+export const TEAM: { name: string; roles: string; linkedin: string }[] = [
   {
     name: "Carlos Jerico Dela Torre",
     roles: "AI and Software Development, Product and Business Architecture, Team Lead",
+    linkedin: "https://www.linkedin.com/in/delatorrecj",
   },
   {
     name: "Yushin Bjorn Matsuda",
     roles: "AI and Software Development, UI/UX Design",
+    linkedin: "https://www.linkedin.com/in/matsuda-yushin",
   },
   {
     name: "Maria Espina",
     roles: "QA, UI/UX Design",
+    linkedin: "https://www.linkedin.com/in/maria-espina-b89243309",
   },
   {
     name: "Rica Mae Mago",
     roles: "QA, Research and Marketing",
+    linkedin: "https://www.linkedin.com/in/rica-mae-mago",
   },
   {
     name: "Russell Jay Fajardo",
     roles: "QA, Research and Marketing",
+    linkedin: "https://www.linkedin.com/in/russell-jay-fajardo-775b19307",
   },
 ];
 
@@ -307,30 +312,26 @@ export const PIPELINE_STAGES: {
   },
 ];
 
-export const WHY_WINS: { criterion: string; weight: string; claim: string }[] = [
+export const WHY_WINS: { title: string; claim: string }[] = [
   {
-    criterion: "Innovation and Originality",
-    weight: "Semi-Final 25%, Final 20%",
+    title: "A combination that doesn't exist elsewhere",
     claim:
       "Plain-language input, five impact dimensions from one simulated reality, and per-dimension confidence: a combination not found in the tools planners typically evaluate.",
   },
   {
-    criterion: "Technical Execution",
-    weight: "Preliminary 30%, Semi-Final 40%, Final 15%",
+    title: "Built for real-time, built honestly",
     claim:
-      "Real-time interactive visualization with animated agent playback, unified-kernel architecture, and confidence-anchored outputs that respect data limits honestly.",
+      "Interactive visualization with animated agent playback, unified-kernel architecture, and confidence-anchored outputs that respect data limits honestly.",
   },
   {
-    criterion: "Impact and Feasibility",
-    weight: "Preliminary 40%, Semi-Final 20%, Final 35%",
+    title: "Grounded in Iloilo, scalable across ASEAN",
     claim:
       "Iloilo is actively building the data infrastructure MATRIX consumes. The ASEAN scaling path is concrete with no hardware dependency.",
   },
   {
-    criterion: "Presentation and Q&A",
-    weight: "Semi-Final 15%, Final 30%",
+    title: "Designed to be understood at a glance",
     claim:
-      "Animated simulation playback is the memorable moment. The five-dimension story is narratively complete, and Iloilo ASEAN Clean Tourist City 2026 anchors the regional hook.",
+      "Animated simulation playback shows how a project ripples through a city. Five dimensions tell one coherent story, anchored to Iloilo's 2026 ASEAN Clean Tourist City Award.",
   },
 ];
 
