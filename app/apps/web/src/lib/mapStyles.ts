@@ -49,9 +49,12 @@ export function syncBuilding3dLayer(
       type: "fill-extrusion",
       minzoom: 14,
       paint: {
-        "fill-extrusion-base": ["get", "render_min_height"],
+        // Some OpenMapTiles building features carry a null render_min_height /
+        // render_height; coalesce to 0 so MapLibre's expression evaluator does not
+        // log "Expected value to be of type number, but found null".
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
         "fill-extrusion-color": color,
-        "fill-extrusion-height": ["get", "render_height"],
+        "fill-extrusion-height": ["coalesce", ["get", "render_height"], 0],
         "fill-extrusion-opacity": 0.8,
       },
     });
@@ -60,4 +63,23 @@ export function syncBuilding3dLayer(
   }
 
   map.setLayoutProperty(BUILDING_3D_LAYER_ID, "visibility", visible ? "visible" : "none");
+}
+
+/**
+ * Silence MapLibre "Image '…' could not be loaded" console warnings emitted by
+ * basemap styles that reference a sprite image missing from their sprite sheet
+ * (e.g. OpenFreeMap Liberty's `wood-pattern`). Registers a 1×1 transparent pixel
+ * for any missing image so the style renders identically, minus the console noise.
+ *
+ * Listener lives on the Map instance (survives setStyle), so register once and
+ * call the returned disposer on teardown. No-op-safe if the image already exists.
+ */
+export function registerMissingImageFallback(map: MaplibreMap): () => void {
+  const handler = (e: { id: string }) => {
+    if (!map.hasImage(e.id)) {
+      map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
+    }
+  };
+  map.on("styleimagemissing", handler);
+  return () => map.off("styleimagemissing", handler);
 }

@@ -5,10 +5,10 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-24 (Updated to Next.js 14 + Tailwind v4 under CR-009 frontend hardening, and CR-010 summary-first results UX)
+**Last reconciled:** 2026-06-25 (Route topology: `/`→marketing landing, cockpit→`/app`; brand logomark + favicon added; §11.1 route map updated. Prior: 2026-06-24 Next.js 14 + Tailwind v4 / CR-009 + CR-010.)
 **PRD:** [prd-matrix.md](prd-matrix.md)
 
-> **Design read (taste-skill §0):** *Reading this as a **trust-first, data-dense decision instrument** for government + technical planners — not a marketing site. Dials: VARIANCE 3 (coherent, austere), MOTION 4 (the agent playback is the only motion that matters), DENSITY 7 (a cockpit). Foundation: shadcn/ui + Radix primitives on the locked Next.js 14 / Tailwind stack; Geist + Geist Mono; one cobalt accent; light-first (planners use daylight/projectors). The taste-skill's landing-page rules apply to the **marketing/pitch site**, not this app.*
+> **Design read (taste-skill §0):** *Reading this as a **trust-first, data-dense decision instrument** for government + technical planners — not a marketing site. Dials: VARIANCE 3 (coherent, austere), MOTION 4 (the agent playback is the only motion that matters), DENSITY 7 (a cockpit). Foundation: shadcn/ui + Radix primitives on the locked Next.js 14 / Tailwind stack; Geist + Geist Mono; one cobalt accent; **dark default with light as a first-class variant** (decided 2026-06-25 — the simulator reads as a dark instrument-grade cockpit, and the map/agent layers carry more contrast on a dark basemap; light remains fully supported, never dark-only). The taste-skill's landing-page rules apply to the **marketing/pitch site**, not this app.*
 >
 > **Glass-box is a design requirement, not just a backend one** (`PRD-F14`): every number on screen is clickable to its equation, data, and confidence (§12). The taste-skill rule "never fake engineering precision" and MATRIX's glass-box mandate are the same rule.
 
@@ -26,14 +26,16 @@
 - AI-purple gradients / glassmorphism-for-its-own-sake.
 - Decorative or looping motion (motion must communicate state — §5).
 - **Fake-precise numbers with no provenance** (banned — every figure traces, §12).
-- Dark-mode-only (light is the default; planners present in daylight).
+- Theme-locked / single-theme — **dark is the default**, but light is a first-class, fully-supported variant for daylight/projector use (decided 2026-06-25; never dark-only).
 - Three-equal-feature-card slop; hue-only encodings that fail color-blind users.
 
 ---
 
 ## 2. Brand Primitives
 
-### Colors (light-first; dark is a lock-once theme variant)
+### Colors (dark default; light is a first-class variant — see §1)
+
+> Token values below are the **light-theme** definitions; the dark theme overrides them in `globals.css` (`.dark`). Dark is the shipped default; light is fully supported.
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -200,7 +202,9 @@ VISUAL_DENSITY:     7   (cockpit — five dimensions + map + controls)
 
 | Route | Surface | Purpose | Calls (SDD §4) |
 |---|---|---|---|
-| `/` | Scenario Query + Map | define & launch a scenario | `POST /scenario` |
+| `/` | Marketing landing | front door — pitch + CTA into the app (the separate marketing surface per §7) | (static) |
+| `/app` | Scenario Query + Map | define & launch a scenario (the cockpit) | `POST /scenario` |
+| `/builder` | Scenario Builder | compose a structured intervention → precise NL query | `POST /scenario` |
 | `/scenario/[id]` | Map Stage + Impact Panel | watch playback, read 5-dim results | `WS /simulate/[id]`, `GET /runs/[id]` |
 | `/scenario/[id]/compare` | Comparison / Ranking | baseline↔scenario, rank alternatives | `GET /runs/[id]`, `GET /baseline` |
 | `/scenario/[id]/equity` | Equity View | distributional winners/losers | `GET /runs/[id]` |

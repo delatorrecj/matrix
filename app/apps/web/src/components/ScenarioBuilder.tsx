@@ -67,6 +67,7 @@ import {
   createScenario,
   type ScenarioGeometry,
 } from "@/lib/api";
+import { LogoMark } from "@/components/Logo";
 
 // ── Domain types ─────────────────────────────────────────────────────────────
 
@@ -305,14 +306,14 @@ export default function ScenarioBuilder() {
       {/* Header + stepper */}
       <header className="border-b border-border bg-surface px-6 py-4">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push("/")}
-              className="mt-1 flex items-center justify-center p-1.5 rounded-md text-text-muted hover:text-foreground hover:bg-secondary transition-colors"
-              aria-label="Back to main interface"
-              title="Back to main interface"
+              onClick={() => router.push("/app")}
+              className="flex items-center justify-center rounded-lg p-1 hover:bg-secondary transition-colors active:scale-95"
+              aria-label="Exit builder — back to the simulator"
+              title="Back to the simulator"
             >
-              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+              <LogoMark className="h-8 w-8 text-primary" />
             </button>
             <div>
               <h1 className="text-xl font-bold tracking-tight">Scenario Builder</h1>

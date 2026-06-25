@@ -141,6 +141,13 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
   if (!isOpen) return null;
 
   const level = toConfidenceLevel(data?.confidence);
+  // Surface the specific capping factor next to the confidence chip (DSD §8 /
+  // methods §2 Low-Confidence Protocol). The modules record it in assumptions
+  // (e.g. "confidence capped at M: …"); pull it forward instead of burying it.
+  const cappingReason =
+    level !== "High"
+      ? data?.assumptions?.find((a) => /cap|confiden/i.test(a))
+      : undefined;
 
   return (
     <div
@@ -203,6 +210,11 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
                 </span>
               </div>
               <p className="text-sm text-text-muted">{data?.confidenceBasis}</p>
+              {cappingReason && (
+                <p className="text-xs text-foreground mt-2 pt-2 border-t border-border/50">
+                  <span className="font-semibold">Capped by:</span> {cappingReason}
+                </p>
+              )}
             </div>
           </section>
 

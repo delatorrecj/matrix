@@ -18,6 +18,7 @@ import type { ResultCardData } from "@/components/ResultCard";
 import { MapAttribution } from "@/components/MapAttribution";
 import RunProgress from "@/components/RunProgress";
 import RunStatusBanner from "@/components/RunStatusBanner";
+import { InitializingState } from "@/components/InitializingState";
 import { IconNavRail } from "@/components/IconNavRail";
 import {
   DIMENSIONS,
@@ -45,7 +46,7 @@ import type {
 } from "@/components/map";
 import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
-import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, syncBuilding3dLayer } from "@/lib/mapStyles";
+import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
 
 const ILOILO_BOUNDS = {
@@ -92,9 +93,11 @@ export default function ScenarioSimulation() {
     }
 
     map.on("style.load", ensureBuilding3D);
+    const disposeMissingImage = registerMissingImageFallback(map);
 
     return () => {
       map.off("style.load", ensureBuilding3D);
+      disposeMissingImage();
     };
   }, [theme]);
 
@@ -175,7 +178,8 @@ export default function ScenarioSimulation() {
     getColor: [29, 78, 216],
     opacity: 0.8,
     widthMinPixels: 2,
-    rounded: true,
+    jointRounded: true,
+    capRounded: true,
     trailLength: 100,
     currentTime: time,
   });
@@ -375,6 +379,15 @@ export default function ScenarioSimulation() {
     setRunAttempt((a) => a + 1);
   }, []);
 
+  // DSD §5/§9 (Impeccable register — motion row): respect prefers-reduced-motion.
+  // The agent playback is the one substantive motion, but it must not auto-loop
+  // for users who asked for reduced motion — start paused; they can still press play.
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setIsPlaying(false);
+    }
+  }, []);
+
   // Simple playback loop
   useEffect(() => {
     let animationFrame: number;
@@ -393,6 +406,10 @@ export default function ScenarioSimulation() {
   }, [isPlaying, maxTime]);
 
   const isRunActive = !isTerminal(runState.phase) && runState.phase !== "disconnected";
+  // "Results loaded" gate (CR-013): the run streamed every result + synthesis and
+  // reached DONE. Until then the summary tab and the playback control show an
+  // "Initializing" state instead of empty skeletons / an inert play button.
+  const resultsReady = runState.phase === "done";
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex print:h-auto print:block print:overflow-visible print:bg-white">
@@ -402,7 +419,7 @@ export default function ScenarioSimulation() {
           activeId={panelView === "analytics" ? "analytics" : "trajectories"}
           onNavigate={(id) => {
             if (id === "home") {
-              router.push("/");
+              router.push("/app");
             } else if (id === "trajectories") {
               setPanelView("summary");
               setShowResultsPanel(true);
@@ -504,6 +521,10 @@ export default function ScenarioSimulation() {
                 onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(card.dimension); }}
                 onCiteClick={handleCiteClick}
               />
+            ) : isRunActive ? (
+              // First run still computing: a single "Initializing" state stands in
+              // for the summary until DONE, instead of the empty per-dimension grid.
+              <InitializingState variant="panel" />
             ) : (
               <SummaryView
                 results={results}
@@ -581,25 +602,33 @@ export default function ScenarioSimulation() {
           />
         </div>
 
-        {/* Timeline Scrubber */}
-        <div className="glass absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl flex items-center gap-4 min-w-[300px] print:hidden">
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            aria-label={isPlaying ? "Pause playback" : "Play playback"}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors active:scale-95"
-          >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max={maxTime > 0 ? maxTime : 1000}
-            value={time}
-            onChange={(e) => setTime(Number(e.target.value))}
-            className="flex-1 accent-primary"
-          />
-          <span className="text-xs font-mono w-12">{time}</span>
-        </div>
+        {/* Timeline Scrubber — only once results have loaded (run reached DONE).
+            While the first run is still computing, the control slot shows an
+            "Initializing" pill instead of an inert play button. */}
+        {resultsReady ? (
+          <div className="glass absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl flex items-center gap-4 min-w-[300px] print:hidden">
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              aria-label={isPlaying ? "Pause playback" : "Play playback"}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors active:scale-95"
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max={maxTime > 0 ? maxTime : 1000}
+              value={time}
+              onChange={(e) => setTime(Number(e.target.value))}
+              className="flex-1 accent-primary"
+            />
+            <span className="text-xs font-mono w-12">{time}</span>
+          </div>
+        ) : isRunActive ? (
+          <div className="glass absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl flex items-center justify-center min-w-[300px] print:hidden">
+            <InitializingState variant="pill" />
+          </div>
+        ) : null}
       </div>
       </div>
     </div>

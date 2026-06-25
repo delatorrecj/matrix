@@ -1,8 +1,9 @@
 "use client";
 
-import { Home, Network, BarChart3, Layers, Settings, Box } from "lucide-react";
+import { Home, Network, BarChart3, Layers, Settings } from "lucide-react";
 import { useState, useRef } from "react";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { LogoMark } from "@/components/Logo";
 
 interface NavItem {
   id: string;
@@ -111,7 +112,7 @@ export function IconNavRail({
             aria-label="MATRIX home"
             className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shrink-0 hover:bg-primary-hover transition-colors active:scale-95"
           >
-            <Box className="w-5 h-5" />
+            <LogoMark className="w-5 h-5" />
           </button>
         </div>
 
