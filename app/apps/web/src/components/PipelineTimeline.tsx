@@ -53,12 +53,13 @@ export function PipelineTimeline() {
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm">
         <p className="font-semibold text-warning">Honest status</p>
         <p className="mt-1 max-w-[65ch] text-text-muted">
-          Target budget is{" "}
-          <strong className="text-text">90 seconds</strong> end-to-end. Cold
-          runs currently land around{" "}
-          <strong className="text-text">123 s</strong>. Repeated runs with
-          trajectory cache are under 1 s. Per-stage timings are visible
-          in-product to guide optimization.
+          The target budget is{" "}
+          <strong className="whitespace-nowrap text-text">90 seconds</strong>{" "}
+          end-to-end. Cold runs currently land around{" "}
+          <strong className="whitespace-nowrap text-text">123 s</strong>,
+          while repeated runs served from the trajectory cache return in{" "}
+          <strong className="whitespace-nowrap text-text">under 1 s</strong>.
+          Per-stage timings are shown in-product to guide optimization.
         </p>
       </div>
     </div>

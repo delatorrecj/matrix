@@ -318,7 +318,7 @@ export default function AboutPage() {
                       <CellValue value={row.needsSpecialist} />
                       {row.name === "MATRIX" && (
                         <span className="ml-1 text-xs text-text-muted">
-                          (planner-friendly)
+                          (human-in-the-loop)
                         </span>
                       )}
                     </td>
@@ -448,7 +448,7 @@ export default function AboutPage() {
                 href="/app"
                 className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-3 text-sm font-semibold text-text transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Launch the simulator
+                Launch MATRIX
               </Link>
             </div>
           </Reveal>

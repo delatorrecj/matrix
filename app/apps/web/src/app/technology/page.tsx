@@ -321,6 +321,21 @@ export default function TechnologyPage() {
           </div>
 
           <Reveal>
+            <div className="mt-10 rounded-xl border border-border bg-surface p-6">
+              <h3 className="font-semibold">Next steps</h3>
+              <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-text-muted">
+                The path to publishing an honest VAL-01 RMSE is calibration:
+                aligning simulated demand and mode share to ground truth. We are
+                in active contact with the Iloilo City government (CPDO) for the
+                corridor and transit data this depends on. As anyone who has
+                worked with Philippine LGUs knows, official data-sharing moves
+                slowly, so we are pacing calibration to that reality rather than
+                overpromising a date.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal>
             <div className="mt-12 flex flex-wrap gap-4">
               <Link
                 href="/app"

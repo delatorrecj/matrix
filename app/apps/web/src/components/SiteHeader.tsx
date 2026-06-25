@@ -53,7 +53,7 @@ export function SiteHeader() {
             href="/app"
             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary-hover active:scale-[0.98] sm:px-4"
           >
-            <span className="hidden sm:inline">Launch simulator</span>
+            <span className="hidden sm:inline">Launch MATRIX</span>
             <span className="sm:hidden">Launch</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>

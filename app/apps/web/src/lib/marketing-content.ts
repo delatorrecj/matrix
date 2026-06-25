@@ -160,7 +160,7 @@ export const COMPETITORS: {
     nlInput: true,
     fiveDimsOneRun: true,
     perDimConfidence: true,
-    needsSpecialist: false,
+    needsSpecialist: true,
   },
 ];
 

@@ -66,7 +66,7 @@ export default function Landing() {
           <Reveal delay={0.14}>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link href="/app" className={ctaPrimary}>
-                Launch the simulator
+                Launch MATRIX
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
               <Link href="/builder" className={ctaSecondary}>
@@ -271,7 +271,7 @@ export default function Landing() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link href="/app" className={ctaPrimary}>
-                  Launch the simulator
+                  Launch MATRIX
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <Link href="/about" className={ctaSecondary}>
