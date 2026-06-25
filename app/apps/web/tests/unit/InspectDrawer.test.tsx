@@ -168,7 +168,8 @@ describe("InspectDrawer", () => {
       },
     });
     expandDrawerDetails();
-    expect(screen.getByRole("link", { name: /overpass-api/i })).toHaveAttribute(
+    // Sources section renders the dataset name (not the raw URL) as the link label.
+    expect(screen.getByRole("link", { name: /OpenStreetMap/i })).toHaveAttribute(
       "href",
       "https://overpass-api.de/api/interpreter"
     );

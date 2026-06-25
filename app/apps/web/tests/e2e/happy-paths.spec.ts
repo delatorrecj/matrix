@@ -60,9 +60,23 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
   test('H-10: map context menu appears only over the map canvas', async ({ page }) => {
     await mockMatrixBackend(page);
     await page.goto(SCENARIO);
+    await expect(page.getByTestId('ws-status')).toContainText('Done');
 
-    const mapStage = page.locator('.maplibregl-canvas').first();
-    await mapStage.click({ button: 'right', position: { x: 400, y: 400 } });
+    // DeckGL's view overlay intercepts pointer events on the canvas — dispatch
+    // contextmenu on the map container so the handler runs without hit-testing.
+    const mapContainer = page.locator('.flex-1.relative .absolute.inset-0').first();
+    await mapContainer.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      el.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + 700,
+          clientY: rect.top + 550,
+          button: 2,
+        }),
+      );
+    });
     await expect(page.getByTestId('map-context-menu')).toBeVisible();
 
     await page.keyboard.press('Escape');

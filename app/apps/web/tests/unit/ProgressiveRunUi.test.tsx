@@ -266,7 +266,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(lastSocket().url).toBe("ws://localhost:8000/simulate/scn-test");
   });
 
-  it("renders five labeled skeletons before any results, then swaps them per dimension", () => {
+  it("shows initializing state while the run is active, then summary cards after DONE", () => {
     render(<ScenarioSimulation />);
     const ws = lastSocket();
     act(() => {
@@ -274,22 +274,27 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
       ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
     });
 
-    for (const dim of ["behavioral", "ecological", "social", "economic", "societal"]) {
-      expect(screen.getByTestId(`skeleton-${dim}`)).toBeInTheDocument();
-    }
+    // CR-010: active runs show InitializingState, not per-dimension skeletons.
+    expect(screen.getByTestId("initializing-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
       "0/5 dimensions · 0/17 results",
     );
 
     act(() => ws.emit(RESULT_BEH_1));
 
-    expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
-    expect(screen.getByTestId("skeleton-ecological")).toBeInTheDocument();
-    // The summary card shows the plain-language label (CR-010), not the raw metric name.
-    expect(screen.getByText("Trips on the affected road (morning rush)")).toBeInTheDocument();
+    expect(screen.getByTestId("initializing-panel")).toBeInTheDocument();
+    expect(screen.queryByText("Trips on the affected road (morning rush)")).not.toBeInTheDocument();
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
       "1/5 dimensions · 1/17 results",
     );
+
+    act(() => ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 }));
+
+    expect(screen.queryByTestId("initializing-panel")).not.toBeInTheDocument();
+    expect(screen.getByText("Trips on the affected road (morning rush)")).toBeInTheDocument();
+    expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
+    expect(screen.getByTestId("skeleton-ecological")).toBeInTheDocument();
   });
 
   it("renders the map layer legend and ingests EDGE_COUNTS without disrupting the run", () => {
@@ -307,13 +312,13 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
       ws.emit(RESULT_BEH_1);
     });
 
-    // EDGE_COUNTS is a no-op for run progress; the dimension result still lands.
-    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running simulation…");
+    // EDGE_COUNTS is a no-op for run progress; the header chip uses the compact label.
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running…");
     expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
 
     // Toggling a layer must not crash the page.
     fireEvent.click(screen.getByText("Flood Zones"));
-    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running simulation…");
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running…");
   });
 
   it("survives unknown event types without losing state", () => {
@@ -325,7 +330,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
       ws.emit(RESULT_BEH_1);
       ws.emit({ type: "TELEMETRY_V9", payload: { surprise: true } });
     });
-    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running simulation…");
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Running…");
     expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
   });
 
@@ -338,7 +343,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
       ws.emit({ type: "QUEUED", scenario_id: "scn-test", position: 2 });
     });
     expect(screen.getByTestId("queued-notice")).toHaveTextContent("at position 2");
-    expect(screen.getByTestId("ws-status")).toHaveTextContent("Queued (position 2)");
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Queued #2");
   });
 
   it("cancel closes the socket and marks the run cancelled (not failed, not done)", () => {
@@ -424,9 +429,9 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
       });
     });
 
-    // The page closes the socket after DONE; the late close must not relabel the run.
+    // The page closes the socket after DONE; duration lives in done-summary, chip stays compact.
     expect(ws.closed).toBe(true);
-    expect(screen.getByTestId("ws-status")).toHaveTextContent("Done (84.2s)");
+    expect(screen.getByTestId("ws-status")).toHaveTextContent("Done");
     const summary = screen.getByTestId("done-summary");
     expect(summary).toHaveTextContent("84.2s total");
     expect(screen.getByTestId("stage-timings")).toHaveTextContent("SUMO");

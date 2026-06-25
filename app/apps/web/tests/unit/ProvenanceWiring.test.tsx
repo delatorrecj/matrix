@@ -20,7 +20,16 @@ vi.mock("@deck.gl/react", () => ({
   ),
 }));
 vi.mock("@deck.gl/geo-layers", () => ({
-  TripsLayer: vi.fn(),
+  TripsLayer: class MockTripsLayer {
+    id = "trips-layer";
+    props: Record<string, unknown>;
+    constructor(props: Record<string, unknown> = {}) {
+      this.props = props;
+    }
+    clone(overrides: Record<string, unknown> = {}) {
+      return new MockTripsLayer({ ...this.props, ...overrides });
+    }
+  },
 }));
 // Panels with their own fetches are out of scope here; InspectDrawer and
 // SynthesisNarrative stay REAL — the citation→drawer wiring is what's under test.
@@ -75,6 +84,13 @@ const SYNTHESIS_EVENT = {
   ],
 };
 
+const DONE_EVENT = {
+  type: "DONE",
+  scenario_id: "scn-test",
+  duration_ms: 8200,
+  timings: { sumo_ms: 3000, modules_ms: 2000, llm_ms: 3200, total_ms: 8200 },
+};
+
 describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
   beforeEach(() => {
     FakeWebSocket.instances = [];
@@ -96,6 +112,7 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
       ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
       ws.emit(RESULT_BEH_1);
       ws.emit(SYNTHESIS_EVENT);
+      ws.emit(DONE_EVENT);
     });
     // CR-010: the synthesis narrative + citation chips live in the Analytics view.
     fireEvent.click(screen.getByRole("button", { name: /view full analytics/i }));

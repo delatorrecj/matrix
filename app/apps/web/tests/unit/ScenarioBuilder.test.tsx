@@ -10,6 +10,7 @@ const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
+  usePathname: () => "/builder",
 }));
 vi.mock("react-map-gl/maplibre", () => ({
   Map: () => null,
