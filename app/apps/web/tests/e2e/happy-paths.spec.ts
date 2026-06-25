@@ -54,7 +54,7 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
 
     await drawer.getByRole('button', { name: /Show details/i }).click();
     await expect(drawer.getByText(/ΔT_c = Σ_a/)).toBeVisible();
-    await expect(drawer.getByRole('link', { name: /overpass-api/i })).toBeVisible();
+    await expect(drawer.getByRole('link', { name: /OpenStreetMap/i })).toBeVisible();
   });
 
   test('H-10: map context menu appears only over the map canvas', async ({ page }) => {
@@ -62,7 +62,7 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     await page.goto(SCENARIO);
 
     const mapStage = page.locator('.maplibregl-canvas').first();
-    await mapStage.click({ button: 'right', position: { x: 120, y: 120 } });
+    await mapStage.click({ button: 'right', position: { x: 400, y: 400 } });
     await expect(page.getByTestId('map-context-menu')).toBeVisible();
 
     await page.keyboard.press('Escape');
