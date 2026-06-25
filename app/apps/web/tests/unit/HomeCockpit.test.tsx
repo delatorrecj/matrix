@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import MatrixCockpit from '@/app/page';
+import MatrixCockpit from '@/app/app/page';
 import { API_BASE_URL } from '@/lib/api';
 
 // --- Heavy map/WebGL modules are not jsdom-compatible: stub them out. ---
@@ -9,6 +9,7 @@ const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
+  usePathname: () => '/app',
 }));
 vi.mock('react-map-gl/maplibre', () => ({
   Map: () => null,

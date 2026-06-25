@@ -75,6 +75,13 @@ const SYNTHESIS_EVENT = {
   ],
 };
 
+const DONE_EVENT = {
+  type: "DONE",
+  scenario_id: "scn-test",
+  duration_ms: 8200,
+  timings: { sumo_ms: 3000, modules_ms: 2000, llm_ms: 3200, total_ms: 8200 },
+};
+
 describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
   beforeEach(() => {
     FakeWebSocket.instances = [];
@@ -96,6 +103,7 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
       ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
       ws.emit(RESULT_BEH_1);
       ws.emit(SYNTHESIS_EVENT);
+      ws.emit(DONE_EVENT);
     });
     // CR-010: the synthesis narrative + citation chips live in the Analytics view.
     fireEvent.click(screen.getByRole("button", { name: /view full analytics/i }));

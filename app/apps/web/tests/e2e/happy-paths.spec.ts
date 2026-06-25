@@ -61,8 +61,9 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     await mockMatrixBackend(page);
     await page.goto(SCENARIO);
 
+    // Layer legend sits top-left — click the lower-right map area to avoid intercepts.
     const mapStage = page.locator('.maplibregl-canvas').first();
-    await mapStage.click({ button: 'right', position: { x: 400, y: 400 } });
+    await mapStage.click({ button: 'right', position: { x: 700, y: 550 } });
     await expect(page.getByTestId('map-context-menu')).toBeVisible();
 
     await page.keyboard.press('Escape');
