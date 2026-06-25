@@ -84,12 +84,13 @@ def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
     """Resolve WHERE a scenario applies -> (SUMO edge ids, resolution method).
 
     Order: a map-drop `geometry` (resolved against the cached net via
-    matrix_kernel.geometry) wins; else the location keyword is matched against edge street
-    names; else the busiest baseline edge is the honest last resort. The method string is
-    recorded verbatim in Trajectory.meta (PRD-F14) and names the busiest-edge FALLBACK
-    explicitly -- a run must never claim a named-corridor ("keyword-match") it did not make
-    (it previously did, because the net carried no street names so every keyword silently
-    fell back to the busiest edge)."""
+    matrix_kernel.geometry) wins; else the location keyword is mapped via gazetteer;
+    else it is matched against edge street names; else a deterministic hash of the
+    location selects from the top 50 busiest edges. The method string is
+    recorded verbatim in Trajectory.meta (PRD-F14) and names the fallback explicitly.
+    This ensures that different unknown locations hit different distinct edges,
+    producing varied module outputs rather than identically falling back to the single
+    busiest edge every time."""
     geom = scenario.geometry is not None
     if geom:
         from matrix_kernel.geometry import resolve_geometry
@@ -99,6 +100,14 @@ def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
             return edges, "geometry"
 
     loc = scenario.effective_location
+    
+    if loc:
+        from matrix_kernel.gazetteer import resolve_colloquial_term
+        entry = resolve_colloquial_term(loc)
+        if entry and entry.sumo_edge:
+            flag = " (PROVISIONAL-id)" if entry.provisional else ""
+            return [entry.sumo_edge], f"gazetteer-match{flag}"
+
     kw = _keyword_edges(loc)
     if kw:
         return kw, "keyword-match (geometry off-network)" if geom else "keyword-match"
@@ -106,6 +115,14 @@ def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
     detail = f"no edge named like {loc!r}" if loc.strip() else "no location given"
     if geom:
         detail = f"geometry off-network; {detail}"
+        
+    busiest_50 = _busiest_baseline_edges(50)
+    if busiest_50 and loc.strip():
+        import hashlib
+        h = int(hashlib.md5(loc.strip().encode('utf-8')).hexdigest(), 16)
+        fallback_edge = busiest_50[h % len(busiest_50)]
+        return [fallback_edge], f"busiest-baseline-fallback (deterministic-hash; {detail})"
+        
     return _busiest_baseline_edges(top_n), f"busiest-baseline-fallback ({detail})"
 
 
