@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfidenceChip, ConfidenceLevel, toConfidenceLevel } from "@/components/ConfidenceChip";
-import { X, ChevronDown } from "lucide-react";
+import { resolveReferenceMeta } from "@/lib/datasets";
+import { X, ChevronDown, ExternalLink } from "lucide-react";
 
 interface InspectDrawerProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export interface InputDataset {
   license?: string;
   tier?: string;
   sourceNote?: string;
+  url?: string;
 }
 
 export interface ProvenanceData {
@@ -86,11 +88,17 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
 
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // A fresh inspection starts with all dataset rows collapsed.
+  // A fresh inspection starts collapsed; reset peek/expand when drawer closes too.
   useEffect(() => {
     setExpandedId(null);
     setIsExpanded(false);
   }, [data]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    setExpandedId(null);
+    setIsExpanded(false);
+  }, [isOpen]);
 
   // Focus management: move focus into the dialog on open, restore it on close.
   useEffect(() => {
@@ -156,7 +164,7 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       aria-labelledby="inspect-drawer-title"
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="glass-strong absolute inset-x-2 top-20 w-auto md:inset-x-auto md:right-6 md:top-24 md:w-[400px] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
+      className="glass-strong absolute inset-x-2 top-20 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-24 md:w-[calc(100%-3rem)] md:max-w-[440px] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
       style={{
         maxHeight: isExpanded ? 'calc(100vh - 12rem)' : 'var(--panel-peek-height, 270px)'
       }}
@@ -196,7 +204,8 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
           </button>
         )}
 
-        <div className={`flex-1 overflow-y-auto p-6 flex flex-col gap-8 transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 invisible'}`}>
+        {isExpanded && (
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 min-h-0">
           {/* Confidence */}
           <section>
             <h4 className="text-sm font-medium text-text-muted mb-3 uppercase tracking-wider">
@@ -274,7 +283,7 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
                     {isItemExpanded && (
                       <dl
                         id={metaId}
-                        className="px-3 pb-3 pt-2 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60"
+                        className="px-3 pb-3 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60"
                         data-testid={`dataset-meta-${domSafe(input.id)}`}
                       >
                         <MetaField label="Vintage" value={input.vintage} />
@@ -282,6 +291,22 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
                         <MetaField label="License" value={input.license} />
                         <MetaField label="Tier" value={input.tier} />
                         <MetaField label="Source note" value={input.sourceNote} wide />
+                        {input.url ? (
+                          <div className="col-span-2">
+                            <dt className="text-[10px] uppercase tracking-wider text-text-muted">Source</dt>
+                            <dd>
+                              <a
+                                href={input.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 wrap-break-word"
+                              >
+                                {input.url}
+                                <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              </a>
+                            </dd>
+                          </div>
+                        ) : null}
                       </dl>
                     )}
                   </div>
@@ -315,11 +340,55 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
                 References
               </h4>
               <ul className="list-disc pl-5 space-y-2">
-                {data?.references?.map((ref: string, i: number) => (
-                  <li key={i} className="text-sm text-text-muted font-mono">
-                    {ref}
-                  </li>
-                ))}
+                {data?.references?.map((ref: string, i: number) => {
+                  const refMeta = resolveReferenceMeta(ref);
+                  return (
+                    <li key={i} className="text-sm text-text-muted">
+                      {refMeta?.url ? (
+                        <a
+                          href={refMeta.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          {refMeta.name || ref}
+                          <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span className="font-mono">{ref}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {/* Source datasets (attribution links) */}
+          {(data?.inputs?.some((input) => input.url) ?? false) && (
+            <section>
+              <h4 className="text-sm font-medium text-text-muted mb-3 uppercase tracking-wider">
+                Sources
+              </h4>
+              <ul className="space-y-2">
+                {data?.inputs
+                  ?.filter((input) => input.url)
+                  .map((input) => (
+                    <li key={input.id}>
+                      <a
+                        href={input.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        {input.name || input.id}
+                        <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
+                      </a>
+                      {input.license && (
+                        <span className="text-xs text-text-muted ml-1">({input.license})</span>
+                      )}
+                    </li>
+                  ))}
               </ul>
             </section>
           )}
@@ -329,7 +398,8 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
               {children}
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         {isExpanded && (
           <button

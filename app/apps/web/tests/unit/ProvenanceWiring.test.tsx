@@ -120,6 +120,7 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
     const dialog = screen.getByRole("region");
     expect(within(dialog).getByText("BEH-1")).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: "Mode shift" })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: /Show details/i }));
     // The streamed dataset id resolves as a clickable row inside the drawer.
     expect(within(dialog).getByTestId("dataset-row-lptrp-2023")).toBeInTheDocument();
   });

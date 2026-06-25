@@ -35,7 +35,7 @@ export default function BiasAuditLog({ runId }: { runId: string }) {
         <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">Run: {log.run_id.substring(0, 8)}</span>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <span className="text-text-muted block text-xs uppercase mb-1">Target Mode Share</span>
           {Object.entries(log.target_mode_share).map(([mode, share]) => (

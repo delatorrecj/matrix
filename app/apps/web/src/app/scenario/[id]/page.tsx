@@ -29,7 +29,6 @@ import {
   initialRunState,
   isTerminal,
   reduceRunEvent,
-  statusLabel,
 } from "@/lib/simulationRun";
 import { LayerLegend } from "@/components/LayerLegend";
 import {
@@ -47,6 +46,9 @@ import type {
 import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
+import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
+import { MapContextMenu } from "@/components/map/MapContextMenu";
+import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import type { MapRef } from "react-map-gl/maplibre";
 
 const ILOILO_BOUNDS = {
@@ -73,6 +75,13 @@ export default function ScenarioSimulation() {
   const scenarioId = params.id as string;
   const mapRef = useRef<MapRef>(null);
   const { theme } = useTheme();
+  const {
+    containerRef: mapContainerRef,
+    menuPosition,
+    menuLngLat,
+    closeMenu: closeMapMenu,
+    handleContextMenu,
+  } = useMapContextMenu({ mapRef });
 
   useEffect(() => {
     if (mapRef.current) {
@@ -143,6 +152,18 @@ export default function ScenarioSimulation() {
   } | null>(null);
   const [inspectData, setInspectData] = useState<ProvenanceData | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const closeInspect = useCallback(() => {
+    setIsDrawerOpen(false);
+    setInspectingMetric(null);
+    setInspectData(null);
+  }, []);
+
+  const openInspect = useCallback((provData: ProvenanceData, dimension: string) => {
+    setInspectData(provData);
+    setIsDrawerOpen(true);
+    setInspectingMetric(dimension);
+  }, []);
 
   useEffect(() => {
     if (inspectingMetric && isDrawerOpen && mapRef.current) {
@@ -294,21 +315,16 @@ export default function ScenarioSimulation() {
         const confidence = typeof msg.confidence === "string" ? msg.confidence : "L";
         const equationId = String(msg.equation_id ?? "");
         const metric = typeof msg.metric === "string" ? msg.metric : (equationId || "metric");
-        const provData: ProvenanceData = {
+        const provData = buildProvenanceData({
           metric,
           value: String(msg.value),
           range,
           confidence,
-          confidenceBasis: "Computed from input dataset confidences per methods §2",
           equationId,
-          // No equation text or per-dataset metadata arrives over the stream yet —
-          // the drawer renders honest "not provided" fallbacks (never invented).
-          inputs: (Array.isArray(msg.input_dataset_ids) ? msg.input_dataset_ids : []).map(
-            (id: string) => ({ id })
-          ),
+          input_dataset_ids: Array.isArray(msg.input_dataset_ids) ? msg.input_dataset_ids : [],
           assumptions: Array.isArray(msg.assumptions) ? msg.assumptions : [],
-          references: Array.isArray(msg.references) ? msg.references : []
-        };
+          references: Array.isArray(msg.references) ? msg.references : [],
+        });
 
         setResults((prev) => [...prev, {
           key: `${msg.dimension}:${metric}:${prev.length}`,
@@ -356,10 +372,9 @@ export default function ScenarioSimulation() {
     (equationId: string) => {
       const match = results.find((r) => r.provData.equationId === equationId);
       if (!match) return;
-      setInspectData(match.provData);
-      setIsDrawerOpen(true);
+      openInspect(match.provData, match.dimension);
     },
-    [results]
+    [results, openInspect]
   );
 
   // Cancel: user-initiated stop — distinct from error and from done.
@@ -410,6 +425,28 @@ export default function ScenarioSimulation() {
   // reached DONE. Until then the summary tab and the playback control show an
   // "Initializing" state instead of empty skeletons / an inert play button.
   const resultsReady = runState.phase === "done";
+  const mapRightPadding = showResultsPanel || isDrawerOpen
+    ? mapPaddingRight(showResultsPanel, panelView)
+    : 0;
+
+  const handleCopyCoordinates = async (lngLat: { lng: number; lat: number }) => {
+    const text = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard may be unavailable outside secure context.
+    }
+  };
+
+  const handleCenterHere = (lngLat: { lng: number; lat: number }) => {
+    setViewState((prev) => ({
+      ...prev,
+      longitude: lngLat.lng,
+      latitude: lngLat.lat,
+      zoom: Math.max(prev.zoom, 15),
+      transitionDuration: 600,
+    }));
+  };
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex print:h-auto print:block print:overflow-visible print:bg-white">
@@ -419,11 +456,14 @@ export default function ScenarioSimulation() {
           activeId={panelView === "analytics" ? "analytics" : "trajectories"}
           onNavigate={(id) => {
             if (id === "home") {
+              closeInspect();
               router.push("/app");
             } else if (id === "trajectories") {
+              closeInspect();
               setPanelView("summary");
               setShowResultsPanel(true);
             } else if (id === "analytics") {
+              closeInspect();
               setPanelView("analytics");
               setShowResultsPanel(true);
             }
@@ -455,11 +495,14 @@ export default function ScenarioSimulation() {
       {/* Results panel — summary dock by default; widens into the full analytics view */}
       {showResultsPanel && (
         <div className={`w-full h-full bg-surface/85 backdrop-blur-xl shadow-lg z-10 flex flex-col border-l border-border order-2 md:order-1 overflow-hidden relative print:w-full print:border-none print:shadow-none print:bg-white print:overflow-visible print:h-auto ${panelView === "analytics" ? "md:w-[680px] lg:w-[860px]" : "md:w-[360px] lg:w-[400px]"}`}>
-          <div className="p-4 border-b border-border bg-transparent flex justify-between items-center gap-2 print:border-black">
-            <div className="min-w-0 flex items-center gap-2">
+          <div className="p-4 border-b border-border bg-transparent flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start print:border-black">
+            <div className="min-w-0 flex items-center gap-2 flex-1">
               {panelView === "analytics" && (
                 <button
-                  onClick={() => setPanelView("summary")}
+                  onClick={() => {
+                    closeInspect();
+                    setPanelView("summary");
+                  }}
                   className="p-1 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors print:hidden shrink-0"
                   aria-label="Back to summary"
                   title="Back to summary"
@@ -468,35 +511,44 @@ export default function ScenarioSimulation() {
                 </button>
               )}
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-foreground print:text-black">
+                <h2 className="text-lg font-bold text-foreground print:text-black truncate">
                   {panelView === "analytics" ? "Full analytics" : "Scenario summary"}
                 </h2>
                 <p className="text-xs text-text-muted font-mono truncate print:text-black">{scenarioId}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 print:hidden">
-              <button
-                onClick={() => window.print()}
-                className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-primary hover:text-primary transition-colors"
-                title="Download Executive Brief (PDF)"
-                aria-label="Download Executive Brief"
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end print:hidden">
+              {!isRunActive && (
+                <button
+                  onClick={() => window.print()}
+                  className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                  title="Download Executive Brief (PDF)"
+                  aria-label="Download Executive Brief"
+                >
+                  Download Brief
+                </button>
+              )}
+              <span
+                className="text-xs font-mono bg-secondary px-2 py-1 rounded max-w-[7rem] truncate"
+                data-testid="ws-status"
+                title={statusChipLabel(runState)}
               >
-                Download Brief
-              </button>
-              <span className="text-xs font-mono bg-secondary px-2 py-1 rounded" data-testid="ws-status">
-                {statusLabel(runState)}
+                {statusChipLabel(runState)}
               </span>
               {isRunActive && (
                 <button
                   onClick={cancelRun}
-                  className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-error hover:text-error transition-colors"
+                  className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-error hover:text-error transition-colors whitespace-nowrap"
                   data-testid="cancel-run"
                 >
                   Cancel
                 </button>
               )}
               <button
-                onClick={() => setShowResultsPanel(false)}
+                onClick={() => {
+                  closeInspect();
+                  setShowResultsPanel(false);
+                }}
                 className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-elevated transition-colors"
                 aria-label="Close results panel"
               >
@@ -518,7 +570,7 @@ export default function ScenarioSimulation() {
                 synthesis={synthesis}
                 scenarioId={scenarioId}
                 isRunActive={isRunActive}
-                onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(card.dimension); }}
+                onInspect={(card) => openInspect(card.provData, card.dimension)}
                 onCiteClick={handleCiteClick}
               />
             ) : isRunActive ? (
@@ -530,7 +582,7 @@ export default function ScenarioSimulation() {
                 results={results}
                 narrative={synthesis?.narrative}
                 isRunActive={isRunActive}
-                onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(card.dimension); }}
+                onInspect={(card) => openInspect(card.provData, card.dimension)}
                 onOpenAnalytics={() => setPanelView("analytics")}
               />
             ))}
@@ -543,7 +595,7 @@ export default function ScenarioSimulation() {
 
         <InspectDrawer
           isOpen={isDrawerOpen}
-          onClose={() => { setIsDrawerOpen(false); setInspectingMetric(null); }}
+          onClose={closeInspect}
           metricId={inspectData?.equationId || null}
           data={inspectData}
         >
@@ -560,7 +612,7 @@ export default function ScenarioSimulation() {
                 isRunActive={isRunActive}
                 colorClass={getDimensionColor(dim)}
                 variant="drawer"
-                onInspect={(card) => { setInspectData(card.provData); setIsDrawerOpen(true); setInspectingMetric(dim); }}
+                onInspect={(card) => openInspect(card.provData, dim)}
               />
             ))}
           </div>
@@ -570,10 +622,15 @@ export default function ScenarioSimulation() {
 
       {/* Map Area */}
       <div className="flex-1 relative order-1 md:order-2 print:h-[600px] print:w-full print:block">
+        <div
+          ref={mapContainerRef}
+          className="absolute inset-0"
+          onContextMenu={handleContextMenu}
+        >
         <DeckGL
           viewState={{
             ...viewState,
-            padding: { right: (showResultsPanel || isDrawerOpen) ? 424 : 0, left: 64, top: 0, bottom: 0 }
+            padding: { right: mapRightPadding, left: 64, top: 0, bottom: 0 }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any}
           controller={true}
@@ -588,6 +645,16 @@ export default function ScenarioSimulation() {
             reuseMaps
           />
         </DeckGL>
+        {menuPosition && menuLngLat && (
+          <MapContextMenu
+            position={menuPosition}
+            lngLat={menuLngLat}
+            onClose={closeMapMenu}
+            onCopyCoordinates={handleCopyCoordinates}
+            onCenterHere={handleCenterHere}
+          />
+        )}
+        </div>
 
         {/* Map layer toggles — drives useMapLayers + the page-owned TripsLayer */}
         <div className="absolute left-4 top-4 z-10 print:hidden">

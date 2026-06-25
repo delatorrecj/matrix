@@ -78,6 +78,7 @@
     --glass-border: rgb(24 24 27 / 0.10);       /* dark hairline reads on light bg */
     --glass-highlight: rgb(255 255 255 / 0.65); /* top inner-edge refraction */
     --glass-blur: 18px;
+    --panel-peek-height: 270px;
   }
 
   /* ── Dark mode ── */

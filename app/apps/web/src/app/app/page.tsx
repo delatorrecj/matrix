@@ -20,6 +20,8 @@ import { LayerLegend } from "@/components/LayerLegend";
 import { IconNavRail } from "@/components/IconNavRail";
 import { HeaderControls } from "@/components/HeaderControls";
 import { MapAttribution } from "@/components/MapAttribution";
+import { MapContextMenu } from "@/components/map/MapContextMenu";
+import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import { PlaybackBar } from "@/components/PlaybackBar";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
@@ -85,6 +87,13 @@ export default function MatrixCockpit() {
   const router = useRouter();
   const mapRef = useRef<MapRef>(null);
   const { theme } = useTheme();
+  const {
+    containerRef: mapContainerRef,
+    menuPosition,
+    menuLngLat,
+    closeMenu: closeMapMenu,
+    handleContextMenu,
+  } = useMapContextMenu({ mapRef });
 
   useEffect(() => {
     if (mapRef.current) {
@@ -190,6 +199,32 @@ export default function MatrixCockpit() {
     void handleSimulate(presetQuery);
   };
 
+  const handleCopyCoordinates = async (lngLat: { lng: number; lat: number }) => {
+    const text = `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard may be unavailable outside secure context.
+    }
+  };
+
+  const handleCenterHere = (lngLat: { lng: number; lat: number }) => {
+    setViewState((prev) => ({
+      ...prev,
+      longitude: lngLat.lng,
+      latitude: lngLat.lat,
+      zoom: Math.max(prev.zoom, 15),
+      transitionDuration: 600,
+    }));
+  };
+
+  const handleUseLocation = (lngLat: { lng: number; lat: number }) => {
+    setQuery(
+      `What if we build a project at ${lngLat.lat.toFixed(4)}°N, ${lngLat.lng.toFixed(4)}°E in Iloilo?`
+    );
+    setSheetExpanded(true);
+  };
+
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground flex">
 
@@ -203,7 +238,11 @@ export default function MatrixCockpit() {
 
       {/* MAP STAGE (Background) */}
       <div className="flex-1 relative">
-        <div className="absolute inset-0 z-0">
+        <div
+          ref={mapContainerRef}
+          className="absolute inset-0 z-0"
+          onContextMenu={handleContextMenu}
+        >
           <DeckGL
             viewState={{
               ...viewState,
@@ -225,6 +264,16 @@ export default function MatrixCockpit() {
               reuseMaps
             />
           </DeckGL>
+          {menuPosition && menuLngLat && (
+            <MapContextMenu
+              position={menuPosition}
+              lngLat={menuLngLat}
+              onClose={closeMapMenu}
+              onCopyCoordinates={handleCopyCoordinates}
+              onCenterHere={handleCenterHere}
+              onUseLocation={handleUseLocation}
+            />
+          )}
         </div>
 
         {/* TOP RIGHT HEADER CONTROLS */}

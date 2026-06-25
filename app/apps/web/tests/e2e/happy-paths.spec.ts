@@ -51,5 +51,24 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     // so the id chip "BEH-1" doesn't also match the "…BEH-1 is registered…" equation-text fallback.
     await expect(drawer.getByText('BEH-1', { exact: true })).toBeVisible();
     await expect(drawer.getByRole('heading', { name: 'Δ trips on affected corridor (AM-peak)' })).toBeVisible();
+
+    await drawer.getByRole('button', { name: /Show details/i }).click();
+    await expect(drawer.getByText(/ΔT_c = Σ_a/)).toBeVisible();
+    await expect(drawer.getByRole('link', { name: /overpass-api/i })).toBeVisible();
+  });
+
+  test('H-10: map context menu appears only over the map canvas', async ({ page }) => {
+    await mockMatrixBackend(page);
+    await page.goto(SCENARIO);
+
+    const mapStage = page.locator('.maplibregl-canvas').first();
+    await mapStage.click({ button: 'right', position: { x: 120, y: 120 } });
+    await expect(page.getByTestId('map-context-menu')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('map-context-menu')).toHaveCount(0);
+
+    await page.getByRole('heading', { name: 'Scenario summary' }).click({ button: 'right' });
+    await expect(page.getByTestId('map-context-menu')).toHaveCount(0);
   });
 });

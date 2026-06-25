@@ -33,6 +33,10 @@ function renderDrawer(overrides: Partial<React.ComponentProps<typeof InspectDraw
   return { onClose, ...utils };
 }
 
+function expandDrawerDetails() {
+  fireEvent.click(screen.getByRole("button", { name: /Show details/i }));
+}
+
 describe("InspectDrawer", () => {
   it("renders nothing when closed", () => {
     const { container } = render(
@@ -83,6 +87,7 @@ describe("InspectDrawer", () => {
 
   it("expands a dataset row on click and shows honest fallbacks for missing metadata", () => {
     renderDrawer();
+    expandDrawerDetails();
     const row = screen.getByTestId("dataset-row-lptrp-2023");
     expect(row).toHaveAttribute("aria-expanded", "false");
 
@@ -100,6 +105,7 @@ describe("InspectDrawer", () => {
 
   it("renders provided dataset metadata without inventing anything", () => {
     renderDrawer();
+    expandDrawerDetails();
     fireEvent.click(screen.getByTestId("dataset-row-cchain"));
 
     const meta = screen.getByTestId("dataset-meta-cchain");
@@ -113,6 +119,7 @@ describe("InspectDrawer", () => {
 
   it("only keeps one dataset row expanded at a time", () => {
     renderDrawer();
+    expandDrawerDetails();
     fireEvent.click(screen.getByTestId("dataset-row-lptrp-2023"));
     fireEvent.click(screen.getByTestId("dataset-row-cchain"));
     expect(screen.queryByTestId("dataset-meta-lptrp-2023")).not.toBeInTheDocument();
@@ -121,14 +128,17 @@ describe("InspectDrawer", () => {
 
   it("shows the computed confidence level — not a hardcoded label", () => {
     renderDrawer();
+    expandDrawerDetails();
     expect(screen.getByText("Medium confidence (computed)")).toBeInTheDocument();
 
     renderDrawer({ data: { ...DATA, confidence: "H" } });
+    expandDrawerDetails();
     expect(screen.getByText("High confidence (computed)")).toBeInTheDocument();
   });
 
   it("falls back honestly when no equation text is provided", () => {
     renderDrawer();
+    expandDrawerDetails();
     expect(
       screen.getByText(/Equation text not provided over the stream/)
     ).toBeInTheDocument();
@@ -137,12 +147,40 @@ describe("InspectDrawer", () => {
 
   it("renders equation text when it is actually provided", () => {
     renderDrawer({ data: { ...DATA, equationText: "Δtrips = Σ(reroute) / baseline" } });
+    expandDrawerDetails();
     expect(screen.getByText("Δtrips = Σ(reroute) / baseline")).toBeInTheDocument();
     expect(screen.queryByText(/Equation text not provided/)).not.toBeInTheDocument();
   });
 
+  it("renders dataset source links and reference links when provided", () => {
+    renderDrawer({
+      data: {
+        ...DATA,
+        inputs: [
+          {
+            id: "OSM-ILO",
+            name: "OpenStreetMap Iloilo extract",
+            url: "https://overpass-api.de/api/interpreter",
+            license: "ODbL",
+          },
+        ],
+        references: ["Calderon2014"],
+      },
+    });
+    expandDrawerDetails();
+    expect(screen.getByRole("link", { name: /overpass-api/i })).toHaveAttribute(
+      "href",
+      "https://overpass-api.de/api/interpreter"
+    );
+    expect(screen.getByRole("link", { name: /Calderon 2014/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("Calderon14.pdf")
+    );
+  });
+
   it("lists references when present", () => {
     renderDrawer();
-    expect(screen.getByText("Calderon2014")).toBeInTheDocument();
+    expandDrawerDetails();
+    expect(screen.getByRole("link", { name: /Calderon 2014/i })).toBeInTheDocument();
   });
 });
