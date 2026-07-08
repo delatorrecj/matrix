@@ -95,8 +95,31 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
     results.append(res4)
 
     # ── SOCI-1: Societal composite ──
-    val1 = (val2 * 0.3) + (val3 * -0.001) + (val4 * 0.5)
-    lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.8, 1.2), n=500)
+    # Normalize each subscore to [0, 1] before combining (BUG-6 fix: the raw subscores
+    # have incompatible units — heritage "score", health-exposure "index" (PM2.5 ×
+    # pop_density, can be 1000s), walkability "score" — so they cannot be summed directly).
+    # Domain bounds derived from plausible ranges for Iloilo City scenarios:
+    _HERITAGE_BOUND = 10.0     # heritage proximity scores rarely exceed ±10
+    _HEALTH_BOUND = 500.0      # PM2.5_proxy × 5843 pop_density; plausible max ~500
+    _WALK_BOUND = 5.0          # walkability delta scores rarely exceed ±5
+    # Normalize: map raw value from [-bound, +bound] → [0, 1], clamped.
+    def _norm(raw: float, bound: float) -> float:
+        return max(0.0, min(1.0, (raw + bound) / (2.0 * bound)))
+    n_heritage = _norm(val2, _HERITAGE_BOUND)
+    n_health   = _norm(-val3, _HEALTH_BOUND)   # negative: lower health exposure is better
+    n_walk     = _norm(val4, _WALK_BOUND)
+
+    # Weights (sum to 1.0): heritage preservation (25%), health protection (40%),
+    # walkability (35%). Derived from Iloilo CLUP/CDP priority ranking (health > walkability
+    # > heritage for urban development planning). PROVISIONAL — subject to stakeholder
+    # calibration.
+    _W_HERITAGE = 0.25
+    _W_HEALTH = 0.40
+    _W_WALK = 0.35
+    val1 = (n_heritage * _W_HERITAGE + n_health * _W_HEALTH + n_walk * _W_WALK) * 100.0
+    val1 = max(0.0, min(100.0, val1))  # clamp to [0, 100]
+
+    lo1, hi1 = earned_confidence_interval(val1, lambda: max(0.0, min(100.0, val1 * rng.uniform(0.8, 1.2))), n=500)
 
     res1 = DimensionResult(
         dimension="societal",
@@ -108,8 +131,17 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
         confidence=confidence_rubric(["NHCP", "WorldPop", "OSM-ILO", "TSSP-2019"]),
         input_dataset_ids=["NHCP", "WorldPop", "OSM-ILO", "TSSP-2019"],
         references=[],
-        assumptions=["composite of SOCI-2, SOCI-3, SOCI-4"],
+        assumptions=[
+            "composite of SOCI-2, SOCI-3, SOCI-4 — normalized to [0,1] before combining",
+            f"normalization bounds: heritage ±{_HERITAGE_BOUND}, health ±{_HEALTH_BOUND}, "
+            f"walkability ±{_WALK_BOUND} (plausible Iloilo scenario ranges)",
+            f"weights: heritage={_W_HERITAGE}, health={_W_HEALTH}, walkability={_W_WALK} "
+            "(sum=1.0; derived from Iloilo CLUP/CDP urban priority ranking — PROVISIONAL, "
+            "subject to stakeholder calibration)",
+            "output clamped to [0, 100]; 50 = no net change from baseline",
+        ],
     )
     results.insert(0, res1)
 
     return results
+

@@ -262,7 +262,7 @@ def test_ws_valid_query_param_key_streams(client, monkeypatch, mocked_kernel):
         types = _drain_ws(websocket)
     assert types[0] == "ACCEPTED"
     assert types.count("DIMENSION_RESULT") == 5
-    assert types[-2] == "SYNTHESIS"
+    assert "SYNTHESIS" in types
     assert types[-1] == "DONE"
 
 

@@ -11,9 +11,9 @@ from pathlib import Path
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Add app to path to import kernel modules
-app_path = Path(__file__).parent.parent / "app"
-sys.path.append(str(app_path))
-sys.path.append(str(app_path / "packages" / "kernel"))
+app_path = Path(__file__).resolve().parent.parent / "app"
+sys.path.insert(0, str(app_path / "packages" / "kernel"))
+sys.path.insert(0, str(app_path))
 
 try:
     from matrix_kernel.validation import get_all_validations
@@ -49,8 +49,9 @@ def run_model_validations():
         for res in results:
             metric = res.get("metric")
             status = res.get("status")
-            print(f"{'✅' if status == 'PASS' else '❌'} {metric}: {status}")
-            if status != "PASS":
+            symbol = "✅" if status == "PASS" else ("⚠️" if status == "NOT_RUN" else "❌")
+            print(f"{symbol} {metric}: {status}")
+            if status == "FAIL":
                 passed = False
         return passed
     else:

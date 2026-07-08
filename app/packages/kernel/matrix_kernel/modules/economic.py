@@ -22,6 +22,21 @@ from matrix_kernel.trajectory import Trajectory
 # until that uplift curve is wired. No source backs the literal ₱/trip figure.
 _PHP_PER_TRIP_PROXY = 50.0
 
+# ECON-2 footfall proxy: visits generated per unit trip delta. PROVISIONAL —
+# an uncalibrated Milestone-A estimate assuming each trip delta translates to ~1.2
+# commercial visits (a trip may pass multiple establishments). Methods §3.4 wants
+# `Δfootfall = persona_pool × Overture_POI_density`; this stand-in stays until the
+# POI-density model is wired. No published source backs the literal 1.2 factor.
+_VISITS_PER_TRIP_DELTA = 1.2
+
+# ECON-3 employment proxy: jobs affected per unit trip delta. PROVISIONAL —
+# an uncalibrated Milestone-A estimate derived from the ADB/NEDA indirect-employment
+# multiplier concept (methods §3.4): each ~20 trips supports ~1 local job, giving
+# 1/20 = 0.05. This is a heuristic, NOT a calibrated PSA-ASPBI employment elasticity.
+# The real model wants `ΔE = Σ(sector_employment × accessibility_elasticity)`; this
+# stand-in stays until the PSA-ASPBI/OpenStat employment data is wired.
+_JOBS_PER_TRIP_DELTA = 0.05
+
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
@@ -56,7 +71,8 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     ))
 
     # ── ECON-2: Footfall Δ per zone ──
-    val2 = float(delta_trips) * 1.2
+    # Approximated from corridor trip delta (PROVISIONAL proxy; see _VISITS_PER_TRIP_DELTA).
+    val2 = float(delta_trips) * _VISITS_PER_TRIP_DELTA
     lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.75, 1.25), n=500)
 
     results.append(DimensionResult(
@@ -69,11 +85,17 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         confidence=confidence_rubric(["PERSONA-POOL", "OVERTURE"]),
         input_dataset_ids=["PERSONA-POOL", "OVERTURE"],
         references=[],
-        assumptions=["footfall proportional to trip delta"],
+        assumptions=[
+            f"footfall proxy = {_VISITS_PER_TRIP_DELTA:g} visits per unit trip delta — "
+            "PROVISIONAL, uncalibrated Milestone-A estimate; methods §3.4 wants "
+            "Δfootfall from persona-pool × Overture POI density; no published source "
+            "backs this literal factor",
+        ],
     ))
 
     # ── ECON-3: Employment Δ ──
-    val3 = float(delta_trips) * 0.05
+    # Approximated from corridor trip delta (PROVISIONAL proxy; see _JOBS_PER_TRIP_DELTA).
+    val3 = float(delta_trips) * _JOBS_PER_TRIP_DELTA
     lo3, hi3 = earned_confidence_interval(val3, lambda: val3 * rng.uniform(0.5, 1.5), n=500)
 
     results.append(DimensionResult(
@@ -86,7 +108,13 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         confidence=confidence_rubric(["PSA-ASPBI", "PSA-OpenStat"]),
         input_dataset_ids=["PSA-ASPBI", "PSA-OpenStat"],
         references=[],
-        assumptions=["indirect employment impact proportional to delta trips"],
+        assumptions=[
+            f"employment proxy = {_JOBS_PER_TRIP_DELTA:g} jobs per unit trip delta — "
+            "PROVISIONAL, uncalibrated heuristic from ADB/NEDA indirect-employment "
+            "multiplier concept (~1 job per 20 trips); methods §3.4 wants "
+            "ΔE = Σ(sector_employment × accessibility_elasticity) from PSA-ASPBI; "
+            "no published source backs this literal factor",
+        ],
     ))
 
     return results

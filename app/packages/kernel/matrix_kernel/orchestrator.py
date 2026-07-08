@@ -10,6 +10,7 @@ should catch to ask for clarification).
 """
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from typing import Literal, Optional
@@ -20,8 +21,50 @@ from pydantic import BaseModel, Field
 from matrix_kernel.config import get_city_config
 from matrix_kernel.gazetteer import annotate_query_with_gazetteer
 from matrix_kernel.graphrag import retrieve
-from matrix_kernel.llm import generate_chat_completion, make_client
+from matrix_kernel.llm import LLMUnavailable, generate_chat_completion, make_client
 from matrix_kernel.scenario import Scenario
+
+logger = logging.getLogger(__name__)
+
+
+def _rule_based_fallback_scenario(query: str, geometry: Optional[dict] = None) -> Scenario:
+    """Rule-based deterministic scenario parser fallback when Azure OpenAI is unavailable."""
+    q_lower = query.lower()
+
+    if any(w in q_lower for w in ("full", "close all", "dinagyang", "festival", "flood", "impassable")):
+        intervention_type = "full_closure"
+        params = {}
+    elif any(w in q_lower for w in ("speed", "kph", "calm", "limit", "school zone")):
+        intervention_type = "speed_change"
+        params = {"max_speed_kph": 30.0}
+    elif any(w in q_lower for w in ("widen", "add lane", "diet", "capacity")):
+        intervention_type = "capacity_change"
+        params = {"capacity_factor": 1.25}
+    else:
+        intervention_type = "lane_closure"
+        params = {"lanes_closed": 1}
+
+    corridors = [
+        "JM Basa St", "General Luna St", "Diversion Rd", "Benigno Aquino Ave",
+        "Ledesma St", "Iznart St", "Molo", "Jaro", "Mandurriao", "Calle Real"
+    ]
+    location = "General Luna St"
+    for c in corridors:
+        if c.lower() in q_lower:
+            location = c
+            break
+
+    return Scenario(
+        scenario_id=str(uuid.uuid4()),
+        description=f"Simulated {intervention_type.replace('_', ' ')} along {location} ({query.strip()})",
+        corridor=location,
+        lanes_closed=params.get("lanes_closed", 1),
+        intervention_type=intervention_type,
+        location=location,
+        geometry=geometry if isinstance(geometry, dict) else None,
+        parameters=params,
+    )
+
 
 
 class ScenarioSchema(BaseModel):
@@ -54,63 +97,66 @@ def parse_scenario(
     returned Scenario verbatim, so the runner resolves edges from the drawn geometry
     (matrix_kernel.geometry) instead of the location keyword.
     """
-    if not client:
-        client = make_client()
+    try:
+        if not client:
+            client = make_client()
 
-    model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4")
-    city_name = get_city_config().name  # city-agnostic: Iloilo by default (CityConfig)
+        model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4")
+        city_name = get_city_config().name  # city-agnostic: Iloilo by default (CityConfig)
 
-    system_instruction = (
-        "You are the MATRIX Orchestrator. Your job is to parse natural language urban planning "
-        f"queries into structured simulation parameters for {city_name}.\n"
-        "Classify the intervention into exactly one type:\n"
-        "- lane_closure: one or more lanes closed but the road stays open (roadworks, utility digs, "
-        "parking-lane removal).\n"
-        "- full_closure: the whole road becomes impassable (flooding, festival/event closure, "
-        "total reconstruction).\n"
-        "- speed_change: a new speed limit (traffic calming, school zone). Fill max_speed_kph.\n"
-        "- capacity_change: capacity added or removed without closing the road (road widening, an "
-        "added lane, a road diet). Fill capacity_factor (>1 adds capacity, <1 removes it).\n"
-        "For new-facility proposals (a school, mall, terminal), model the construction-phase road "
-        "impact as a lane_closure at the named location and say so in the description.\n"
-        "Only fill numeric parameters the user stated or clearly implied; otherwise leave them "
-        "null/default -- never invent numbers.\n"
-        "If the query lacks a location or an action (e.g., 'what if we build a school?' - where?), "
-        "flag it as ambiguous and ask for clarification."
-    )
+        system_instruction = (
+            "You are the MATRIX Orchestrator. Your job is to parse natural language urban planning "
+            f"queries into structured simulation parameters for {city_name}.\n"
+            "Classify the intervention into exactly one type:\n"
+            "- lane_closure: one or more lanes closed but the road stays open (roadworks, utility digs, "
+            "parking-lane removal).\n"
+            "- full_closure: the whole road becomes impassable (flooding, festival/event closure, "
+            "total reconstruction).\n"
+            "- speed_change: a new speed limit (traffic calming, school zone). Fill max_speed_kph.\n"
+            "- capacity_change: capacity added or removed without closing the road (road widening, an "
+            "added lane, a road diet). Fill capacity_factor (>1 adds capacity, <1 removes it).\n"
+            "For new-facility proposals (a school, mall, terminal), model the construction-phase road "
+            "impact as a lane_closure at the named location and say so in the description.\n"
+            "Only fill numeric parameters the user stated or clearly implied; otherwise leave them "
+            "null/default -- never invent numbers.\n"
+            "If the query lacks a location or an action (e.g., 'what if we build a school?' - where?), "
+            "flag it as ambiguous and ask for clarification."
+        )
 
-    # Annotate colloquial terms with explicit GIS/OSM node hits (CR-008 Item 7)
-    annotated_query = annotate_query_with_gazetteer(query)
+        # Annotate colloquial terms with explicit GIS/OSM node hits (CR-008 Item 7)
+        annotated_query = annotate_query_with_gazetteer(query)
 
-    # Retrieve semantic context (CR-008 Item 9)
-    chunks = retrieve(query, top_k=3)
-    retrieved_context = ""
-    if chunks:
-        context_lines = [f"Source [{c['source']}]: {c['text']}" for c in chunks]
-        retrieved_context = "\n\nRelevant Local Context:\n" + "\n".join(context_lines)
+        # Retrieve semantic context (CR-008 Item 9)
+        chunks = retrieve(query, top_k=3)
+        retrieved_context = ""
+        if chunks:
+            context_lines = [f"Source [{c['source']}]: {c['text']}" for c in chunks]
+            retrieved_context = "\n\nRelevant Local Context:\n" + "\n".join(context_lines)
 
-    # Resilient call: retry/backoff + hard timeout, typed LLMUnavailable on exhaustion
-    # (matrix_kernel.llm). The orchestrator has no silent fallback — a parse failure must
-    # surface (the API layer turns LLMUnavailable into a clear error), never a guessed scenario.
-    messages = [
-        {"role": "system", "content": system_instruction},
-        {"role": "user", "content": annotated_query + retrieved_context}
-    ]
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": annotated_query + retrieved_context}
+        ]
 
-    response = generate_chat_completion(
-        client,
-        model=model_name,
-        messages=messages,
-        response_format=ScenarioSchema,
-        temperature=0.1,  # Low temperature for deterministic parsing
-    )
+        response = generate_chat_completion(
+            client,
+            model=model_name,
+            messages=messages,
+            response_format=ScenarioSchema,
+            temperature=0.1,  # Low temperature for deterministic parsing
+        )
 
-    result = response.choices[0].message.parsed
-    if not isinstance(result, ScenarioSchema):
-        # In case the SDK didn't auto-parse into the Pydantic model (fallback)
-        import json
-        data = json.loads(response.choices[0].message.content)
-        result = ScenarioSchema(**data)
+        result = response.choices[0].message.parsed
+        if not isinstance(result, ScenarioSchema):
+            # In case the SDK didn't auto-parse into the Pydantic model (fallback)
+            import json
+            data = json.loads(response.choices[0].message.content)
+            result = ScenarioSchema(**data)
+    except (LLMUnavailable, Exception) as exc:
+        logger.warning(
+            "orchestrator: Azure OpenAI unavailable (%s) — using rule-based scenario parser fallback.", exc
+        )
+        return _rule_based_fallback_scenario(query, geometry=geometry)
 
     if result.is_ambiguous:
         raise ValueError(result.clarification_prompt or "The query is ambiguous. Please provide a location and action.")

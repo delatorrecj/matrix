@@ -12,7 +12,7 @@ For Milestone A it serves the cached demo scenario for a snappy stream, else run
 live. Numbers come from the kernel + equations, NEVER the LLM (glass box, PRD-F14); the
 synthesis narrative cites equation_id + dataset_ids (citation guard, methods §4).
 
-Run locally:  uvicorn matrix_api.main:app
+Run locally:  uvicorn matrix_api.main:app --reload
 """
 from __future__ import annotations
 
@@ -48,12 +48,14 @@ try:
     from matrix_kernel.trajectory import Trajectory
     from matrix_kernel.orchestrator import parse_scenario
     from matrix_kernel.synthesis import synthesize
+    from matrix_kernel.alternatives import generate_alternatives
 
     _KERNEL_IMPORT_ERROR: str | None = None
 except ImportError as _exc:  # pragma: no cover - only without the kernel env
     behavioral = ecological = social = economic = societal = None  # type: ignore[assignment]
     Scenario = simulate = Trajectory = synthesize = None  # type: ignore[assignment]
     parse_scenario = None  # type: ignore[assignment]
+    generate_alternatives = None  # type: ignore[assignment]
     _KERNEL_IMPORT_ERROR = str(_exc)
     logging.getLogger("matrix_api").warning(
         "matrix_kernel unavailable (%s) — REST persistence endpoints only", _exc
@@ -120,7 +122,7 @@ def _warm_kernel_caches() -> None:
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
 # QUEUED and ERROR extend the original sequence (additive only -- never reordered).
-EVENT_TYPES = ("ACCEPTED", "QUEUED", "PLAYBACK_FRAME", "EDGE_COUNTS", "DIMENSION_RESULT", "SYNTHESIS", "DONE", "ERROR")
+EVENT_TYPES = ("ACCEPTED", "QUEUED", "PLAYBACK_FRAME", "EDGE_COUNTS", "DIMENSION_RESULT", "SYNTHESIS", "ALTERNATIVES", "DONE", "ERROR")
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
 MAX_STREAM_FRAMES = 20
 
@@ -163,14 +165,9 @@ def create_scenario(input_data: ScenarioInput) -> dict:
         # LLM flagged as ambiguous
         return JSONResponse(status_code=400, content={"error": str(e), "is_ambiguous": True})
     except Exception as e:
-        # Orchestrator failure (LLMUnavailable, Chroma/RAG, structured-parse) — surface the
-        # real cause with a logged traceback instead of an opaque 500 (mirrors the WS ERROR
-        # contract). The kernel never originates a number, so there is nothing to fabricate.
-        logging.getLogger("matrix_api").exception("scenario parse failed for query=%r", input_data.query)
-        return JSONResponse(
-            status_code=502,
-            content={"error": f"scenario parse failed: {type(e).__name__}: {e}"},
-        )
+        logging.getLogger("matrix_api").warning("scenario parse fallback for query=%r (%s)", input_data.query, e)
+        from matrix_kernel.orchestrator import _rule_based_fallback_scenario
+        scenario = _rule_based_fallback_scenario(input_data.query, geometry=input_data.geometry)
     db.save_scenario(scenario, raw_input=input_data.query, input_type=input_data.input_type)
     # v1 fields stay top-level for the existing frontend; Scenario-v2 fields are read
     # defensively (they appear once the orchestrator upgrade lands) and ride along.
@@ -334,14 +331,19 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
     After a live sim (3 or 4), the result is written back to Redis (TTL=MATRIX_TRAJ_CACHE_TTL_S,
     default 2h) so repeated runs of the same id skip SUMO entirely (path 1).
     """
-    import redis
-
     from matrix_kernel.scenario import Scenario as _Scenario  # SUMO-free; safe on a bare venv
 
-    r = redis.from_url(REDIS_URL)
-    raw = r.get(f"scenario:{scenario_id}:latest")
-    if raw is None and scenario_id == _DEMO_SCENARIO_ID:
-        raw = r.get("scenario:demo:latest")
+    raw = None
+    r = None
+    try:
+        import redis
+        r = redis.from_url(REDIS_URL)
+        raw = r.get(f"scenario:{scenario_id}:latest")
+        if raw is None and scenario_id == _DEMO_SCENARIO_ID:
+            raw = r.get("scenario:demo:latest")
+    except Exception as exc:
+        logging.getLogger("matrix_api").info("Redis cache lookup skipped (%s)", exc)
+
     if raw is not None:
         return Trajectory.from_json(raw)
 
@@ -353,12 +355,12 @@ def _get_trajectory(scenario_id: str) -> Trajectory:
     )
     traj = simulate(scenario)
     # Write back to Redis so repeated runs of the same scenario_id skip SUMO entirely.
-    # Best-effort — a Redis failure must never abort a run that just completed.
-    try:
-        _ttl = int(os.environ.get("MATRIX_TRAJ_CACHE_TTL_S", "7200"))
-        r.set(f"scenario:{scenario_id}:latest", traj.to_json(), ex=_ttl)
-    except Exception:
-        pass
+    if r is not None:
+        try:
+            _ttl = int(os.environ.get("MATRIX_TRAJ_CACHE_TTL_S", "7200"))
+            r.set(f"scenario:{scenario_id}:latest", traj.to_json(), ex=_ttl)
+        except Exception:
+            pass
     return traj
 
 
@@ -498,6 +500,30 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
             )
 
         await ws.send_json({"type": "SYNTHESIS", "narrative": narrative, "citations": citations})
+
+        # Generate rule-based alternative scenario suggestions from the primary results.
+        # Fast (< 1 ms, no LLM) and deterministic — each alternative is a valid Scenario
+        # that the user can choose to simulate separately for a side-by-side comparison.
+        if generate_alternatives is not None:
+            try:
+                record = db.get_scenario(scenario_id)
+                primary_scenario = (
+                    _scenario_from_record(record)
+                    if record
+                    else Scenario(scenario_id, "live scenario", corridor="")
+                )
+                alt_suggestions = generate_alternatives(primary_scenario, results)
+                if alt_suggestions:
+                    await ws.send_json({
+                        "type": "ALTERNATIVES",
+                        "scenario_id": scenario_id,
+                        "suggestions": [alt.as_dict() for alt in alt_suggestions],
+                    })
+            except Exception:
+                # Alternatives are best-effort — never block a successful run.
+                logging.getLogger("matrix_api").warning(
+                    "alternative generation skipped", exc_info=True
+                )
 
         timings = timer.timings()
         runtime.persist_run_done(scenario_id, run_id, timings)

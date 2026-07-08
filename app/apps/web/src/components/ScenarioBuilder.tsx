@@ -365,6 +365,7 @@ export default function ScenarioBuilder() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {INTERVENTIONS.map(({ type, label, blurb, Icon }) => {
                   const active = state.interventionType === type;
+                  const isLast = type === "new_facility";
                   return (
                     <button
                       key={type}
@@ -372,8 +373,10 @@ export default function ScenarioBuilder() {
                       aria-pressed={active}
                       onClick={() => update("interventionType", type)}
                       className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-all active:scale-[0.99] ${
+                        isLast ? "sm:col-span-2" : ""
+                      } ${
                         active
-                          ? "border-primary bg-primary/5"
+                          ? "border-primary bg-primary/5 shadow-sm"
                           : "border-border hover:border-primary hover:bg-primary/5"
                       }`}
                     >
@@ -416,7 +419,7 @@ export default function ScenarioBuilder() {
 
             <div className="mt-3">
               <span className="block text-xs font-semibold text-text-muted mb-2">Quick suggestions for Iloilo City:</span>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 items-center">
                 {[
                   "Diversion Road (Jaro to Mandurriao segment)",
                   "JM Basa Street (Calle Real historic district)",
@@ -428,7 +431,7 @@ export default function ScenarioBuilder() {
                     key={sug}
                     type="button"
                     onClick={() => update("locationName", sug)}
-                    className="text-xs bg-secondary border border-border px-2.5 py-1.5 rounded-full hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95 text-text"
+                    className="text-xs bg-secondary border border-border px-3 py-2 rounded-full hover:border-primary/50 hover:bg-primary/5 transition-all active:scale-95 text-text max-w-full whitespace-normal text-left"
                   >
                     {sug}
                   </button>

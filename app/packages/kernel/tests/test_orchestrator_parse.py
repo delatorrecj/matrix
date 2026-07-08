@@ -140,3 +140,13 @@ def test_ambiguous_query_raises_with_clarification():
     )
     with pytest.raises(ValueError, match="Where should the school"):
         parse_scenario("what if we build a school?", client=FakeClient(schema))
+
+
+def test_orchestrator_falls_back_on_llm_unavailable(monkeypatch):
+    def _unavailable(*args, **kwargs):
+        from matrix_kernel.llm import LLMUnavailable
+        raise LLMUnavailable("Azure OpenAI unavailable", attempts=1)
+    monkeypatch.setattr("matrix_kernel.orchestrator.generate_chat_completion", _unavailable)
+    sc = parse_scenario("what if we close JM Basa St for the Dinagyang festival?", client=object())
+    assert sc.intervention_type == "full_closure"
+    assert sc.location == "JM Basa St"

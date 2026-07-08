@@ -11,7 +11,7 @@ Returns one DimensionResult per equation. Phase 3 (Gate 3).
 from __future__ import annotations
 
 import random
-from matrix_kernel.baseline import load_baseline
+from matrix_kernel.baseline import SIM_END, load_baseline
 from matrix_kernel.confidence import (
     confidence_rubric,
     earned_confidence_interval,
@@ -24,6 +24,29 @@ from matrix_kernel.trajectory import Trajectory
 _AVG_EDGE_LENGTH_KM = 0.150  # 150 meters
 _EF_CO2_G_PER_KM = 120.0     # fleet average emission factor
 _DAYS_PER_YR = 365.0
+
+# AM-peak-to-daily expansion factor.
+#
+# The simulation runs for SIM_END seconds (default 900 s = 15 min), representing one
+# slice of the AM peak hour. Trip counts from this window must be expanded to daily
+# traffic before annualizing. The factor is derived from:
+#
+#   K-factor (DPWH Design Guidelines for National Roads, 2015; Table 3.1): for Philippine
+#   urban arterials K = 0.10 — the AM peak hour carries ~10% of Average Annual Daily
+#   Traffic (AADT). This is consistent with JICA Metro Cebu Urban Transport Study findings
+#   and the TSSP-2019 traffic count data for Iloilo intersections.
+#
+#   Window fraction: SIM_END / 3600 represents the fraction of the peak hour covered by
+#   the simulation (default 900/3600 = 0.25 = one quarter-hour). The demand model
+#   (build_demand.py) generates trips uniformly over this window.
+#
+#   Expansion: daily_trips = window_trips / (K × window_fraction)
+#            = window_trips / (0.10 × 0.25)  = window_trips × 40
+#
+# References: DPWH-2015 §3, TSSP-2019, JICA-MCUTS
+_K_FACTOR_DPWH = 0.10                              # AM peak hour / AADT (DPWH Philippine urban)
+_WINDOW_FRACTION = SIM_END / 3600.0                 # simulation window as fraction of peak hour
+_AM_PEAK_TO_DAILY = 1.0 / (_K_FACTOR_DPWH * _WINDOW_FRACTION)  # = 40.0 for default 900 s
 
 # ECO-2 air-quality proxy: PM2.5 delta as a fraction of the CO2e delta. PROVISIONAL —
 # an uncalibrated Milestone-A stand-in for the methods §3.2 dispersion-to-station model
@@ -38,14 +61,16 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     results: list[DimensionResult] = []
 
     # ── ECO-1: Transport CO2e Δ ──
-    # Sum of (scenario - baseline) VKT
+    # Sum of (scenario - baseline) trips over the affected corridor
     corridor = trajectory.meta.get("closed_edges", [])
     if not corridor:
         corridor = list(set(sc.keys()) | set(base.keys()))
         
-    delta_trips = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor)
-    # Convert trips to VKT, then to CO2e (kg), then to kt/yr
-    delta_vkt_daily = delta_trips * _AVG_EDGE_LENGTH_KM
+    delta_trips_window = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor)
+    # Expand from the simulation window (e.g. 15 min) to daily using the DPWH K-factor
+    delta_trips_daily = delta_trips_window * _AM_PEAK_TO_DAILY
+    # Convert daily trips to daily VKT, then to CO2e (kg), then to kt/yr
+    delta_vkt_daily = delta_trips_daily * _AVG_EDGE_LENGTH_KM
     delta_co2e_kt_yr = (delta_vkt_daily * _EF_CO2_G_PER_KM * _DAYS_PER_YR) / 1e9
 
     lo1, hi1 = earned_confidence_interval(
@@ -60,10 +85,13 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         unit="ktCO₂e/yr",
         confidence=confidence_rubric(["SUMO-NET", "WHO-EMEP"]),
         input_dataset_ids=["SUMO-NET", "WHO-EMEP"],
-        references=["WHO-EMEP"],
+        references=["WHO-EMEP", "DPWH-2015", "TSSP-2019"],
         assumptions=[
+            f"AM-peak-to-daily expansion factor = {_AM_PEAK_TO_DAILY:.0f}× "
+            f"(K={_K_FACTOR_DPWH}, window={SIM_END:.0f}s/{3600:.0f}s; "
+            "DPWH Design Guidelines 2015 §3, TSSP-2019 Iloilo context)",
             f"average edge length = {_AVG_EDGE_LENGTH_KM} km",
-            f"fleet average EF = {_EF_CO2_G_PER_KM} g/km",
+            f"fleet average EF = {_EF_CO2_G_PER_KM} g/km (WHO-EMEP)",
         ],
     ))
 

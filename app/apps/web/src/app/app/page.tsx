@@ -9,13 +9,14 @@ import DeckGL from "@deck.gl/react";
 import {
   Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon,
   Layers, Play, Loader2, WifiOff, AlertTriangle, SlidersHorizontal,
-  GraduationCap, TrainFront, CloudRain, X, LayoutList
+  GraduationCap, TrainFront, CloudRain, X, LayoutList, Sparkles
 } from "lucide-react";
 import Link from "next/link";
 
 import { DimensionCard } from "@/components/DimensionCard";
 import { LogoMark } from "@/components/Logo";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
+
 import { LayerLegend } from "@/components/LayerLegend";
 import { IconNavRail } from "@/components/IconNavRail";
 import { HeaderControls } from "@/components/HeaderControls";
@@ -537,7 +538,6 @@ export default function MatrixCockpit() {
           />
         </div>
       </InspectDrawer>
-
     </div>
   );
 }

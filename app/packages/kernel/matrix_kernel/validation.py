@@ -514,6 +514,7 @@ def simulated_corridor_flows_from_baseline(
     pax_per_vehicle: float | None = None,
     transit_vehicle_fraction: float | None = None,
     redis_url: str | None = None,
+    allow_synthetic: bool = False,
 ) -> dict[str, float] | None:
     """Map fixture observation ids -> peak transit passenger-flow proxies from the baseline.
 
@@ -533,6 +534,8 @@ def simulated_corridor_flows_from_baseline(
     try:
         traj = load_baseline(redis_url or REDIS_URL)
     except Exception:
+        return None
+    if not allow_synthetic and traj.meta.get("fallback") == "synthetic_in_memory":
         return None
     window_s = float(traj.meta.get("sim_end_s", SIM_END))
     occupancy = _OCCUPANCY_BY_MODE[_TRANSIT_MODE] if pax_per_vehicle is None else pax_per_vehicle

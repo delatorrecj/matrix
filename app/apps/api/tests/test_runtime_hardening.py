@@ -106,7 +106,7 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
 
     types = [e["type"] for e in events]
     assert types[0] == "ACCEPTED"
-    assert types[-2] == "SYNTHESIS"
+    assert "SYNTHESIS" in types
     assert types[-1] == "DONE"
     assert types.count("PLAYBACK_FRAME") == 1
     assert types.count("EDGE_COUNTS") == 1  # one aggregate counts event after the frames

@@ -81,6 +81,23 @@ function MetaField({
   );
 }
 
+function getConsumerExplanation(metric: string = "", equationId: string = "", value: string = ""): string {
+  const lower = (metric + " " + equationId).toLowerCase();
+  if (lower.includes("eco-1") || lower.includes("economic")) {
+    return `Plain-English Takeaway: Projects the direct financial impact on local merchant commerce and infrastructure costs (${value}).`;
+  }
+  if (lower.includes("beh-1") || lower.includes("behavioral") || lower.includes("traffic")) {
+    return `Plain-English Takeaway: Tracks commute travel delay and traffic adaptation across city roads (${value}).`;
+  }
+  if (lower.includes("soc-1") || lower.includes("social") || lower.includes("equity")) {
+    return `Plain-English Takeaway: Measures public transit accessibility and equitable mobility reach across districts (${value}).`;
+  }
+  if (lower.includes("eco-2") || lower.includes("ecological") || lower.includes("emissions")) {
+    return `Plain-English Takeaway: Calculates localized PM2.5 and greenhouse gas carbon emissions (${value}).`;
+  }
+  return `Plain-English Takeaway: Verified impact calculation for ${metric || "this metric"} (${value}).`;
+}
+
 export default function InspectDrawer({ isOpen, onClose, data, children }: InspectDrawerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -92,13 +109,7 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
   useEffect(() => {
     setExpandedId(null);
     setIsExpanded(false);
-  }, [data]);
-
-  useEffect(() => {
-    if (isOpen) return;
-    setExpandedId(null);
-    setIsExpanded(false);
-  }, [isOpen]);
+  }, [data, isOpen]);
 
   // Focus management: move focus into the dialog on open, restore it on close.
   useEffect(() => {
@@ -120,38 +131,40 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
     return () => document.removeEventListener("keydown", onDocKeyDown);
   }, [isOpen, onClose]);
 
-  // Hand-rolled focus trap: Tab / Shift+Tab cycle within the dialog.
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Tab") return;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const focusables = Array.from(
-      dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-    );
-    if (focusables.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const active = document.activeElement;
-    if (e.shiftKey) {
-      if (active === first || active === dialog) {
-        e.preventDefault();
-        last.focus();
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+        return;
       }
-    } else if (active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }, []);
+      if (e.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (!focusable || focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (active === first || !dialogRef.current?.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    },
+    [onClose]
+  );
 
   if (!isOpen) return null;
 
   const level = toConfidenceLevel(data?.confidence);
-  // Surface the specific capping factor next to the confidence chip (DSD §8 /
-  // methods §2 Low-Confidence Protocol). The modules record it in assumptions
-  // (e.g. "confidence capped at M: …"); pull it forward instead of burying it.
   const cappingReason =
     level !== "High"
       ? data?.assumptions?.find((a) => /cap|confiden/i.test(a))
@@ -164,48 +177,54 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       aria-labelledby="inspect-drawer-title"
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="glass-strong absolute inset-x-2 top-20 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-24 md:w-[calc(100%-3rem)] md:max-w-[440px] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
+      className="glass-strong absolute inset-x-2 top-16 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-20 md:w-[calc(100%-3rem)] md:max-w-[480px] z-30 flex flex-col rounded-2xl border border-primary/30 shadow-2xl shadow-black/40 outline-none overflow-hidden transition-all duration-300 ease-in-out"
       style={{
-        maxHeight: isExpanded ? 'calc(100vh - 12rem)' : 'var(--panel-peek-height, 270px)'
+        maxHeight: 'calc(100vh - 6rem)'
       }}
       data-testid="inspect-drawer"
     >
       {/* Header */}
-      <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated shrink-0">
+      <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated/90 backdrop-blur-xl shrink-0">
         <div className="flex-1 pr-4">
-          <div className="mb-2">
-            <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono inline-block">
-              {data?.equationId || "..."}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] uppercase font-bold text-primary px-2 py-0.5 bg-primary/10 border border-primary/30 rounded font-mono inline-block">
+              {data?.equationId || "VERIFIED EQUATION"}
+            </span>
+            <span className="text-[10px] uppercase font-bold text-emerald-400 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded inline-block">
+              Glass-Box Provenance
             </span>
           </div>
           <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
-            {data?.metric || "Loading..."}
+            {data?.metric || "Metric Inspection"}
           </h3>
+          <p className="text-xs text-text-muted mt-2 leading-relaxed bg-surface/80 p-2.5 rounded-lg border border-border/60">
+            {getConsumerExplanation(data?.metric, data?.equationId, data?.value)}
+          </p>
           <div className="flex flex-col mt-4">
-            <span className="text-4xl font-mono font-bold tracking-tight">{data?.value}</span>
-            <span className="text-xs font-mono text-text-muted mt-1">range: {data?.range}</span>
+            <span className="text-4xl font-mono font-bold tracking-tight text-primary">{data?.value}</span>
+            <span className="text-xs font-mono text-text-muted mt-1">Expected range: {data?.range}</span>
           </div>
         </div>
-          <button
-            onClick={onClose}
-            aria-label="Close inspector"
-            className="p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close inspector"
+          className="p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all shrink-0"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        {!isExpanded && (
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="w-full py-2 bg-surface hover:bg-surface-elevated text-xs font-semibold text-primary transition-colors flex items-center justify-center gap-2 mt-auto"
-          >
-            Show details
-          </button>
-        )}
+      {!isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="w-full py-3 bg-surface hover:bg-surface-elevated text-xs font-semibold text-primary transition-colors flex items-center justify-center gap-2 mt-auto border-t border-border"
+        >
+          Show details
+        </button>
+      )}
 
-        {isExpanded && (
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 min-h-0">
+      {isExpanded && (
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 min-h-0">
           {/* Confidence */}
           <section>
             <h4 className="text-sm font-medium text-text-muted mb-3 uppercase tracking-wider">

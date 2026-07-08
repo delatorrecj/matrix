@@ -1,4 +1,4 @@
-"""Runtime hardening for the WS simulation pipeline (RFC matrix-rfc-001 §3, §6).
+"""Runtime hardening for the WS simulation pipeline (RFC matrix-rfc-001 §3, §6; resilient local execution).
 
 Everything heavier than a send_json lives here so main.py stays thin:
 

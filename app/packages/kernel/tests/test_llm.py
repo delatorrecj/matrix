@@ -229,9 +229,11 @@ def test_synthesis_falls_back_on_llm_unavailable(monkeypatch, caplog):
     monkeypatch.setattr("matrix_kernel.synthesis.generate_chat_completion", _unavailable)
     with caplog.at_level(logging.WARNING, logger="matrix_kernel.synthesis"):
         narrative, citations = synthesize([_result()], client=object())
-    assert narrative == "Synthesis narrative generation failed. Please see the raw data."
-    assert citations == []
-    assert "placeholder narrative" in caplog.text
+    assert "HEADLINE" in narrative
+    assert "KEY FINDINGS" in narrative
+    assert len(citations) == 1
+    assert citations[0]["equation_id"] == "BEH-1"
+    assert "offline narrative summary" in caplog.text
 
 
 def test_synthesis_success_path_keeps_cited_numbers(monkeypatch):
