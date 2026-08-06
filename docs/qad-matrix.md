@@ -5,7 +5,7 @@
 **Version:** 0.1
 **Owner:** Carlos Jerico Dela Torre (Team ATLAN)
 **Status:** Active
-**Last reconciled:** 2026-06-24 (CR-012) — verified `run_eval.py` + Playwright + vitest. **Test reality:** Kernel tests: **190 passed, 11 skipped** bare (`python -m pytest`); API tests: **64 passed, 4 skipped** bare (`python -m pytest` in api folder). VAL-01/VAL-02 validation gates are fully implemented; VAL-01 result is honestly withheld pending calibration, VAL-02 is provisional; PERF-01 meets the 90 s budget (~48 s warm, Redis trajectory caching handles repeats in < 1 s).
+**Last reconciled:** 2026-08-05 (CR-014) — live VAL-01 published (honest FAIL, NRMSE 4.488). **Test reality:** Kernel tests: see latest `uv run pytest`; VAL-01/VAL-02 gate computations implemented; VAL-01 live FAIL after Tier-B calibrate + Redis baseline; VAL-02 NOT_RUN pending S1-GFM.
 **PRD:** [prd-matrix.md](prd-matrix.md) · **SDD:** [sdd-matrix.md](sdd-matrix.md) · **Methods:** [methods-matrix.md](methods-matrix.md)
 
 > Tests trace to PRD user stories (`US-##`) and features (`PRD-F#`). The **glass-box gate** (§8) and **validation ledger** (§8) are release-blocking — they are what separate MATRIX from a black box and from an unvalidated demo.
@@ -114,7 +114,7 @@ Tracking: GitHub Issues, `bug/P0`…`bug/P3`.
 - [/] Happy paths H-01…H-10 pass in staging (H-01 to H-08 E2E verified locally via Playwright).
 - [x] Automated suite ≥ 80% coverage on kernel + equation modules.
 - [x] **Glass-box gate (§8) passes: every emitted number has a resolvable equation_id + dataset_ids + confidence, and a working Inspect.**
-- [ ] **Validation ledger (§8) reported: Calderon RMSE + flood IoU + mode-share within ±3%.** *(VAL-03 mode-share anchor is enforced in code today. VAL-01/VAL-02 gate **computations are implemented** in `app/packages/kernel/matrix_kernel/validation.py` (emitting `validation_report.json`; thresholds documented in §8) — but the **live numbers are not yet published**: VAL-01 needs the corridor→SUMO-edge mapping + a kernel run, and VAL-02's closure fixture is **PROVISIONAL** until the S1-GFM 2024 extent is acquired — see [methods §6](methods-matrix.md). Do not check until the numbers are published from non-provisional inputs.)*
+- [/] **Validation ledger (§8) reported: Calderon RMSE + flood IoU + mode-share within ±3%.** *(VAL-01 **published 2026-08-05**: NRMSE 4.488 **FAIL** (honest; threshold 0.30) — see `app/validation_report.json` / CR-014. VAL-03 mode-share enforced in bias auditor. VAL-02 still NOT_RUN until S1-GFM non-provisional fixture.)*
 - [/] 90 s budget verified on a reference scenario (single-user). *(Warm-run probe currently **~123 s** on a 900 s horizon — **over budget**; Phase-6 optimization (libsumo / headless / lighter reroute) pending — see PERF-01.)*
 - [ ] Manual exploratory session: no new P0/P1.
 - [ ] Instrumentation (PRD §5.5) verified emitting in staging.
@@ -152,7 +152,7 @@ These are the gates that make MATRIX defensible — *the* answer to a judge's "h
 
 ### 8.1 Ground-Truth Comparison (CR-008 Item 1)
 To prove predictive reliability, the kernel runs automated back-tests against two historical Iloilo ground-truth benchmarks:
-- **VAL-01 (Calderon 2014):** Compares MATRIX passenger-flow proxies against the Calderon et al. BRT model for the Ungka-Iloilo corridors. *Status:* Currently **WITHHELD** (reporting `NOT_RUN` with an honest reason) because the current synthetic demand puts the corridor proxy ~an order of magnitude above the Calderon maxima. The gate code exists, but passing it requires the FOI'd LTFRB survey (CR-007 PR 9) to calibrate mode-share.
+- **VAL-01 (Calderon 2014):** Compares MATRIX passenger-flow proxies against the Calderon et al. BRT model for the Ungka-Iloilo corridors. *Status:* **Published FAIL** (2026-08-05, CR-014) — live NRMSE **4.488** (threshold ≤ 0.30) after Tier-B WorldPop demand calibrate + Redis baseline. Not massaged; residual scale gap vs Calderon transit loads remains until FOI/survey volume anchors.
 - **VAL-02 (2024 Iloilo Flood):** Compares simulated flood closures against actual 2024 closed road segments using length-weighted IoU. *Status:* Currently **PROVISIONAL** (reporting a pass against a placeholder) until the Copernicus Sentinel-1 GFM extent is acquired.
 
 The status of these gates is constantly emitted in `validation_report.json` and served to the UI. We NEVER massage demand to force a pass. An honest withhold is preferred over fabricated validation.

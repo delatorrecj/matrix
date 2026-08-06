@@ -1,5 +1,7 @@
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
+
 import pytest
 
 # Needs the eclipse-sumo wheel (runner -> sumo_env) at import; skip cleanly without it.
@@ -48,3 +50,38 @@ def test_timing_probe():
     
     # QAD PERF-01: End-to-end simulation budget must be under 90s
     assert warm_delta_ms < 90000, f"PERF-01 Budget Exceeded: Delta run took {warm_delta_ms} ms (limit 90000)"
+
+
+def test_concurrent_simulate_calls_do_not_collide():
+    """The /simulate concurrency gate (matrix_api.runtime.SimGate) admits up to
+    MATRIX_MAX_CONCURRENT_SIMS (default 2) simultaneous runs -- simulate() must give each
+    its own traci label (not the implicit "default"), or the second call's Connection()
+    raises TraCIException("Connection 'default' is already active."). Two real threads,
+    two real SUMO subprocesses."""
+    scenarios = [
+        Scenario("concurrent-1", "close a lane on Diversion Rd", corridor="diversion"),
+        Scenario("concurrent-2", "close a lane on JM Basa", corridor="basa"),
+    ]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        trajectories = list(pool.map(simulate, scenarios))
+    for traj in trajectories:
+        assert traj.meta["edges_with_traffic"] > 0
+
+
+def test_location_of_interest_is_ground_truth_from_the_real_net():
+    """CR-013 end-to-end: a keyword-matched location gets a real [lon, lat] derived
+    from the actual matched edge (real net, real SUMO) -- not a pre-simulation guess."""
+    traj = simulate(Scenario("s-loi", "close a lane on Iznart St", location="Iznart"))
+    assert traj.meta["edge_resolution"] == "keyword-match"
+    loi = traj.meta["location_of_interest"]
+    assert loi is not None
+    lon, lat = loi
+    assert 122.4 < lon < 122.7   # within the Iloilo pilot bbox (MATRIX_Iloilo_Data_Sources.md)
+    assert 10.6 < lat < 10.8
+
+
+def test_location_of_interest_is_none_for_unresolvable_location():
+    """An unresolvable location falls back to busiest-baseline -- honestly no marker."""
+    traj = simulate(Scenario("s-loi-none", "close a lane somewhere unnamed", location="Nonexistent Road XYZ"))
+    assert traj.meta["edge_resolution"].startswith("busiest-baseline-fallback")
+    assert traj.meta["location_of_interest"] is None

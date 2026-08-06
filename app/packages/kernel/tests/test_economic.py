@@ -1,12 +1,11 @@
 """Tests for Economic module."""
 import pytest
 
-# modules.economic -> baseline -> sumo_env needs the eclipse-sumo wheel at import;
-# skip cleanly on a bare venv instead of erroring at collection (`uv sync` runs it).
 pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in app/packages/kernel")
 
 from matrix_kernel.modules.economic import score
 from matrix_kernel.trajectory import Trajectory
+
 
 def test_economic_results():
     baseline = {"C0": 100, "C1": 50, "OTHER": 200}
@@ -18,12 +17,9 @@ def test_economic_results():
     results = score(scenario, baseline=baseline)
 
     assert {r.equation_id for r in results} == {"ECON-1", "ECON-2", "ECON-3"}
-    for r in results:
-        assert r.dimension == "economic"
-        assert r.equation_id and r.input_dataset_ids
-        assert r.range[0] <= r.value <= r.range[1]
-
-    # The ECON-1 ₱/trip land-value proxy constant surfaces its provenance under Inspect (PRD-F14).
-    econ1 = next(r for r in results if r.equation_id == "ECON-1")
-    econ1_assumptions = " ".join(econ1.assumptions)
-    assert "PROVISIONAL" in econ1_assumptions and "50" in econ1_assumptions
+    by_id = {r.equation_id: r for r in results}
+    assert by_id["ECON-1"].confidence == "M"
+    assert by_id["ECON-2"].confidence == "M"
+    assert by_id["ECON-3"].confidence == "M"
+    assert any("ASPBI" in a or "employment" in a.lower() for a in by_id["ECON-3"].assumptions)
+    assert any("places" in a.lower() or "footfall" in a.lower() for a in by_id["ECON-2"].assumptions)

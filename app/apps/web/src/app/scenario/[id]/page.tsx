@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Map } from "react-map-gl/maplibre";
+import { Map, Marker } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import { TripsLayer } from "@deck.gl/geo-layers";
+import { FlyToInterpolator } from "@deck.gl/core";
 import type { Layer } from "@deck.gl/core";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
 import { type SynthesisCitation } from "@/components/SynthesisNarrative";
@@ -47,9 +48,11 @@ import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft 
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
+import { getScenario, getLatestRun, type ScenarioGeometry, type StoredDimensionResult } from "@/lib/api";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import type { MapRef } from "react-map-gl/maplibre";
+import type { DimensionId, RunTimings } from "@/lib/simulationRun";
 
 const ILOILO_BOUNDS = {
   minLng: 122.48,
@@ -69,6 +72,92 @@ const handleViewStateChange = ({ viewState }: any) => {
   return viewState;
 };
 
+/** Reduce a scenario's GeoJSON geometry to a single [lng, lat] to fly the map to —
+ * a Point's own coordinates, or the centroid (mean of the outer ring, excluding the
+ * closing duplicate vertex) for a Polygon. Mirrors ScenarioBuilder's centroid logic. */
+function geometryToLngLat(geometry: ScenarioGeometry | null): [number, number] | null {
+  if (!geometry) return null;
+  if (geometry.type === "Point") {
+    const coords = geometry.coordinates as number[];
+    return [coords[0], coords[1]];
+  }
+  const ring = (geometry.coordinates as number[][][])[0];
+  if (!ring || ring.length === 0) return null;
+  const vertices = ring.slice(0, -1).length > 0 ? ring.slice(0, -1) : ring;
+  const n = vertices.length;
+  const cx = vertices.reduce((s, v) => s + v[0], 0) / n;
+  const cy = vertices.reduce((s, v) => s + v[1], 0) / n;
+  return [cx, cy];
+}
+
+/** Map a stored GET /runs|/latest-run result into the same card shape as DIMENSION_RESULT. */
+function storedResultToCard(r: StoredDimensionResult, index: number): ResultCardData {
+  const confidence = typeof r.confidence === "string" ? r.confidence : "L";
+  const equationId = String(r.equation_id ?? "");
+  const metric = typeof r.metric === "string" ? r.metric : equationId || "metric";
+  const value = typeof r.value === "number" ? r.value : Number(r.value);
+  const rawRange: [number, number] | null =
+    Array.isArray(r.range) &&
+    r.range.length === 2 &&
+    typeof r.range[0] === "number" &&
+    typeof r.range[1] === "number"
+      ? [r.range[0], r.range[1]]
+      : null;
+  const range = rawRange ? `${rawRange[0]}..${rawRange[1]}` : "";
+  return {
+    key: `${r.dimension}:${metric}:${index}`,
+    dimension: String(r.dimension ?? "unknown"),
+    metric,
+    equationId,
+    unit: typeof r.unit === "string" ? r.unit : "",
+    conf: confidence,
+    rawValue: value,
+    rawRange,
+    directional: r.directional === true || confidence === "L",
+    provData: buildProvenanceData({
+      metric,
+      value: String(r.value),
+      range,
+      confidence,
+      equationId,
+      input_dataset_ids: Array.isArray(r.input_dataset_ids) ? r.input_dataset_ids : [],
+      assumptions: Array.isArray(r.assumptions) ? r.assumptions : [],
+      references: Array.isArray(r.references) ? r.references : [],
+    }),
+  };
+}
+
+function hydrateRunStateFromStored(
+  results: StoredDimensionResult[],
+  durationMs: number | null,
+  timings: RunTimings | null,
+): RunState {
+  const resultsByDimension: Record<DimensionId, number> = {
+    behavioral: 0,
+    ecological: 0,
+    social: 0,
+    economic: 0,
+    societal: 0,
+  };
+  for (const r of results) {
+    const dim = r.dimension;
+    if (dim === "behavioral" || dim === "ecological" || dim === "social" || dim === "economic" || dim === "societal") {
+      resultsByDimension[dim] += 1;
+    }
+  }
+  return {
+    phase: "done",
+    wsOpened: false,
+    queuePosition: null,
+    resultsByDimension,
+    resultCount: results.length,
+    synthesisReceived: false,
+    durationMs,
+    timings,
+    error: null,
+  };
+}
+
 export default function ScenarioSimulation() {
   const router = useRouter();
   const params = useParams();
@@ -83,32 +172,55 @@ export default function ScenarioSimulation() {
     handleContextMenu,
   } = useMapContextMenu({ mapRef });
 
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
+
+  // CR-013: fetch the scenario's own parsed location once, so the results view can pan/
+  // zoom to it instead of sitting at the generic Iloilo-wide default.
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.getMap().setStyle(theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT);
-    }
-  }, [theme]);
+    let cancelled = false;
+    getScenario(scenarioId)
+      .then((record) => {
+        if (cancelled) return;
+        setLocationOfInterest(geometryToLngLat(record.geometry));
+      })
+      .catch(() => {
+        // No scenario metadata (404 / API down) — keep the default view, no error surfaced.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scenarioId]);
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const ensureBuilding3D = () => {
-      syncBuilding3dLayer(map, theme, true);
+    const syncBuildings = (e?: { type: string; sourceId?: string }) => {
+      if (e && e.type === "sourcedata" && e.sourceId !== "openmaptiles") return;
+      if (map.getSource("openmaptiles")) {
+        try {
+          syncBuilding3dLayer(map, theme, true);
+        } catch {
+          // Style not fully ready yet — the next sourcedata/style.load event retries.
+        }
+      }
     };
 
     if (map.isStyleLoaded()) {
-      ensureBuilding3D();
+      syncBuildings();
     }
 
-    map.on("style.load", ensureBuilding3D);
+    map.on("style.load", syncBuildings);
+    map.on("sourcedata", syncBuildings);
     const disposeMissingImage = registerMissingImageFallback(map);
 
     return () => {
-      map.off("style.load", ensureBuilding3D);
+      map.off("style.load", syncBuildings);
+      map.off("sourcedata", syncBuildings);
       disposeMissingImage();
     };
-  }, [theme]);
+  }, [theme, mapLoaded]);
 
   const [time, setTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -127,10 +239,11 @@ export default function ScenarioSimulation() {
     bearing: 0
   });
 
-
-
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [runAttempt, setRunAttempt] = useState(0);
+  /** After bootstrap: open WS only when there is no completed run to hydrate (or Re-run). */
+  const [shouldSimulate, setShouldSimulate] = useState(false);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   const [results, setResults] = useState<ResultCardData[]>([]);
   const [tripsData, setTripsData] = useState<{ id: string, path: [number, number][], timestamps: number[] }[]>([]);
@@ -164,6 +277,22 @@ export default function ScenarioSimulation() {
     setIsDrawerOpen(true);
     setInspectingMetric(dimension);
   }, []);
+
+  // Fly to the scenario's location of interest once, as soon as both the map and the
+  // scenario metadata are ready. Cap zoom so trajectories/layers stay readable.
+  useEffect(() => {
+    if (locationOfInterest && mapLoaded) {
+      const [lng, lat] = locationOfInterest;
+      setViewState((prev) => ({
+        ...prev,
+        longitude: lng,
+        latitude: lat,
+        zoom: 15,
+        transitionDuration: 2200,
+        transitionInterpolator: new FlyToInterpolator({ speed: 1.2 }),
+      }));
+    }
+  }, [locationOfInterest, mapLoaded]);
 
   useEffect(() => {
     if (inspectingMetric && isDrawerOpen && mapRef.current) {
@@ -241,8 +370,61 @@ export default function ScenarioSimulation() {
     };
   }, []);
 
-  // WebSocket connection — one run per (scenarioId, runAttempt).
+  // Bootstrap: hydrate a completed run (no re-SUMO) or open WS for a fresh/re-run.
   useEffect(() => {
+    let cancelled = false;
+    setBootstrapped(false);
+    setShouldSimulate(false);
+
+    void (async () => {
+      // Re-run / retry always simulates.
+      if (runAttempt > 0) {
+        if (!cancelled) {
+          setShouldSimulate(true);
+          setBootstrapped(true);
+        }
+        return;
+      }
+      try {
+        const run = await getLatestRun(scenarioId);
+        if (cancelled) return;
+        if (run && run.status === "done" && Array.isArray(run.results) && run.results.length > 0) {
+          const cards = run.results.map(storedResultToCard);
+          setResults(cards);
+          setTripsData([]);
+          setEdgeCounts({});
+          setSynthesis(null);
+          const timings =
+            run.timings && typeof run.timings === "object"
+              ? (run.timings as RunTimings)
+              : null;
+          setRunState(
+            hydrateRunStateFromStored(
+              run.results,
+              typeof run.duration_ms === "number" ? run.duration_ms : null,
+              timings,
+            ),
+          );
+          setShouldSimulate(false);
+        } else {
+          setShouldSimulate(true);
+        }
+      } catch {
+        if (!cancelled) setShouldSimulate(true);
+      } finally {
+        if (!cancelled) setBootstrapped(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scenarioId, runAttempt]);
+
+  // WebSocket connection — one run per (scenarioId, runAttempt) when shouldSimulate.
+  useEffect(() => {
+    if (!bootstrapped || !shouldSimulate) return;
+
     const ws = new WebSocket(buildSimulationWsUrl(scenarioId));
     wsRef.current = ws;
 
@@ -298,6 +480,11 @@ export default function ScenarioSimulation() {
         if (msg.edge_counts && typeof msg.edge_counts === "object") {
           setEdgeCounts(msg.edge_counts as EdgeCounts);
         }
+        // Only fill location when scenario fetch left it unset (avoid re-fly mid-run).
+        if (Array.isArray(msg.location_of_interest) && msg.location_of_interest.length === 2) {
+          const [lon, lat] = msg.location_of_interest as [number, number];
+          setLocationOfInterest((prev) => prev ?? [lon, lat]);
+        }
       } else if (msg.type === "DIMENSION_RESULT") {
         // Build provenance data payload format expected by InspectDrawer.
         // The raw value/range stay untouched here (Inspect = glass box, full
@@ -335,6 +522,7 @@ export default function ScenarioSimulation() {
           conf: confidence,
           rawValue: value,
           rawRange,
+          directional: msg.directional === true || confidence === "L",
           provData
         }]);
       } else if (msg.type === "SYNTHESIS") {
@@ -363,7 +551,7 @@ export default function ScenarioSimulation() {
       ws.onmessage = null;
       ws.close();
     };
-  }, [scenarioId, runAttempt, dispatch]);
+  }, [bootstrapped, shouldSimulate, scenarioId, runAttempt, dispatch]);
 
   // Citation chip → Inspect drawer: resolve the equation id against the
   // accumulated results (glass box: an unmatched citation never opens a drawer —
@@ -518,7 +706,7 @@ export default function ScenarioSimulation() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end print:hidden">
-              {!isRunActive && (
+              {resultsReady && (
                 <button
                   onClick={() => window.print()}
                   className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
@@ -526,6 +714,17 @@ export default function ScenarioSimulation() {
                   aria-label="Download Executive Brief"
                 >
                   Download Brief
+                </button>
+              )}
+              {resultsReady && (
+                <button
+                  onClick={retryRun}
+                  className="text-xs px-2 py-1 rounded border border-border text-text-muted hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
+                  title="Re-run simulation"
+                  aria-label="Re-run simulation"
+                  data-testid="rerun"
+                >
+                  Re-run
                 </button>
               )}
               <span
@@ -563,8 +762,8 @@ export default function ScenarioSimulation() {
             <RunStatusBanner runState={runState} onRetry={retryRun} />
           </div>
 
-          {!isDrawerOpen &&
-            (panelView === "analytics" ? (
+          {panelView === "analytics" ? (
+            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
               <AnalyticsView
                 results={results}
                 synthesis={synthesis}
@@ -573,11 +772,13 @@ export default function ScenarioSimulation() {
                 onInspect={(card) => openInspect(card.provData, card.dimension)}
                 onCiteClick={handleCiteClick}
               />
-            ) : isRunActive ? (
-              // First run still computing: a single "Initializing" state stands in
-              // for the summary until DONE, instead of the empty per-dimension grid.
+            </div>
+          ) : isRunActive && results.length === 0 ? (
+            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
               <InitializingState variant="panel" />
-            ) : (
+            </div>
+          ) : (
+            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
               <SummaryView
                 results={results}
                 narrative={synthesis?.narrative}
@@ -585,7 +786,8 @@ export default function ScenarioSimulation() {
                 onInspect={(card) => openInspect(card.provData, card.dimension)}
                 onOpenAnalytics={() => setPanelView("analytics")}
               />
-            ))}
+            </div>
+          )}
         </div>
 
         {/* Map attribution — replaces MapLibre's default white control (ODbL/OpenMapTiles). */}
@@ -643,7 +845,17 @@ export default function ScenarioSimulation() {
             mapLib={maplibregl}
             attributionControl={false}
             reuseMaps
-          />
+            onLoad={() => setMapLoaded(true)}
+          >
+            {locationOfInterest && (
+              <Marker longitude={locationOfInterest[0]} latitude={locationOfInterest[1]} anchor="bottom">
+                <div
+                  className="h-4 w-4 -translate-y-1 rounded-full border-2 border-white bg-primary shadow-lg"
+                  title="Scenario location of interest"
+                />
+              </Marker>
+            )}
+          </Map>
         </DeckGL>
         {menuPosition && menuLngLat && (
           <MapContextMenu

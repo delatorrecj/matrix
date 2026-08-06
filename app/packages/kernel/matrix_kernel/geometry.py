@@ -266,6 +266,15 @@ def edges_in_polygon(net, polygon: dict) -> list[str]:
     return sorted(hits)
 
 
+def edge_midpoint_lonlat(net, edge_id: str) -> Position:
+    """The lon/lat of an edge's shape midpoint -- a representative point for the edge,
+    used to derive the results view's ground-truth location-of-interest marker/pan-target
+    from the edges a scenario actually resolved to (matrix_kernel.runner)."""
+    shape = net.getEdge(edge_id).getShape()
+    mx, my = shape[len(shape) // 2]
+    return net.convertXY2LonLat(mx, my)
+
+
 def resolve_geometry(net, geojson: dict, radius_m: float = 100.0) -> list[str]:
     """GeoJSON (Point/Polygon, wrappers tolerated) -> sorted SUMO edge IDs.
 

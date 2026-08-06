@@ -242,8 +242,54 @@ export function isDimensionComplete(state: RunState, dim: DimensionId): boolean 
   return state.resultsByDimension[dim] >= EXPECTED_RESULTS[dim];
 }
 
-/** "n/5 dimensions · m/17 results" progress line. */
+/**
+ * Phase-weighted progress percent (0–100).
+ * SUMO finishes before any DIMENSION_RESULT, so resultCount alone stays 0% through
+ * the longest wait — weight phases so the bar moves during that gap.
+ */
+export function progressPercent(state: RunState): number {
+  switch (state.phase) {
+    case "connecting":
+      return 5;
+    case "queued":
+      return 10;
+    case "running":
+      if (state.resultCount === 0) return 40;
+      return Math.min(
+        95,
+        40 + Math.round((state.resultCount / TOTAL_EXPECTED_RESULTS) * 55),
+      );
+    case "done":
+      return 100;
+    case "error":
+    case "cancelled":
+    case "disconnected":
+      return Math.min(
+        95,
+        state.resultCount === 0
+          ? 40
+          : 40 + Math.round((state.resultCount / TOTAL_EXPECTED_RESULTS) * 55),
+      );
+  }
+}
+
+/** Progress line: stage copy during SUMO, then dimension/result counts. */
 export function formatProgress(state: RunState): string {
+  if (state.phase === "connecting") return "Connecting…";
+  if (state.phase === "queued") {
+    return state.queuePosition !== null
+      ? `Queued (position ${state.queuePosition})`
+      : "Queued…";
+  }
+  if (
+    (state.phase === "running" ||
+      state.phase === "error" ||
+      state.phase === "cancelled" ||
+      state.phase === "disconnected") &&
+    state.resultCount === 0
+  ) {
+    return "Running traffic simulation…";
+  }
   return `${dimensionsReported(state)}/${TOTAL_DIMENSIONS} dimensions · ${state.resultCount}/${TOTAL_EXPECTED_RESULTS} results`;
 }
 
@@ -257,7 +303,9 @@ export function statusLabel(state: RunState): string {
         ? `Queued (position ${state.queuePosition})`
         : "Queued";
     case "running":
-      return "Running simulation…";
+      return state.resultCount === 0
+        ? "Running traffic simulation…"
+        : "Scoring impact…";
     case "done":
       return state.durationMs !== null
         ? `Done (${formatMs(state.durationMs)})`

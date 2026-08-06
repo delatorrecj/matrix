@@ -360,14 +360,12 @@ def run_validation_gates(
         cal = _not_run(
             "VAL-01", _VAL01_NAME, "normalized_rmse", _VAL01_UNIT,
             VAL01_THRESHOLD_NRMSE, "<=", VAL01_THRESHOLD_PROVENANCE, CALDERON_FIXTURE,
-            "computable but WITHHELD: matrix_kernel.build_validation_report maps the corridors "
-            "(Lopez Jaena St; Benigno S. Aquino Jr. Avenue = the paper's 'Diversion Rd') to the "
-            "named net and runs the gate (passenger_flow_max only — MATRIX models no transfers), "
-            "but against the current uncalibrated synthetic demand the corridor passenger-flow "
-            "proxy sits ~an order of magnitude above the Calderon maxima — a mode-share "
-            "calibration gap (P1-6) plus a proxy/unit reconciliation, not a model validation. "
-            "Withheld until demand is calibrated and the flow proxy is reconciled: an unvalidated "
-            "FAIL is not a validation result (PRD-F14).",
+            "computable but NOT_RUN until a simulated side is supplied: API startup / "
+            "`python -m matrix_kernel.build_validation_report` injects live-baseline corridor "
+            "flows (CR-012 T1.2 transit-vehicle-share proxy) and publishes PASS or honest FAIL. "
+            "Credibility Phase 1 no longer withholds a computed NRMSE when the baseline exists; "
+            "residual FAIL after demand-volume calibration (T1.3) is a valid published result "
+            "(PRD-F14 — never massage the gate).",
         )
     if flood_simulated is not None:
         flood = validate_flood(flood_simulated, simulated_source=flood_source)

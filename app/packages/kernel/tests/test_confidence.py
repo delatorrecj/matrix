@@ -7,6 +7,7 @@ from matrix_kernel.confidence import (
     confidence_rubric,
     earned_confidence_interval,
     method_capped_confidence,
+    provisional_capped_confidence,
 )
 
 
@@ -32,6 +33,14 @@ def test_method_capped_takes_worst_of_data_and_method():
     assert method_capped_confidence(["S5P-NO2"], "H") == "M"
     # Equal factors pass through.
     assert method_capped_confidence(["OSM-ILO"], "H") == "H"
+
+
+def test_provisional_capped_always_low():
+    # §3.6 PROVISIONAL constants force L even when every input dataset is H (methods §2).
+    assert provisional_capped_confidence(["EMB", "S5P-NO2"]) == "L"
+    assert provisional_capped_confidence(["BIR-ZV", "CCHAIN"]) == "L"
+    assert provisional_capped_confidence(["CCHAIN", "OSM-ILO"]) == "L"
+    assert provisional_capped_confidence(["OSM-ILO", "OVERTURE"]) == "L"
 
 
 def test_rubric_worst_factor_caps():

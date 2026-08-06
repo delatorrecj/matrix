@@ -1,6 +1,6 @@
 # MATRIX — Methods & Traceability Registry (Glass-Box Ledger)
 
-**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Re-locked:** §4 + §4.3 amended & re-locked 2026-06-24 by **CR-010** (owner-approved; synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged) · **Re-locked:** §3.6 + §6 amended & re-locked 2026-06-24 by **CR-012** (owner-approved; VAL-01 corridor proxy reconciled to peak *transit* passenger flow + `_OCCUPANCY_BY_MODE` constants registered. NB: VAL-01 itself stays **WITHHELD** until the live NRMSE confirms at deploy — the re-lock blesses the methodology + constants, not a validation pass) · **Re-locked:** §4.2 amended & re-locked 2026-06-25 by **CR-012** (PR #37; kernel `_resolve_edges` gazetteer + deterministic-hash fallback documented — no validation-gate change)
+**Project:** MATRIX · **Version:** 0.1 · **Date:** 2026-06-02 · **Owner:** Team ATLAN · **Status:** Locked — 2026-06-03 (Phase 0; changes require a Change Record) · **Amended:** 2026-06-17 by CR-007 PR 6 (BEH-4 promotion, dataset-tier ratification, method-cap rule, proxy constants — see §2 addenda, §3.1 BEH-4, §3.6) · **Re-locked:** §4 + §4.3 amended & re-locked 2026-06-24 by **CR-010** (owner-approved; synthesis = plain-language BLUF brief, delimited bilingual; citation contract unchanged) · **Re-locked:** §3.6 + §6 amended & re-locked 2026-06-24 by **CR-012** (owner-approved; VAL-01 corridor proxy reconciled to peak *transit* passenger flow + `_OCCUPANCY_BY_MODE` constants registered. NB: VAL-01 itself stays **WITHHELD** until the live NRMSE confirms at deploy — the re-lock blesses the methodology + constants, not a validation pass) · **Re-locked:** §4.2 amended & re-locked 2026-06-25 by **CR-012** (PR #37; kernel `_resolve_edges` gazetteer + deterministic-hash fallback documented — no validation-gate change) · **Re-locked:** §6 amended 2026-08-05 by **Credibility Phase 1** (owner path: publish live VAL-01 when baseline present — PASS or honest FAIL; PROVISIONAL proxies capped at L; `GET /credibility`) · **Re-locked:** §3.3/§3.4/§3.6 + Appendix A amended 2026-08-05 by **Credibility Phases 2–4** (Tier-B WorldPop demand calibration; BIR→ECON-1; CCHAIN→SOC-1/2/3 + ECO-4 flood; `refresh_dynamic.py`)
 **Backs:** [prd-matrix.md](prd-matrix.md) `PRD-F14` · [sdd-matrix.md](sdd-matrix.md) · data IDs from [../data/INVENTORY.md](../data/INVENTORY.md)
 
 > **MATRIX is a glass box, not a black box.** Every number it outputs is **derived by an explicit equation from named data**, carries a **confidence tier computed by a rule**, and is **reproducible and citable**. If a number cannot be traced through this ledger, it does not ship. The LLM (Azure OpenAI) *orchestrates and narrates with citations* — it **never originates a number**; all scores come from the deterministic kernel and the equations below.
@@ -61,7 +61,7 @@ A dimension flagged **Low** renders as *directional only* (`PRD-F5`) — never a
 | **Dataset vintage > ~10 yr** | Data tier degrades to M (≤ 10 yr) or L (> 10 yr) per the rubric table | Data vintage → L | A dataset with a 2010 vintage used for a 2026 projection |
 | **Heuristic method maturity** | Method tier is L when the computation is a rule-of-thumb constant with no calibration data | Method → L | BEH-4 gravity constants (`_TRIPS_PER_CAPACITY`) before survey calibration |
 | **Unknown or unregistered dataset ID** | `confidence_rubric()` in `confidence.py` defaults any unknown `dataset_id` to tier L | Data coverage → L | A dataset ID not in `DATASET_TIERS` |
-| **PROVISIONAL constant** | Any equation with a constant flagged PROVISIONAL in §3.6 is capped at L until replaced with survey/FOI data | Method → L | `_PHP_PER_TRIP_PROXY = ₱50` (ECON-1), `_VENDORS_PER_CLOSED_LANE = 12` (SOC-2) |
+| **PROVISIONAL constant** | Any equation with a constant flagged PROVISIONAL in §3.6 is capped at L until replaced with survey/FOI data | Method → L | `_PM25_PER_CO2E_PROXY` (ECO-2); ECON-1/SOC-2 fallbacks only if BIR/CCHAIN CSV missing |
 | **Unvalidated gate** | An output whose module has not passed its VAL gate (VAL-01/VAL-02) is reported directional only until gate passes | Validation → L | BEH-4 until Calderon corridor mapping resolves VAL-01 |
 | **Method-maturity cap (see above)** | `method_capped_confidence` applied when method tier < data tier | Method → L (or M) | ECO-4, SOC-1 → capped at M; equations with purely heuristic methods → L |
 
@@ -105,24 +105,24 @@ Inputs reference [INVENTORY](../data/INVENTORY.md) IDs. Equations are versioned;
 ### 3.3 Social
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
-| SOC-1 | Equity-weighted access | `A = Σ_b w_b · Δaccess_b`, `w_b = inverse income decile` | CCHAIN RWI + health isochrones, NHFR | index | M (`method_capped_confidence`: inputs CCHAIN/NHFR are H, but equity-weighted access method is literature-calibrated → caps at M; CR-007 PR 6) |
-| SOC-2 | Displacement risk count | `vendors = lanes_closed · _VENDORS_PER_CLOSED_LANE` (PROVISIONAL proxy) | CCHAIN `osm_poi_*`, OSM-ILO | count | M (PROVISIONAL `_VENDORS_PER_CLOSED_LANE` proxy, §3.6) |
-| SOC-3 | Distributional split (`PRD-F17`) | win/lose by income decile & barangay | CCHAIN RWI, WorldPop | per-decile | M |
+| SOC-1 | Equity-weighted access | `A = mean_w( (1/(rwi+ε)) · (hospital_15min_pct/100) · Δaccess )` over CCHAIN barangays | CCHAIN RWI + Mapbox health isochrones, NHFR | index | M |
+| SOC-2 | Displacement risk count | `vendors = lanes_closed · mean(market_place + convenience)` from CCHAIN `osm_poi_amenity` (fallback `_VENDORS_PER_CLOSED_LANE` if CSV missing) | CCHAIN `osm_poi_*`, OSM-ILO | count | M (CCHAIN amenity density; fallback L) |
+| SOC-3 | Distributional split (`PRD-F17`) | `low_income_impact = A · (1 + bottom_tercile_share)` from CCHAIN RWI | CCHAIN RWI, WorldPop | per-decile | M |
 
 ### 3.4 Economic
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
-| ECON-1 | Land-value Δ (≤1 km) | `ΔLV = LV_base · uplift(Δaccessibility)` (range) | **BIR-ZV** (✅ manual XLS), CCHAIN RWI | PHP range | M |
-| ECON-2 | Footfall Δ per zone | `footfall = Δtrips · 1.2` (footfall ∝ trip delta) | persona pool, OVERTURE places | visits/day | M (`confidence_rubric` over PERSONA-POOL + OVERTURE) |
-| ECON-3 | Employment Δ | `direct + indirect(multiplier) − displaced` | PSA-ASPBI/OpenStat, ADB/NEDA multiplier | jobs | M |
+| ECON-1 | Land-value Δ (≤1 km) | `ΔLV = LV_base · footprint · uplift(Δaccessibility)`; `LV_base` = median BIR CR zonal ₱/sqm | **BIR-ZV** (✅), CCHAIN | PHP | M (BIR wired 2026-08-05; ₱/trip fallback L if CSV missing) |
+| ECON-2 | Footfall Δ per zone | `footfall = Δtrips · 1.2 · places_factor` (places from Overture/OSM amenity count) | persona pool, OVERTURE/OSM | visits/day | M |
+| ECON-3 | Employment Δ | `jobs = ASPBI_emp_WesternVisayas · (Δtrips/base) · 0.001` | PSA-ASPBI/OpenStat | jobs | M |
 
 ### 3.5 Societal
 | ID | Metric | Equation | Inputs | Unit | Conf basis |
 |---|---|---|---|---|---|
-| SOCI-1 | Societal composite | `Σ w_i · subscore_i` (heritage, health, walk, noise) | below | 0–100 | M |
-| SOCI-2 | Heritage proximity | distance decay to nearest declared site | NHCP, OSM heritage (117) | score | M |
-| SOCI-3 | Health-exposure proxy | `PM2.5 × population density` | ECO-2, WorldPop | index | M |
-| SOCI-4 | Walkability Δ | bike/sidewalk coverage + Macalalag factors | OSM-ILO, TSSP-2019 bike | score | M |
+| SOCI-1 | Societal composite | `Σ w_i · subscore_i` (heritage, health, walk) | below | 0–100 | L while SOCI-3 PROVISIONAL |
+| SOCI-2 | Heritage proximity | mean distance-decay to OSM `historic=*` (NHCP interim) | OSM-ILO | score | M |
+| SOCI-3 | Health-exposure proxy | `PM2.5 × population density` | ECO-2, WorldPop | index | L (PROVISIONAL density) |
+| SOCI-4 | Walkability Δ | OSM walk/bike tag density × TSSP-2019 weight excerpt | OSM-ILO, TSSP-2019 | score | M |
 
 ### 3.6 PROVISIONAL Proxy Constants (Milestone A; ratified CR-007 PR 6)
 
@@ -135,8 +135,8 @@ a specific Iloilo measurement; they are order-of-magnitude placeholders declared
 | Constant | Location | Current value | Backs | Pending replacement |
 |---|---|---|---|---|
 | `_PM25_PER_CO2E_PROXY` | `modules/ecological.py` | 0.05 | ECO-2 air-quality delta | Calibrated dispersion-to-station coefficient (EMB readings vs modelled emissions) |
-| `_PHP_PER_TRIP_PROXY` | `modules/economic.py` | ₱50.0 / trip | ECON-1 land-value Δ | BIR-ZV zonal schedule uplift curve (`ΔLV = LV_base × uplift(Δaccessibility)`) |
-| `_VENDORS_PER_CLOSED_LANE` | `modules/social.py` | 12 vendors | SOC-2 displacement risk | CCHAIN `osm_poi_*` impact-buffer count |
+| `_PHP_PER_TRIP_PROXY` | `modules/economic.py` | ₱50.0 / trip | ECON-1 **fallback only** when BIR CSV missing | Primary path: BIR median CR × footprint × uplift (wired 2026-08-05) |
+| `_VENDORS_PER_CLOSED_LANE` | `modules/social.py` | 12 vendors | SOC-2 **fallback only** when CCHAIN amenity missing | Primary path: CCHAIN `osm_poi_amenity` city-mean density (wired 2026-08-05) |
 | `_GENERIC_POP_DENSITY` | `modules/societal.py` | 5,843 persons/km² (PSA 2020 CPH Iloilo City: 457,626 persons / 78.34 km²; city-wide average; updated CR-007 PR 7) | SOCI-3 health-exposure proxy | Per-zone WorldPop density wired into the kernel |
 | `FACILITY_PROFILES` | `demand_delta.py` | per-kind `trips_per_capacity`, `redirected_fraction`, `catchment_radius_m` | BEH-4 (all kinds) | Local travel-survey calibration per facility kind |
 | `_INJECTION_WEIGHT` | `bias_auditor.py` | 10.0 | `reweight_pool` weight for modes absent in the observed batch but present in the target (§4.1) | Heuristic; replace with a principled smoothing prior once anchor coverage is complete |
@@ -239,9 +239,9 @@ The LLM orchestrator uses a curated `gazetteer` and a `GraphRAG` ChromaDB index 
 
 | Check | Method | Target | Status |
 |---|---|---|---|
-| Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | **WITHHELD — pending live confirmation** (CR-012 T1.2: the corridor proxy is reconciled to peak *transit* passenger flow — `transit_vehicle_share` × jeepney occupancy, §3.6 `_OCCUPANCY_BY_MODE` — removing ~8× of the prior all-vehicle over-count; the residual is demand-volume calibration, T1.3/WS-2. Un-withheld + re-locked once the live NRMSE is confirmed at deploy.) |
+| Behavioral corridor | RMSE vs **Calderon 2014** BRT model on one Iloilo corridor | report RMSE | **Published 2026-08-05 (CR-014):** live NRMSE = **4.488** → **FAIL** (threshold ≤ 0.30) against Redis baseline after Tier-B WorldPop calibrate (`build_demand.py --calibrate`). Honest FAIL — demand not fitted to Calderon targets. Without baseline → NOT_RUN. |
 | Flood redistribution | back-test vs **2024 Iloilo flood** extent (Sentinel-1 GFM) | spatial overlap (IoU) | **NOT_RUN** (closure helper staged; no real Sentinel-1 extent wired → no IoU computed) |
-| Mode-share anchor | generated vs ground-truth ±3% | within band | enforced (bias auditor) |
+| Mode-share anchor | generated vs ground-truth ±3% | within band | enforced (bias auditor); surfaced on `GET /credibility` as VAL-03 |
 
 ---
 
@@ -310,9 +310,9 @@ A run is reproducible: `simulation_runs` records the scenario params, **random s
 
 | Equation | Metric | Dataset IDs | Tier | Notes |
 |---|---|---|---|---|
-| **SOC-1** | Equity-weighted access | `CCHAIN` (RWI + health isochrones), `NHFR` | **M** | Inputs are H; equity-weighted access method is literature-calibrated → `method_capped_confidence` caps at M |
-| **SOC-2** | Displacement risk count | `CCHAIN` (`osm_poi_*`), `OSM-ILO` | **M** | `_VENDORS_PER_CLOSED_LANE = 12` proxy — PROVISIONAL (§3.6) |
-| **SOC-3** | Distributional split | `CCHAIN` (RWI), `WorldPop` | **M** | Per-decile split by barangay (`PRD-F17`) |
+| **SOC-1** | Equity-weighted access | `CCHAIN` (RWI), `NHFR` | **M** | City-mean inverse-RWI × Δaccess; NHFR isochrones still deferred |
+| **SOC-2** | Displacement risk count | `CCHAIN` (`osm_poi_*`), `OSM-ILO` | **M** | CCHAIN amenity density × lanes; `_VENDORS_PER_CLOSED_LANE` fallback only |
+| **SOC-3** | Distributional split | `CCHAIN` (RWI), `WorldPop` | **M** | Bottom-tercile RWI share × equity access (`PRD-F17`) |
 
 ---
 
@@ -320,7 +320,7 @@ A run is reproducible: `simulation_runs` records the scenario params, **random s
 
 | Equation | Metric | Dataset IDs | Tier | Notes |
 |---|---|---|---|---|
-| **ECON-1** | Land-value Δ (≤ 1 km) | `BIR-ZV`, `CCHAIN` (RWI) | **M** | BIR DO17-2021 zonal schedule (5,680 priced entries); `_PHP_PER_TRIP_PROXY = ₱50` PROVISIONAL (§3.6) |
+| **ECON-1** | Land-value Δ (≤ 1 km) | `BIR-ZV`, `CCHAIN` | **M** | BIR median CR zonal × footprint × uplift; ₱/trip fallback L if CSV missing |
 | **ECON-2** | Footfall Δ per zone | `PERSONA-POOL`, `OVERTURE` (places) | **M** | Dwell/pass counts from trajectories |
 | **ECON-3** | Employment Δ | `PSA-ASPBI`, `PSA-OpenStat` | **M** | ADB/NEDA multiplier + PSA ASPBI 2022 |
 

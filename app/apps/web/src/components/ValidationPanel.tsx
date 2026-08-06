@@ -223,6 +223,15 @@ export default function ValidationPanel() {
 
       {state.status === "loaded" && state.gates.length > 0 && (
         <div className="space-y-4">
+          <p
+            className="text-[11px] text-text-muted leading-relaxed"
+            data-testid="validation-open-data-framing"
+          >
+            Open-data twin (CR-016): corridor volumes are directional under literature
+            mode-share — VAL-01 FAIL is expected until an open independent volume source
+            exists. VAL-02 event IoU stays NOT RUN; LiPAD is hazard-skill only, not
+            2024-event ground truth. Do not treat absolute magnitudes as agency-calibrated.
+          </p>
           {state.gates.map((gate) => (
             <GateCard key={gate.gate_id} gate={gate} />
           ))}

@@ -1,15 +1,14 @@
 import {
   RunState,
-  TOTAL_EXPECTED_RESULTS,
   formatMs,
   formatProgress,
+  progressPercent,
 } from "@/lib/simulationRun";
 
 /**
- * Progress line while the run streams ("n/5 dimensions · m/17 results") and,
- * once DONE, the stage-timing summary (SUMO / modules / Azure OpenAI breakdown when
+ * Progress line while the run streams (phase-weighted percent + stage/result copy)
+ * and, once DONE, the stage-timing summary (SUMO / modules / Azure OpenAI breakdown when
  * the server provides `timings`; legacy `duration_ms` otherwise).
- * All numbers shown are received counts/timings — nothing is estimated.
  */
 interface RunProgressProps {
   runState: RunState;
@@ -20,11 +19,7 @@ export default function RunProgress({ runState }: RunProgressProps) {
     return <DoneSummary runState={runState} />;
   }
 
-  // Counters stay visible on error/cancel/disconnect so partial progress is legible.
-  const pct = Math.min(
-    100,
-    Math.round((runState.resultCount / TOTAL_EXPECTED_RESULTS) * 100),
-  );
+  const pct = progressPercent(runState);
 
   return (
     <div data-testid="run-progress">

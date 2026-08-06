@@ -1,0 +1,13 @@
+{
+  "provenance": "WHO/EMEP-EEA air pollutant emission inventory guidebook — fleet-average CO2 band for mixed urban LDV+PUV fleets (planning excerpt for MATRIX ECO-1 spot-check; not a full EMEP table dump).",
+  "note": "Band covers typical urban Philippines mixed fleet averages used as planning norms (≈110–160 g/km). ECO-1's 120 g/km fleet average must sit inside this band.",
+  "fleet_average_co2_g_per_km": {
+    "band_lo": 110.0,
+    "band_hi": 160.0,
+    "unit": "gCO2/km"
+  },
+  "references": [
+    "EMEP/EEA Guidebook (road transport chapter)",
+    "methods-matrix.md §3.2 ECO-1 WHO-EMEP"
+  ]
+}

@@ -125,6 +125,14 @@ def parse_scenario(
     elif result.intervention_type == "capacity_change" and result.capacity_factor is not None:
         parameters["capacity_factor"] = result.capacity_factor
 
+    # `geometry` only ever carries a map-drop GeoJSON supplied structurally by the API
+    # (PRD-F14: the LLM never originates it). For an NL-only query, the ground-truth
+    # location-of-interest comes from the runner's own edge resolution at simulate time
+    # (matrix_kernel.runner._resolve_edges -> Trajectory.meta["location_of_interest"],
+    # surfaced over the /simulate WS's EDGE_COUNTS event) -- not a second, pre-simulation
+    # guess here that could disagree with what actually got simulated.
+    resolved_geometry = geometry if isinstance(geometry, dict) else None
+
     return Scenario(
         scenario_id=str(uuid.uuid4()),
         description=result.description,
@@ -132,6 +140,6 @@ def parse_scenario(
         lanes_closed=result.lanes_closed,
         intervention_type=result.intervention_type,
         location=result.location,
-        geometry=geometry if isinstance(geometry, dict) else None,  # map-drop GeoJSON, via the API
+        geometry=resolved_geometry,
         parameters=parameters,
     )

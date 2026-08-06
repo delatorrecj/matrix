@@ -72,7 +72,7 @@ async def _lifespan(app: FastAPI):
 
 
 # Auth + rate limiting are env-gated and OFF by default (see matrix_api/auth.py);
-# /health, /validation, and the docs stay open even when enabled.
+# /health, /validation, /credibility, and the docs stay open even when enabled.
 app = FastAPI(
     title="MATRIX API", version="0.1.0",
     dependencies=[Depends(require_api_key)], lifespan=_lifespan,
@@ -97,6 +97,10 @@ def _warm_kernel_caches() -> None:
         exercises the Azure OpenAI generator whose drift the reweighter corrects.
       • GraphRAG/Chroma collection — ingests the corpus so orchestrator `retrieve()` returns
         sourced chunks instead of [] (the collection was never built outside tests).
+      • Validation + credibility reports (CR-012 T1.4 / Credibility Phase 1) — when a Redis
+        baseline exists, regenerate validation_report.json so GET /validation serves a live
+        NRMSE (PASS or honest FAIL). Always attempt credibility_report.json (fixture-backed
+        spot-checks work without Redis).
 
     Both are wrapped so a missing kernel / Redis / Chroma never blocks API startup. Disable
     with MATRIX_SKIP_WARMUP=1 (e.g. bare test envs)."""
@@ -117,6 +121,24 @@ def _warm_kernel_caches() -> None:
         log.info("GraphRAG corpus ingested")
     except Exception as exc:  # pragma: no cover - depends on Chroma availability
         log.warning("GraphRAG ingest skipped (%s)", exc)
+    try:
+        from matrix_kernel.build_validation_report import generate, write_markdown_artifact
+        from matrix_kernel.validation import write_validation_report
+
+        report = generate()
+        path = write_validation_report(report, _APP_ROOT / "validation_report.json")
+        write_markdown_artifact(report, path.with_suffix(".md"))
+        statuses = ", ".join(f"{g['gate_id']}={g['status']}" for g in report["gates"])
+        log.info("validation report written (%s): %s", path, statuses)
+    except Exception as exc:  # pragma: no cover - net/baseline soft path
+        log.warning("validation report generation skipped (%s)", exc)
+    try:
+        from matrix_kernel.credibility import write_credibility_report
+
+        cpath = write_credibility_report(path=_APP_ROOT / "credibility_report.json")
+        log.info("credibility report written: %s", cpath)
+    except Exception as exc:  # pragma: no cover
+        log.warning("credibility report generation skipped (%s)", exc)
 
 # The event types streamed over the WS (RFC §3) -- frozen so the frontend (Track B) can mock them.
 # QUEUED and ERROR extend the original sequence (additive only -- never reordered).
@@ -183,6 +205,44 @@ def create_scenario(input_data: ScenarioInput) -> dict:
         "location": getattr(scenario, "location", None),
         "geometry": getattr(scenario, "geometry", None),
     }
+
+@app.get("/scenario/{scenario_id}")
+def get_scenario(scenario_id: str) -> dict:
+    """A saved scenario's parsed fields, notably `location`/`geometry` -- the results view
+    (CR-013) fetches this once on load to pan/zoom the map to the scenario's location of
+    interest. `geometry` comes back from Postgres as a `ST_AsGeoJSON` *string*; the
+    in-memory fallback stores it as a dict already -- normalize both to a dict|None here."""
+    record = db.get_scenario(scenario_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"error": "scenario not found", "scenario_id": scenario_id})
+    geometry = record.get("geometry")
+    if isinstance(geometry, str):
+        geometry = json.loads(geometry)
+    return {
+        "scenario_id": record.get("scenario_id", scenario_id),
+        "description": record.get("description", ""),
+        "intervention_type": record.get("intervention_type"),
+        "location": record.get("location"),
+        "geometry": geometry if isinstance(geometry, dict) else None,
+    }
+
+
+@app.get("/scenarios/{scenario_id}/latest-run")
+def get_latest_run(scenario_id: str) -> dict:
+    """Most recent completed run for a scenario (glass-box results intact).
+
+    The results URL is `/scenario/{scenario_id}` — the internal UUID run_id never
+    reaches the client — so reload/share hydrates via this lookup instead of
+    re-opening WS /simulate.
+    """
+    run = db.get_latest_run_for_scenario(scenario_id)
+    if run is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "no completed run", "scenario_id": scenario_id},
+        )
+    return run
+
 
 @app.get("/runs/{run_id}")
 def get_run(run_id: str) -> dict:
@@ -264,6 +324,32 @@ def get_validation() -> dict:
         "source": "matrix_kernel.validation",
         "note": "live module results (no validation_report.json found)",
     }
+
+
+@app.get("/credibility")
+def get_credibility() -> dict:
+    """Credibility Phase 1 report: equation conformance, VAL gates, third-party spot-checks.
+
+    Prefers credibility_report.json written at startup; otherwise builds live (fixture-backed
+    OpenAQ / WHO-EMEP checks work offline). Never invents a PASS for missing data."""
+    override = os.environ.get("MATRIX_CREDIBILITY_REPORT")
+    candidates = [Path(override)] if override else [
+        _APP_ROOT / "credibility_report.json",
+        _APP_ROOT / "packages" / "kernel" / "credibility_report.json",
+    ]
+    for path in candidates:
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                logging.getLogger("matrix_api").warning(
+                    "unreadable credibility report %s (%s); rebuilding", path, exc
+                )
+    try:
+        from matrix_kernel.credibility import build_credibility_report
+    except ImportError:
+        return {"error": "credibility module not available", "llm_invents_numbers": False}
+    return build_credibility_report()
 
 
 # ─── persistence seam for the WS pipeline (wired post-merge by the WS-handler owner) ────
@@ -469,7 +555,16 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
         # Per-edge aggregate vehicle counts for the congestion choropleth (drives the map's
         # congestion layer; join key = SUMO edge id, matching public/layers/edges.geojson).
         # One message; an absent edge id means zero recorded vehicles, never a guess (PRD-F14).
-        await ws.send_json({"type": "EDGE_COUNTS", "edge_counts": traj.edge_counts})
+        # location_of_interest/edge_resolution (CR-013) ride along here too: they're the
+        # ground truth of WHERE the scenario actually ran (computed in runner.simulate from
+        # the edges actually resolved), not a pre-simulation guess -- the results view uses
+        # this, not GET /scenario/{id}, to pan/mark the map for NL-only (non-map-drop) queries.
+        await ws.send_json({
+            "type": "EDGE_COUNTS",
+            "edge_counts": traj.edge_counts,
+            "location_of_interest": traj.meta.get("location_of_interest"),
+            "edge_resolution": traj.meta.get("edge_resolution"),
+        })
 
         # Public bias audit (PRD-F6): log this run's persona mode share vs the ground-truth
         # anchor so GET /audit/{scenario_id} returns real data. Off the critical path, never fatal.

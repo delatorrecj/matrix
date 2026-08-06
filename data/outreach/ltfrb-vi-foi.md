@@ -32,7 +32,7 @@ Under Executive Order No. 2 (s. 2016), we respectfully request, for **Iloilo Cit
 1. **Route geometries / alignments** — shapefile, KML/KMZ, GeoJSON, or GPS traces if available (otherwise the official street-by-street route descriptions).
 2. **Per-route operational parameters** — number of authorized units per route, service headways/frequencies, and operating hours.
 3. **Fleet composition** — modern PUV vs. traditional units per route.
-4. **Ridership or boarding figures**, if any are on file (aggregated; no personal data).
+4. **Ridership, boarding figures, or Origin–Destination (OD) survey summaries** for Iloilo City, if any are on file (aggregated city/corridor/mode totals only; **no personal data**). Mode-share or passenger-volume tables are especially useful for academic model calibration.
 
 This is for academic, non-commercial use only. Aggregated data is sufficient — we are **not** requesting any personal information about operators or commuters. We are happy to receive whatever subset is readily releasable, and to acknowledge LTFRB Region VI as the data source in our outputs.
 

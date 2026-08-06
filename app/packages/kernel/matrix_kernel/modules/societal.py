@@ -1,28 +1,42 @@
-"""Societal impact module (U8). Confidence: typically Medium.
+"""Societal impact module (U8).
 
 Equations (docs/methods-matrix.md §3.5):
   SOCI-1  Societal composite      -- weighted sum of the subscores below
-  SOCI-2  Heritage proximity      -- NHCP, OSM heritage (117 sites)
+  SOCI-2  Heritage proximity      -- OSM historic points (NHCP interim)
   SOCI-3  Health-exposure proxy   -- ECO-2 × WorldPop population density
-  SOCI-4  Walkability Δ           -- OSM-ILO, TSSP-2019 bike (Macalalag factors)
-
-Returns one DimensionResult per equation. Phase 3 (Gate 3).
+  SOCI-4  Walkability Δ           -- OSM walk/bike density × TSSP-2019 factors
 """
 from __future__ import annotations
 
+import math
 import random
+
 from matrix_kernel.baseline import load_baseline
-from matrix_kernel.confidence import confidence_rubric, earned_confidence_interval
+from matrix_kernel.confidence import (
+    earned_confidence_interval,
+    method_capped_confidence,
+    provisional_capped_confidence,
+)
+from matrix_kernel.datasets import (
+    osm_historic_points,
+    osm_walk_bike_tag_density,
+    tssp2019_walk_factors,
+)
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
 
-# Iloilo City overall population density sourced from PSA 2020 Population Census
-# of the Philippines (August 2020 CPH): 457,626 persons / 78.34 km² = 5,843
-# persons/km².  This is the city-wide average; actual barangay-level density varies
-# from ~500 (peri-urban) to ~25,000 (downtown).  Replacing the previous uncited
-# 8,500 placeholder (CR-007 PR 7). Still a single flat figure — per-zone WorldPop
-# density is not yet wired (§3.6); that upgrade is tracked to PR 9.
 _GENERIC_POP_DENSITY = 5843.0  # persons/km², PSA 2020 CPH Iloilo City average
+# Iloilo City Proper approximate centroid (for heritage distance decay).
+_CITY_LAT, _CITY_LON = 10.7202, 122.5621
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlmb / 2) ** 2
+    return 2 * r * math.asin(min(1.0, math.sqrt(a)))
 
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, eco2_val: float = 0.0) -> list[DimensionResult]:
@@ -35,81 +49,124 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
     delta_trips = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor) if corridor else 0.0
 
     # ── SOCI-2: Heritage proximity ──
-    val2 = float(delta_trips) * 0.01
-    lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.8, 1.2), n=500)
+    hist = osm_historic_points()
+    if hist is None:
+        val2 = float(delta_trips) * 0.01
+        conf2 = method_capped_confidence(["OSM-ILO"], "L")
+        assumptions2 = [
+            "OSM historic tags missing — heritage = Δtrips × 0.01 scalar stand-in",
+            "confidence capped at L",
+        ]
+        ids2 = ["OSM-ILO"]
+    else:
+        pts, n_sites = hist
+        # Mean distance-decay score: closer heritage → higher score; trip surge lowers it.
+        decays = [math.exp(-_haversine_km(_CITY_LAT, _CITY_LON, lat, lon) / 2.0) for lat, lon in pts]
+        mean_decay = sum(decays) / len(decays)
+        stress = abs(delta_trips) / max(abs(sum(base.get(e, 0) for e in corridor)), 1.0)
+        val2 = mean_decay * (1.0 - min(0.5, 0.1 * stress))
+        conf2 = method_capped_confidence(["OSM-ILO"], "M")
+        assumptions2 = [
+            f"OSM historic sites = {n_sites} (interim NHCP substitute; methods §3.5)",
+            f"mean distance-decay from city centroid = {mean_decay:.4f}",
+            f"corridor stress = {stress:.4f}",
+            "equation: heritage = mean(exp(-d/2km)) × (1 − stress penalty)",
+        ]
+        ids2 = ["OSM-ILO"]
 
-    res2 = DimensionResult(
+    lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.8, 1.2), n=500)
+    results.append(DimensionResult(
         dimension="societal",
         metric="Heritage proximity",
         equation_id="SOCI-2",
         value=val2,
         range=(lo2, hi2),
         unit="score",
-        confidence=confidence_rubric(["NHCP", "OSM-ILO"]),
-        input_dataset_ids=["NHCP", "OSM-ILO"],
+        confidence=conf2,
+        input_dataset_ids=ids2,
         references=[],
-        assumptions=["heritage proximity proxy from delta trips"],
-    )
-    results.append(res2)
+        assumptions=assumptions2,
+    ))
 
     # ── SOCI-3: Health-exposure proxy ──
-    val3 = eco2_val * _GENERIC_POP_DENSITY  # PM2.5 × generic pop density
+    val3 = eco2_val * _GENERIC_POP_DENSITY
     lo3, hi3 = earned_confidence_interval(val3, lambda: val3 * rng.uniform(0.7, 1.3), n=500)
-
-    res3 = DimensionResult(
+    results.append(DimensionResult(
         dimension="societal",
         metric="Health-exposure proxy",
         equation_id="SOCI-3",
         value=val3,
         range=(lo3, hi3),
         unit="index",
-        confidence=confidence_rubric(["EMB", "S5P-NO2", "WorldPop"]),
+        confidence=provisional_capped_confidence(["EMB", "S5P-NO2", "WorldPop"]),
         input_dataset_ids=["EMB", "S5P-NO2", "WorldPop"],
         references=[],
         assumptions=[
             "uses ECO-2 passed value × population density",
-            f"population density = {_GENERIC_POP_DENSITY:.0f} persons/km² (PSA 2020 CPH: "
-            "Iloilo City 457,626 persons / 78.34 km²); city-wide average applied uniformly "
-            "— PROVISIONAL per-zone weighting; per-zone WorldPop density not yet wired "
-            "into the kernel (methods §3.5, §3.6)",
+            f"population density = {_GENERIC_POP_DENSITY:.0f} persons/km² (PSA 2020 CPH)",
+            "confidence capped at L: §3.6 PROVISIONAL density (methods §2)",
         ],
-    )
-    results.append(res3)
+    ))
 
     # ── SOCI-4: Walkability Δ ──
-    val4 = float(delta_trips) * -0.005
-    lo4, hi4 = earned_confidence_interval(val4, lambda: val4 * rng.uniform(0.6, 1.4), n=500)
+    density = osm_walk_bike_tag_density()
+    factors = tssp2019_walk_factors()
+    if density is None:
+        val4 = float(delta_trips) * -0.005
+        conf4 = method_capped_confidence(["OSM-ILO", "TSSP-2019"], "L")
+        assumptions4 = [
+            "OSM walk/bike tags missing — walkability = Δtrips × -0.005 scalar",
+            "confidence capped at L",
+        ]
+    else:
+        frac, n_ways = density
+        w_side = float(factors.get("sidewalk_weight", 0.45))
+        w_bike = float(factors.get("bike_infra_weight", 0.35))
+        w_stress = float(factors.get("traffic_stress_penalty", 0.20))
+        base_walk = frac * (w_side + w_bike)
+        trip_stress = min(1.0, abs(delta_trips) / 500.0) * w_stress
+        val4 = base_walk - trip_stress
+        conf4 = method_capped_confidence(["OSM-ILO", "TSSP-2019"], "M")
+        assumptions4 = [
+            f"OSM highway ways with walk/bike tags = {frac:.3%} of {n_ways}",
+            f"TSSP factors: sidewalk={w_side}, bike={w_bike}, stress={w_stress} "
+            f"({factors.get('source', 'TSSP-2019')})",
+            f"walkability = tag_fraction×(sidewalk+bike) − trip_stress = {val4:.4f}",
+        ]
 
-    res4 = DimensionResult(
+    lo4, hi4 = earned_confidence_interval(val4, lambda: val4 * rng.uniform(0.6, 1.4), n=500)
+    results.append(DimensionResult(
         dimension="societal",
         metric="Walkability Δ",
         equation_id="SOCI-4",
         value=val4,
         range=(lo4, hi4),
         unit="score",
-        confidence=confidence_rubric(["OSM-ILO", "TSSP-2019"]),
+        confidence=conf4,
         input_dataset_ids=["OSM-ILO", "TSSP-2019"],
         references=["TSSP-2019"],
-        assumptions=["walkability decreases slightly with more trips"],
-    )
-    results.append(res4)
+        assumptions=assumptions4,
+    ))
 
     # ── SOCI-1: Societal composite ──
     val1 = (val2 * 0.3) + (val3 * -0.001) + (val4 * 0.5)
     lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.8, 1.2), n=500)
-
-    res1 = DimensionResult(
+    # Worst of component ceilings: SOCI-3 still L → composite L
+    conf1 = method_capped_confidence(["OSM-ILO", "WorldPop", "TSSP-2019"], "L")
+    results.insert(0, DimensionResult(
         dimension="societal",
         metric="Societal composite",
         equation_id="SOCI-1",
         value=val1,
         range=(lo1, hi1),
         unit="0-100",
-        confidence=confidence_rubric(["NHCP", "WorldPop", "OSM-ILO", "TSSP-2019"]),
-        input_dataset_ids=["NHCP", "WorldPop", "OSM-ILO", "TSSP-2019"],
+        confidence=conf1,
+        input_dataset_ids=["OSM-ILO", "WorldPop", "TSSP-2019"],
         references=[],
-        assumptions=["composite of SOCI-2, SOCI-3, SOCI-4"],
-    )
-    results.insert(0, res1)
+        assumptions=[
+            "composite of SOCI-2, SOCI-3, SOCI-4",
+            "confidence capped at L while SOCI-3 remains PROVISIONAL",
+        ],
+    ))
 
     return results

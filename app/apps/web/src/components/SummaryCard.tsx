@@ -16,6 +16,7 @@ export function SummaryCard({ card, onInspect }: { card: ResultCardData; onInspe
   const { display, negligible } = formatMetricValue(card.rawValue, card.equationId);
   const dir = directionFor(card.rawValue, card.equationId, negligible);
   const level = toConfidenceLevel(card.conf);
+  const directionalOnly = card.directional === true || level === "L";
 
   const toneClass =
     dir.tone === "good" ? "text-success" : dir.tone === "bad" ? "text-error" : "text-text-muted";
@@ -35,6 +36,15 @@ export function SummaryCard({ card, onInspect }: { card: ResultCardData; onInspe
 
       {negligible ? (
         <div className="text-base font-semibold text-text-muted print:text-black">No meaningful change</div>
+      ) : directionalOnly ? (
+        <>
+          <div className="text-base font-semibold text-text-muted print:text-black">Directional only</div>
+          <div className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${toneClass} print:text-black`}>
+            <Arrow className="w-3.5 h-3.5" aria-hidden="true" />
+            <span className="capitalize">{dir.word}</span>
+            <span className="text-text-muted font-normal">· not a precise estimate</span>
+          </div>
+        </>
       ) : (
         <>
           <div className="flex items-end gap-2">

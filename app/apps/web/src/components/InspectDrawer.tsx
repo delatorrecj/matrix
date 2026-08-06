@@ -164,7 +164,7 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       aria-labelledby="inspect-drawer-title"
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="glass-strong absolute inset-x-2 top-20 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-24 md:w-[calc(100%-3rem)] md:max-w-[440px] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
+      className="glass-strong absolute inset-x-2 top-44 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-48 md:w-[calc(100%-3rem)] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
       style={{
         maxHeight: isExpanded ? 'calc(100vh - 12rem)' : 'var(--panel-peek-height, 270px)'
       }}
