@@ -39,7 +39,7 @@ export function ResultCard({ card, onInspect, variant = "panel" }: ResultCardPro
   const value = formatMetricValue(card.rawValue, card.equationId, { precise: true }).display;
   const range = formatRange(card.rawRange, card.equationId, { precise: true });
   const directionalOnly =
-    card.directional === true || toConfidenceLevel(card.conf) === "L";
+    card.directional === true || toConfidenceLevel(card.conf) === "Low";
 
   return (
     <div

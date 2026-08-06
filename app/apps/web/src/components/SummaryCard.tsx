@@ -16,7 +16,7 @@ export function SummaryCard({ card, onInspect }: { card: ResultCardData; onInspe
   const { display, negligible } = formatMetricValue(card.rawValue, card.equationId);
   const dir = directionFor(card.rawValue, card.equationId, negligible);
   const level = toConfidenceLevel(card.conf);
-  const directionalOnly = card.directional === true || level === "L";
+  const directionalOnly = card.directional === true || level === "Low";
 
   const toneClass =
     dir.tone === "good" ? "text-success" : dir.tone === "bad" ? "text-error" : "text-text-muted";

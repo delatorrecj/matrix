@@ -7,6 +7,7 @@ import {
   dimensionsReported,
   formatMs,
   formatProgress,
+  progressPercent,
   initialRunState,
   isDimensionComplete,
   reduceRunEvent,
@@ -50,6 +51,16 @@ describe("reduceRunEvent lifecycle", () => {
     expect(s.resultCount).toBe(3);
     expect(dimensionsReported(s)).toBe(2);
     expect(formatProgress(s)).toBe("2/5 dimensions · 3/17 results");
+    expect(progressPercent(s)).toBe(40 + Math.round((3 / 17) * 55));
+  });
+
+  it("shows SUMO-stage copy and mid-band percent before any results", () => {
+    const running = stateAfter([{ type: "ACCEPTED" }]);
+    expect(formatProgress(running)).toBe("Running traffic simulation…");
+    expect(progressPercent(running)).toBe(40);
+    expect(progressPercent(initialRunState())).toBe(5);
+    expect(progressPercent(stateAfter([{ type: "QUEUED", position: 1 }]))).toBe(10);
+    expect(progressPercent(stateAfter([{ type: "DONE", duration_ms: 1 }]))).toBe(100);
   });
 
   it("counts a result with an unknown dimension toward the total only", () => {
@@ -157,7 +168,17 @@ describe("reduceRunEvent lifecycle", () => {
     expect(statusLabel(stateAfter([{ type: "QUEUED", position: 2 }]))).toBe(
       "Queued (position 2)",
     );
-    expect(statusLabel(stateAfter([{ type: "ACCEPTED" }]))).toBe("Running simulation…");
+    expect(statusLabel(stateAfter([{ type: "ACCEPTED" }]))).toBe(
+      "Running traffic simulation…",
+    );
+    expect(
+      statusLabel(
+        stateAfter([
+          { type: "ACCEPTED" },
+          { type: "DIMENSION_RESULT", dimension: "behavioral" },
+        ]),
+      ),
+    ).toBe("Scoring impact…");
     expect(statusLabel(stateAfter([{ type: "DONE", duration_ms: 84210 }]))).toBe("Done (84.2s)");
     expect(statusLabel(stateAfter([{ type: "CANCEL" }]))).toBe("Cancelled");
     expect(statusLabel(stateAfter([{ type: "ERROR" }]))).toBe("Error");
