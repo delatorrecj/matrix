@@ -189,7 +189,7 @@ Built for the **ASEAN AI Hackathon 2026** (Smart Cities Track) by students from 
 | --- | --- |
 | [**Carlos Jerico Dela Torre**](https://www.linkedin.com/in/delatorrecj) | AI & Software Development, Business & Product Architecture (Lead) |
 | [**Yushin Bjorn Matsuda**](https://www.linkedin.com/in/matsuda-yushin) | AI & Software Development, UI/UX Design |
-| [**Maria Espina**](https://www.linkedin.com/in/maria-espina-b89243309) | QA, UI/UX Design |
+| [**Maria Espina**](www.linkedin.com/in/ma-kristina-espina-b89243309) | QA, UI/UX Design |
 | [**Rica Mae Mago**](https://www.linkedin.com/in/rica-mae-mago) | QA, Research & Marketing |
 | [**Russell Jay Fajardo**](https://www.linkedin.com/in/russell-jay-fajardo-775b19307) | QA, Research & Marketing |
 
