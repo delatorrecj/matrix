@@ -190,11 +190,11 @@ Each entry follows the same shape so you can rehearse out loud:
 
 ### Q2.2 — "How do you validate your behavioral model?"
 
-**Short answer:** VAL-01 back-tests our corridor passenger-flow proxy against the published Calderon et al. 2014 Iloilo BRT study — normalized RMSE against an FHWA-documented threshold of 0.30. The gate code is fully implemented and tested. The headline number is deliberately *withheld* because demand volume isn't calibrated yet — publishing a confident RMSE from uncalibrated demand would violate our own glass-box principle.
+**Short answer:** VAL-01 back-tests our corridor passenger-flow proxy against the published Calderon et al. 2014 Iloilo BRT study — normalized RMSE against an FHWA-documented threshold of 0.30. The gate is published as an honest **FAIL** (live NRMSE is on screen in the validation panel). Corridor volumes are directional, not city-calibrated. Uncalibrated demand is why it fails — we do not hide the RMSE.
 
 **Backing:** `validate_calderon()` in [`validation.py`](../app/packages/kernel/matrix_kernel/validation.py); `VAL01_THRESHOLD_NRMSE = 0.30` with FHWA provenance; fixture from `LIT-CALDERON`; status in [methods-matrix.md §6](../docs/methods-matrix.md) and [docs/cr-012-validation-calibration.md](../docs/cr-012-validation-calibration.md).
 
-**Guardrail:** Say "withheld pending calibration," not "not validated." The harness validates; the demand isn't calibrated enough to publish.
+**Guardrail:** Say "published FAIL — directional volumes," not "withheld" and not "validated at 94%."
 
 ---
 
@@ -590,14 +590,14 @@ Each entry follows the same shape so you can rehearse out loud:
 8. **ASEAN scaling** — OSM bbox swap + persona reweight; no hardware.
 9. **Deployed today** — Vercel (web) + Hugging Face Spaces (API).
 10. **Team ATLAN, PUP** — built through CR-010 with two merge gates.
-11. **Validation is three-level** — empirical (Calderon RMSE, withheld until calibration), automated (254 tests + 2 merge gates), external planner sign-off = next milestone (none yet — say so openly).
+11. **Validation is three-level** — empirical (Calderon NRMSE published as FAIL vs 0.30), automated (254 tests + 2 merge gates), external planner sign-off = next milestone (none yet — say so openly).
 
 ### Three guardrail lines (memorize verbatim)
 
 | Topic | Say this | Never say this |
 |---|---|---|
 | **Latency** | "90-second target · ~123 seconds cold · under 1 second warm cache" | "Runs in 90 seconds" (without qualifier) |
-| **Validation** | "VAL-01 withheld pending demand calibration — the harness runs, we won't publish a fake RMSE" | "Validated at 94% accuracy" or "Not validated" |
+| **Validation** | "VAL-01 is a published FAIL — live NRMSE vs 0.30; corridor volumes are directional" | "Validated at 94% accuracy" or "RMSE withheld" |
 | **Bias auditor** | "Audits every batch; reweights when LLM pool exceeds ±3% — logged publicly" | "Always rebalances the simulation" |
 | **Who validated** | "Against peer-reviewed literature + our own glass-box gates today; external CPDO planner validation is the next milestone" | "An expert validated it" / "It's been independently verified" |
 | **AI's role** | "AI plans, grounds, and narrates; deterministic equations compute every number" | "AI-powered predictions" / "the AI calculates the impact" |

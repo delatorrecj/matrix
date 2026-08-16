@@ -220,7 +220,7 @@ Budget from RFC-001 / SDD §7:
 
 Levers: do not regenerate 200–500 personas per click; reweight the cached pool. Do not resimulate the whole city; perturb agents whose paths hit the project buffer. Stream early frames. Warm repeats are faster because Redis already has the trajectory.
 
-Honest caveats you should volunteer: the SLO is **single-user**; multi-user needs a queue. Cold run without baseline is outside budget. VAL-01 RMSE vs Calderon counts is **withheld** until demand/mode-share is calibrated. VAL-02 flood IoU is `NOT_RUN` until a real Sentinel extent is wired. Gazetteer node ids are provisional.
+Honest caveats you should volunteer: the SLO is **single-user**; multi-user needs a queue. Cold run without baseline is outside budget. VAL-01 vs Calderon counts is a **published FAIL** (live NRMSE vs threshold ≤ 0.30); corridor volumes are directional, not city-calibrated. VAL-02 flood IoU is `NOT_RUN` until a real Sentinel extent is wired. Gazetteer node ids are provisional.
 
 ### 7.6 API surface worth memorizing
 
@@ -262,7 +262,7 @@ Runtime simulation reads processed network/demand and Redis caches. It does not 
 | Fly.io / Supabase | Removed. Vercel + HF Spaces. |
 | Tailwind v3 plugin, `framer-motion`, Google Fonts `<link>` | v4 `@tailwindcss/postcss`, `motion/react`, `next/font`. |
 | LLM writes the 14% | Kernel + equation_id. LLM cites. |
-| VAL-01 proves we are calibrated | Machinery exists; headline RMSE withheld until demand calibration. |
+| VAL-01 proves we are calibrated | VAL-01 is a published FAIL (live NRMSE vs 0.30). Volumes are directional. |
 
 ### 7.10 Tests (so you do not overclaim)
 

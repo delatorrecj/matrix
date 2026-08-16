@@ -156,6 +156,12 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
     level !== "High"
       ? data?.assumptions?.find((a) => /cap|confiden/i.test(a))
       : undefined;
+  const corridorVolumeEq =
+    data?.equationId === "BEH-1" || data?.equationId === "BEH-3";
+  const fidelityNotice =
+    corridorVolumeEq && (level === "Low" || data?.assumptions?.some((a) => /VAL-01|uncalibrated/i.test(a)))
+      ? "Iloilo corridor volumes are directional, not city-calibrated. VAL-01 vs Calderon 2014 is published in Analytics → Validation (FAIL is FAIL). Magnitudes are not a passing calibration."
+      : undefined;
 
   return (
     <div
@@ -184,6 +190,14 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
           <div className="flex flex-col mt-4">
             <span className="text-4xl font-mono font-bold tracking-tight">{data?.value}</span>
             <span className="text-xs font-mono text-text-muted mt-1">range: {data?.range}</span>
+            {fidelityNotice && (
+              <p
+                className="mt-3 text-xs leading-relaxed text-foreground bg-warning/10 border border-warning/30 rounded-lg px-2.5 py-2"
+                data-testid="inspect-fidelity-notice"
+              >
+                {fidelityNotice}
+              </p>
+            )}
           </div>
         </div>
           <button

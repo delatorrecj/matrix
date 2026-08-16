@@ -20,9 +20,9 @@ Writes ``app/validation_report.json`` (gitignored; served by GET /validation whe
 live module reports NOT_RUN). When the baseline/net is unavailable both gates are written NOT_RUN —
 never a fabricated number.
 
-STATUS (CR-007 PR 5b): against the *uncalibrated* synthetic demand the corridor flow proxy ran ~an
-order of magnitude above the Calderon maxima (NRMSE ~12 — a FAIL): a mode-share calibration gap
-(P1-6) + a proxy/unit reconciliation, NOT a model validation, so the report was **withheld**.
+STATUS (CR-007 PR 5b / CR-014): against uncalibrated open-data demand the corridor flow proxy
+fails the Calderon back-test (live NRMSE published as FAIL vs threshold 0.30). That is a
+valid published result — never withheld, never massaged into a pass.
 
 CR-012 WS-1 T1.2 (proxy reconciliation): the proxy now measures peak *transit* passenger flow —
 `simulated_corridor_flows_from_baseline` restricts the all-vehicle edge throughput to the
@@ -176,7 +176,7 @@ def write_markdown_artifact(report: dict, md_path: Path):
         "|---|---|---|---|---|"
     ]
     for g in report["gates"]:
-        status = f"**{g['status']}**" if g["status"] != "NOT_RUN" else "*WITHHELD/PROVISIONAL*"
+        status = f"**{g['status']}**" if g["status"] != "NOT_RUN" else "*NOT_RUN*"
         val = f"{g['value']} {g['metric']}" if g["value"] is not None else "—"
         lines.append(f"| {g['gate_id']} | {g['name']} | {status} | {val} | {g['comparator']} {g['threshold']} |")
     

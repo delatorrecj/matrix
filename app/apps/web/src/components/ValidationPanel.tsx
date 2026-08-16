@@ -65,6 +65,27 @@ function isProvisional(gate: ValidationGate): boolean {
   return Boolean(gate.fixture_provisional ?? gate.provisional);
 }
 
+function corridorVolumeFraming(gates: ValidationGate[]): string {
+  const val01 = gates.find((g) => g.gate_id === "VAL-01");
+  const val02 = gates.find((g) => g.gate_id === "VAL-02");
+  const val02Bit =
+    !val02 || val02.status === "NOT_RUN"
+      ? " VAL-02 event IoU stays NOT RUN until a real Sentinel extent is wired."
+      : "";
+  if (val01?.status === "FAIL" && val01.value != null) {
+    return (
+      `Corridor volumes are directional, not city-calibrated. VAL-01 is a published FAIL against the Calderon 2014 back-test (${val01.metric} ${val01.value} vs threshold ${comparatorGlyph(val01.comparator)} ${val01.threshold}). That FAIL is the calibration status — not a passing grade.${val02Bit} Do not treat absolute magnitudes as agency-calibrated.`
+    );
+  }
+  if (val01?.status === "PASS" && val01.value != null) {
+    return `VAL-01 vs Calderon 2014 is PASS (${val01.metric} ${val01.value} vs threshold ${comparatorGlyph(val01.comparator)} ${val01.threshold}).${val02Bit}`;
+  }
+  if (val01?.status === "NOT_RUN") {
+    return `VAL-01 has not been computed. Corridor volumes stay directional until a published Calderon back-test exists.${val02Bit}`;
+  }
+  return `Corridor volumes are directional, not city-calibrated.${val02Bit} Do not treat absolute magnitudes as agency-calibrated.`;
+}
+
 function GateCard({ gate }: { gate: ValidationGate }) {
   return (
     <div
@@ -227,10 +248,7 @@ export default function ValidationPanel() {
             className="text-[11px] text-text-muted leading-relaxed"
             data-testid="validation-open-data-framing"
           >
-            Open-data twin (CR-016): corridor volumes are directional under literature
-            mode-share — VAL-01 FAIL is expected until an open independent volume source
-            exists. VAL-02 event IoU stays NOT RUN; LiPAD is hazard-skill only, not
-            2024-event ground truth. Do not treat absolute magnitudes as agency-calibrated.
+            {corridorVolumeFraming(state.gates)}
           </p>
           {state.gates.map((gate) => (
             <GateCard key={gate.gate_id} gate={gate} />

@@ -146,7 +146,7 @@ This is the anchor of the entire video. 105 seconds of the working system, runni
 
 **NARRATION:**
 
-> "And here is the line most teams will not say out loud. Our headline RMSE is withheld. Mode-share calibration is not complete yet, so Behavioral stays at Medium and the flood fixture is labeled provisional. Publishing a confident accuracy number from uncalibrated demand data would violate the exact glass-box principle this product is built on. The harness is built. It runs. It will publish the moment calibration data lands. For an honesty-first tool, labeling provisional data is the feature. Not the hedge."
+> "And here is the line most teams will not say out loud. VAL-01 is a published FAIL. Live NRMSE sits on the validation ledger against a 0.30 threshold, so corridor volumes are directional, not city-calibrated. Publishing a passing accuracy number from uncalibrated demand would violate the glass-box principle this product is built on. For an honesty-first tool, publishing the FAIL is the feature. Not the hedge."
 
 *[Integrity proven. This directly answers the judges' ground-truth question.]*
 

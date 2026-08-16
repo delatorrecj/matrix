@@ -511,10 +511,8 @@ for t,b,th,c in val:
 # honesty panel
 panel(s, 0.7, 8.2, 18.6, 1.5, fill=C(0x2A1A06), line=C(0x7A5A1F), radius=0.06, accent=WARN)
 tb(s, 1.15, 8.4, 17.9, 1.2, [{"runs":[
-   ("The headline RMSE is deliberately withheld. ", 16, True, WARN, F_HEAD),
-   ("Mode-share isn’t calibrated yet, so Behavioral stays Medium and the flood fixture is PROVISIONAL. Publishing "
-    "a confident number from uncalibrated demand would violate the glass-box principle the product is built on. The "
-    "harness is built, it runs, and it publishes the moment the calibration data lands.", 15, False, INK, F_BODY)],"ls":1.06}])
+   ("VAL-01 is a published FAIL. ", 16, True, WARN, F_HEAD),
+   ("Live NRMSE is on the validation ledger against the 0.30 threshold. Corridor volumes are directional, not city-calibrated. Publishing a passing grade from uncalibrated demand would violate the glass-box principle the product is built on.", 15, False, INK, F_BODY)],"ls":1.06}])
 
 # =====================================================================
 # SLIDE 12 — SCALABILITY ROADMAP
