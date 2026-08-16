@@ -33,6 +33,7 @@ FAKE_TRAJ = Trajectory(
         "kind": "scenario",
         "edge_resolution": "keyword-match",
         "location_of_interest": [122.56, 10.72],
+        "affected_edges": ["edge-1"],
     },
 )
 
@@ -124,6 +125,7 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
     # results view's ground-truth source for panning/marking the map (NL-only queries).
     assert edge_evt["location_of_interest"] == [122.56, 10.72]
     assert edge_evt["edge_resolution"] == "keyword-match"
+    assert edge_evt["affected_edges"] == ["edge-1"]
     assert types.index("EDGE_COUNTS") > types.index("PLAYBACK_FRAME")
     assert types.index("EDGE_COUNTS") < types.index("DIMENSION_RESULT")
 

@@ -206,25 +206,81 @@ def create_scenario(input_data: ScenarioInput) -> dict:
         "geometry": getattr(scenario, "geometry", None),
     }
 
+def _geometry_lnglat(geometry: dict | None) -> list[float] | None:
+    """Map-drop GeoJSON → [lon, lat]. Point as-is; Polygon = mean of the outer ring."""
+    if not geometry:
+        return None
+    coords = geometry.get("coordinates")
+    gtype = geometry.get("type")
+    if gtype == "Point" and isinstance(coords, (list, tuple)) and len(coords) >= 2:
+        return [float(coords[0]), float(coords[1])]
+    if gtype == "Polygon" and isinstance(coords, list) and coords:
+        ring = coords[0]
+        if not isinstance(ring, list) or not ring:
+            return None
+        vertices = ring[:-1] if len(ring) > 1 else ring
+        n = len(vertices)
+        if n == 0:
+            return None
+        return [sum(v[0] for v in vertices) / n, sum(v[1] for v in vertices) / n]
+    return None
+
+
+def _camera_location_of_interest(location: object, geometry: dict | None) -> list[float] | None:
+    """Camera-only [lon, lat]: map-drop centroid, else gazetteer coords for `location`."""
+    pt = _geometry_lnglat(geometry)
+    if pt:
+        return pt
+    if not location or not str(location).strip():
+        return None
+    try:
+        from matrix_kernel.gazetteer import location_coordinates
+    except ImportError:  # pragma: no cover - bare env without kernel package
+        return None
+    return location_coordinates(str(location))
+
+
 @app.get("/scenario/{scenario_id}")
 def get_scenario(scenario_id: str) -> dict:
     """A saved scenario's parsed fields, notably `location`/`geometry` -- the results view
     (CR-013) fetches this once on load to pan/zoom the map to the scenario's location of
     interest. `geometry` comes back from Postgres as a `ST_AsGeoJSON` *string*; the
-    in-memory fallback stores it as a dict already -- normalize both to a dict|None here."""
+    in-memory fallback stores it as a dict already -- normalize both to a dict|None here.
+    `location_of_interest` is camera-only (not Scenario.geometry): map-drop centroid, else
+    gazetteer coordinates for the stored location name."""
     record = db.get_scenario(scenario_id)
     if record is None:
         return JSONResponse(status_code=404, content={"error": "scenario not found", "scenario_id": scenario_id})
     geometry = record.get("geometry")
     if isinstance(geometry, str):
         geometry = json.loads(geometry)
+    geom = geometry if isinstance(geometry, dict) else None
     return {
         "scenario_id": record.get("scenario_id", scenario_id),
         "description": record.get("description", ""),
         "intervention_type": record.get("intervention_type"),
         "location": record.get("location"),
-        "geometry": geometry if isinstance(geometry, dict) else None,
+        "geometry": geom,
+        "location_of_interest": _camera_location_of_interest(record.get("location"), geom),
     }
+
+
+_CLIENT_TIMING_KEYS = ("sumo_ms", "modules_ms", "llm_ms", "total_ms")
+
+
+def _run_public_view(run: dict) -> dict:
+    """Split corridor fields stuffed into timings JSONB so the client timings
+    contract stays {sumo,modules,llm,total}_ms only."""
+    out = dict(run)
+    timings = out.get("timings")
+    if isinstance(timings, dict):
+        out["affected_edges"] = timings.get("affected_edges")
+        out["edge_resolution"] = timings.get("edge_resolution")
+        out["timings"] = {k: timings[k] for k in _CLIENT_TIMING_KEYS if k in timings}
+    else:
+        out.setdefault("affected_edges", None)
+        out.setdefault("edge_resolution", None)
+    return out
 
 
 @app.get("/scenarios/{scenario_id}/latest-run")
@@ -241,7 +297,7 @@ def get_latest_run(scenario_id: str) -> dict:
             status_code=404,
             content={"error": "no completed run", "scenario_id": scenario_id},
         )
-    return run
+    return _run_public_view(run)
 
 
 @app.get("/runs/{run_id}")
@@ -251,7 +307,7 @@ def get_run(run_id: str) -> dict:
     run = db.get_run(run_id)
     if run is None:
         return JSONResponse(status_code=404, content={"error": "run not found", "run_id": run_id})
-    return run
+    return _run_public_view(run)
 
 @app.get("/audit/{run_id}")
 def get_audit(run_id: str) -> dict:
@@ -564,6 +620,7 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
             "edge_counts": traj.edge_counts,
             "location_of_interest": traj.meta.get("location_of_interest"),
             "edge_resolution": traj.meta.get("edge_resolution"),
+            "affected_edges": traj.meta.get("affected_edges") or [],
         })
 
         # Public bias audit (PRD-F6): log this run's persona mode share vs the ground-truth
@@ -595,7 +652,12 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
         await ws.send_json({"type": "SYNTHESIS", "narrative": narrative, "citations": citations})
 
         timings = timer.timings()
-        runtime.persist_run_done(scenario_id, run_id, timings)
+        persist_timings = {
+            **timings,
+            "affected_edges": traj.meta.get("affected_edges") or [],
+            "edge_resolution": traj.meta.get("edge_resolution"),
+        }
+        runtime.persist_run_done(scenario_id, run_id, persist_timings)
         await ws.send_json({
             "type": "DONE",
             "scenario_id": scenario_id,
