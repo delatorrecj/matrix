@@ -38,5 +38,69 @@
     "sumo_edge": "E_terminal_mkt",
     "coordinates": [122.561, 10.691],
     "provisional": true
+  },
+  "molo": {
+    "canonical_name": "Molo",
+    "feature_type": "district",
+    "osm_id": "node/molo-centroid",
+    "sumo_edge": "E_molo_plaza",
+    "coordinates": [122.5446, 10.6969],
+    "provisional": true
+  },
+  "jaro": {
+    "canonical_name": "Jaro",
+    "feature_type": "district",
+    "osm_id": "node/jaro-centroid",
+    "sumo_edge": "E_jaro_cathedral",
+    "coordinates": [122.5573, 10.7233],
+    "provisional": true
+  },
+  "la paz": {
+    "canonical_name": "La Paz",
+    "feature_type": "district",
+    "osm_id": "node/lapaz-centroid",
+    "sumo_edge": "E_la_paz_plaza",
+    "coordinates": [122.5720, 10.7130],
+    "provisional": true
+  },
+  "lapaz": {
+    "canonical_name": "La Paz",
+    "feature_type": "district",
+    "osm_id": "node/lapaz-centroid",
+    "sumo_edge": "E_la_paz_plaza",
+    "coordinates": [122.5720, 10.7130],
+    "provisional": true
+  },
+  "mandurriao": {
+    "canonical_name": "Mandurriao",
+    "feature_type": "district",
+    "osm_id": "node/mandurriao-centroid",
+    "sumo_edge": "E_mandurriao",
+    "coordinates": [122.5480, 10.7190],
+    "provisional": true
+  },
+  "arevalo": {
+    "canonical_name": "Arevalo",
+    "feature_type": "district",
+    "osm_id": "node/arevalo-centroid",
+    "sumo_edge": "E_arevalo_plaza",
+    "coordinates": [122.5160, 10.6860],
+    "provisional": true
+  },
+  "villa arevalo": {
+    "canonical_name": "Arevalo",
+    "feature_type": "district",
+    "osm_id": "node/arevalo-centroid",
+    "sumo_edge": "E_arevalo_plaza",
+    "coordinates": [122.5160, 10.6860],
+    "provisional": true
+  },
+  "city proper": {
+    "canonical_name": "Iloilo City Proper (Downtown)",
+    "feature_type": "district",
+    "osm_id": "node/1111111",
+    "sumo_edge": "E_downtown_main",
+    "coordinates": [122.566, 10.695],
+    "provisional": true
   }
 }

@@ -8,6 +8,7 @@ from matrix_kernel.gazetteer import (
     GAZETTEER_FILE,
     annotate_query_with_gazetteer,
     load_gazetteer,
+    location_coordinates,
     resolve_colloquial_term,
 )
 
@@ -60,3 +61,15 @@ def test_annotate_query_noop_on_miss():
     query = "what if we build a new brt along diversion road"
     annotated = annotate_query_with_gazetteer(query)
     assert annotated == query
+
+
+def test_molo_exact_and_query_substring():
+    entry = resolve_colloquial_term("Molo")
+    assert entry is not None
+    assert entry.canonical_name == "Molo"
+    assert location_coordinates("Molo") == [122.5446, 10.6969]
+    assert location_coordinates("3-storey school in MOLO") == [122.5446, 10.6969]
+
+
+def test_location_coordinates_miss():
+    assert location_coordinates("this has no colloquial terms in it") is None
