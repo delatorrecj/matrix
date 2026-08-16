@@ -1,6 +1,15 @@
 /** Map data layers — factories, hook, and static-layer loader. See README.md. */
 
 export { congestionLayer, CONGESTION_LAYER_ID } from "./congestionLayer";
+export { affectedEdgesLayer, AFFECTED_EDGES_LAYER_ID } from "./affectedEdgesLayer";
+export {
+  AFFECTED_BUFFER_M,
+  affectedBounds,
+  filterAffectedFeatures,
+  honestAffectedEdgeIds,
+  isHonestEdgeResolution,
+  zoomForBbox,
+} from "./affectedCorridor";
 export {
   confidenceLayer,
   confidenceCellsFromGeoJSON,

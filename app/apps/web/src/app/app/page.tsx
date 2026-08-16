@@ -24,6 +24,7 @@ import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
+import { useHasMounted } from "@/lib/useHasMounted";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
 
@@ -134,6 +135,7 @@ export default function MatrixCockpit() {
   };
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  const mapMounted = useHasMounted();
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -246,6 +248,7 @@ export default function MatrixCockpit() {
           className="absolute inset-0 z-0"
           onContextMenu={handleContextMenu}
         >
+          {mapMounted ? (
           <DeckGL
             viewState={{
               ...viewState,
@@ -268,6 +271,9 @@ export default function MatrixCockpit() {
               onLoad={() => setMapLoaded(true)}
             />
           </DeckGL>
+          ) : (
+            <div className="absolute inset-0 bg-background" aria-hidden="true" />
+          )}
           {menuPosition && menuLngLat && (
             <MapContextMenu
               position={menuPosition}

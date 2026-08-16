@@ -109,6 +109,8 @@ export interface ScenarioRecord {
   intervention_type: string | null;
   location: string | null;
   geometry: ScenarioGeometry | null;
+  /** Camera [lon, lat] from map-drop geometry or gazetteer; null if unknown. */
+  location_of_interest?: [number, number] | null;
 }
 
 /**
@@ -148,6 +150,8 @@ export interface LatestRunRecord {
   status: string;
   duration_ms?: number | null;
   timings?: Record<string, number> | null;
+  affected_edges?: string[] | null;
+  edge_resolution?: string | null;
   results: StoredDimensionResult[];
 }
 

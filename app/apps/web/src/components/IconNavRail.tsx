@@ -100,9 +100,9 @@ export function IconNavRail({
   };
 
   return (
-    <>
+    <div className="h-full shrink-0 relative z-20">
       <nav
-        className="w-16 h-full bg-surface border-r border-border flex flex-col py-4 shrink-0 relative z-20"
+        className="w-16 h-full bg-surface border-r border-border flex flex-col py-4"
         aria-label="Main navigation"
       >
         {/* Logo → Home */}
@@ -142,6 +142,6 @@ export function IconNavRail({
       )}
 
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </>
+    </div>
   );
 }

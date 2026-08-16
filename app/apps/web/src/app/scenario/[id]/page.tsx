@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Map, Marker } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
@@ -36,6 +36,11 @@ import {
   useMapLayers,
   fetchStaticLayer,
   confidenceCellsFromGeoJSON,
+  affectedEdgesLayer,
+  filterAffectedFeatures,
+  honestAffectedEdgeIds,
+  affectedBounds,
+  zoomForBbox,
 } from "@/components/map";
 import type {
   ConfidenceCell,
@@ -49,6 +54,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
 import { getScenario, getLatestRun, type ScenarioGeometry, type StoredDimensionResult } from "@/lib/api";
+import { useHasMounted } from "@/lib/useHasMounted";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import type { MapRef } from "react-map-gl/maplibre";
@@ -65,12 +71,12 @@ const ILOILO_BOUNDS = {
 // deck.gl onViewStateChange is generic over ViewStateT (TransitionProps | MapViewState),
 // so no concrete view-state shape is assignable; we mutate the live viewState to clamp it.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleViewStateChange = ({ viewState }: any) => {
-  viewState.longitude = Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng);
-  viewState.latitude = Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat);
-  viewState.zoom = Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom);
-  return viewState;
-};
+const handleViewStateChange = ({ viewState }: any) => ({
+  ...viewState,
+  longitude: Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng),
+  latitude: Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat),
+  zoom: Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom),
+});
 
 /** Reduce a scenario's GeoJSON geometry to a single [lng, lat] to fly the map to —
  * a Point's own coordinates, or the centroid (mean of the outer ring, excluding the
@@ -88,6 +94,17 @@ function geometryToLngLat(geometry: ScenarioGeometry | null): [number, number] |
   const cx = vertices.reduce((s, v) => s + v[0], 0) / n;
   const cy = vertices.reduce((s, v) => s + v[1], 0) / n;
   return [cx, cy];
+}
+
+function recordLocationOfInterest(record: {
+  location_of_interest?: [number, number] | null;
+  geometry: ScenarioGeometry | null;
+}): [number, number] | null {
+  const loi = record.location_of_interest;
+  if (Array.isArray(loi) && loi.length === 2 && typeof loi[0] === "number" && typeof loi[1] === "number") {
+    return [loi[0], loi[1]];
+  }
+  return geometryToLngLat(record.geometry);
 }
 
 /** Map a stored GET /runs|/latest-run result into the same card shape as DIMENSION_RESULT. */
@@ -173,6 +190,7 @@ export default function ScenarioSimulation() {
   } = useMapContextMenu({ mapRef });
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  const mapMounted = useHasMounted();
   const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
 
   // CR-013: fetch the scenario's own parsed location once, so the results view can pan/
@@ -182,7 +200,7 @@ export default function ScenarioSimulation() {
     getScenario(scenarioId)
       .then((record) => {
         if (cancelled) return;
-        setLocationOfInterest(geometryToLngLat(record.geometry));
+        setLocationOfInterest(recordLocationOfInterest(record));
       })
       .catch(() => {
         // No scenario metadata (404 / API down) — keep the default view, no error surfaced.
@@ -253,6 +271,8 @@ export default function ScenarioSimulation() {
   // are assembled by useMapLayers. Static files (edges/flood/confidence) load once; congestion
   // is driven by the live EDGE_COUNTS stream event (reset per run, like tripsData/results).
   const [edgeCounts, setEdgeCounts] = useState<EdgeCounts>({});
+  const [affectedEdges, setAffectedEdges] = useState<string[]>([]);
+  const [edgeResolution, setEdgeResolution] = useState<string | null>(null);
   const [activeLayers, setActiveLayers] = useState<MapLayerToggles>({
     agents: true, congestion: true, confidence: false, flood: false,
   });
@@ -294,17 +314,32 @@ export default function ScenarioSimulation() {
     }
   }, [locationOfInterest, mapLoaded]);
 
+  const affectedCollection = useMemo(
+    () =>
+      filterAffectedFeatures(
+        edgesGeoJSON,
+        honestAffectedEdgeIds(edgeResolution, affectedEdges),
+      ),
+    [edgesGeoJSON, edgeResolution, affectedEdges],
+  );
+
+  const haloLayer = useMemo(() => affectedEdgesLayer(affectedCollection), [affectedCollection]);
+
+  // Second fly: fit honest affected edges + 300 m buffer. Skip fallback (empty collection).
   useEffect(() => {
-    if (inspectingMetric && isDrawerOpen && mapRef.current) {
-      setViewState(prev => ({
-        ...prev,
-        longitude: 122.56,
-        latitude: 10.71,
-        zoom: 14.5,
-        transitionDuration: 800,
-      }));
-    }
-  }, [inspectingMetric, isDrawerOpen]);
+    if (!mapLoaded || !affectedCollection) return;
+    const bbox = affectedBounds(affectedCollection);
+    if (!bbox) return;
+    const [minLng, minLat, maxLng, maxLat] = bbox;
+    setViewState((prev) => ({
+      ...prev,
+      longitude: (minLng + maxLng) / 2,
+      latitude: (minLat + maxLat) / 2,
+      zoom: zoomForBbox(bbox),
+      transitionDuration: 1800,
+      transitionInterpolator: new FlyToInterpolator({ speed: 1.2 }),
+    }));
+  }, [affectedCollection, mapLoaded]);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -334,7 +369,11 @@ export default function ScenarioSimulation() {
     currentTime: time,
   });
   
-  const layers = [...dataLayers, ...(activeLayers.agents ? [tripsLayer] : [])].map((layer: Layer) => {
+  const layers = [
+    ...dataLayers,
+    ...(haloLayer ? [haloLayer] : []),
+    ...(activeLayers.agents ? [tripsLayer] : []),
+  ].map((layer: Layer) => {
     if (!inspectingMetric || !isDrawerOpen) return layer;
     
     let isHighlighted = false;
@@ -393,6 +432,12 @@ export default function ScenarioSimulation() {
           setResults(cards);
           setTripsData([]);
           setEdgeCounts({});
+          setAffectedEdges(
+            Array.isArray(run.affected_edges)
+              ? run.affected_edges.filter((id): id is string => typeof id === "string")
+              : [],
+          );
+          setEdgeResolution(typeof run.edge_resolution === "string" ? run.edge_resolution : null);
           setSynthesis(null);
           const timings =
             run.timings && typeof run.timings === "object"
@@ -479,6 +524,12 @@ export default function ScenarioSimulation() {
         // Aggregate per-edge counts that drive the congestion choropleth.
         if (msg.edge_counts && typeof msg.edge_counts === "object") {
           setEdgeCounts(msg.edge_counts as EdgeCounts);
+        }
+        if (typeof msg.edge_resolution === "string") {
+          setEdgeResolution(msg.edge_resolution);
+        }
+        if (Array.isArray(msg.affected_edges)) {
+          setAffectedEdges(msg.affected_edges.filter((id): id is string => typeof id === "string"));
         }
         // Only fill location when scenario fetch left it unset (avoid re-fly mid-run).
         if (Array.isArray(msg.location_of_interest) && msg.location_of_interest.length === 2) {
@@ -577,6 +628,8 @@ export default function ScenarioSimulation() {
     setResults([]);
     setTripsData([]);
     setEdgeCounts({});
+    setAffectedEdges([]);
+    setEdgeResolution(null);
     setSynthesis(null);
     setRunState(initialRunState());
     setRunAttempt((a) => a + 1);
@@ -829,6 +882,7 @@ export default function ScenarioSimulation() {
           className="absolute inset-0"
           onContextMenu={handleContextMenu}
         >
+        {mapMounted ? (
         <DeckGL
           viewState={{
             ...viewState,
@@ -857,6 +911,9 @@ export default function ScenarioSimulation() {
             )}
           </Map>
         </DeckGL>
+        ) : (
+          <div className="absolute inset-0 bg-background" aria-hidden="true" />
+        )}
         {menuPosition && menuLngLat && (
           <MapContextMenu
             position={menuPosition}
