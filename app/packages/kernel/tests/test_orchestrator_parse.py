@@ -140,3 +140,60 @@ def test_ambiguous_query_raises_with_clarification():
     )
     with pytest.raises(ValueError, match="Where should the school"):
         parse_scenario("what if we build a school?", client=FakeClient(schema))
+
+
+def test_new_facility_maps_stated_kind_and_capacity():
+    """A 3,000-seat school in Molo is demand (BEH-4), not a construction lane_closure."""
+    schema = ScenarioSchema(
+        description="Build a 3,000-seat school in Molo",
+        intervention_type="new_facility",
+        location="Molo",
+        facility_kind="school",
+        capacity=3000,
+        is_ambiguous=False,
+    )
+    sc = parse_scenario(
+        "What if we build a 3,000-seat school in Molo?",
+        client=FakeClient(schema),
+    )
+    assert sc.intervention_type == "new_facility"
+    assert sc.location == "Molo"
+    assert sc.corridor == "Molo"
+    assert sc.parameters == {"facility_kind": "school", "capacity": 3000}
+    assert sc.geometry is None
+
+
+def test_system_instruction_classifies_new_facility_not_construction(monkeypatch):
+    """Live Azure follows the system prompt; it must not remap a school to lane_closure."""
+    seen: dict[str, str] = {}
+
+    def capture(client, *, messages, **kwargs):
+        seen["content"] = messages[0]["content"]
+        schema = ScenarioSchema(
+            description="Build a 3,000-seat school in Molo",
+            intervention_type="new_facility",
+            location="Molo",
+            facility_kind="school",
+            capacity=3000,
+            is_ambiguous=False,
+        )
+        class _Msg:
+            parsed = schema
+            content = ""
+        class _Choice:
+            message = _Msg()
+        class _Resp:
+            choices = [_Choice()]
+        return _Resp()
+
+    monkeypatch.setattr("matrix_kernel.orchestrator.generate_chat_completion", capture)
+    parse_scenario("What if we build a 3,000-seat school in Molo?", client=FakeClient(
+        ScenarioSchema(
+            description="x", intervention_type="new_facility", location="Molo",
+            facility_kind="school", capacity=3000, is_ambiguous=False,
+        )
+    ))
+    text = seen["content"]
+    assert "new_facility" in text
+    assert "construction-phase" not in text
+    assert "BEH-4" in text

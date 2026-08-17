@@ -251,6 +251,25 @@ def test_scenario_from_record_v1_only_is_lane_closure():
     assert sc.geometry is None
 
 
+def test_scenario_from_record_rebuilds_new_facility_not_lane_closure():
+    rec = {
+        "scenario_id": "scn-school",
+        "description": "Build a 3,000-seat school in Molo",
+        "intervention_type": "new_facility",
+        "location": "Molo",
+        "parsed_params": {
+            "corridor": "Molo",
+            "lanes_closed": 1,
+            "parameters": {"facility_kind": "school", "capacity": 3000},
+        },
+        "geometry": None,
+    }
+    sc = main._scenario_from_record(rec)
+    assert sc.intervention_type == "new_facility"
+    assert sc.location == "Molo"
+    assert sc.parameters == {"facility_kind": "school", "capacity": 3000}
+
+
 def _fake_redis_module(get_returns=None):
     """A stand-in `redis` module whose client.get(...) always returns `get_returns`."""
     return SimpleNamespace(from_url=lambda url: SimpleNamespace(get=lambda key: get_returns))
@@ -280,6 +299,32 @@ def test_get_trajectory_simulates_persisted_scenario(monkeypatch):
     assert captured["sc"].location == "Diversion Rd"
     assert captured["sc"].geometry["type"] == "Point"
     assert captured["sc"].parameters == {"max_speed_kph": 20.0}
+
+
+def test_get_trajectory_simulates_persisted_new_facility(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=None))
+    monkeypatch.setattr(main.db, "get_scenario", lambda sid: {
+        "scenario_id": sid,
+        "description": "Build a 3,000-seat school in Molo",
+        "intervention_type": "new_facility",
+        "location": "Molo",
+        "parsed_params": {
+            "corridor": "Molo",
+            "parameters": {"facility_kind": "school", "capacity": 3000},
+        },
+        "geometry": None,
+    })
+    captured: dict = {}
+
+    def fake_simulate(scenario):
+        captured["sc"] = scenario
+        return "TRAJ"
+
+    monkeypatch.setattr(main, "simulate", fake_simulate)
+    assert main._get_trajectory("scn-school") == "TRAJ"
+    assert captured["sc"].intervention_type == "new_facility"
+    assert captured["sc"].parameters == {"facility_kind": "school", "capacity": 3000}
 
 
 def test_get_trajectory_blank_only_when_nothing_persisted(monkeypatch):

@@ -28,15 +28,20 @@ from dataclasses import dataclass, field
 
 KPH_TO_MS = 1.0 / 3.6
 
-INTERVENTION_TYPES = ("lane_closure", "full_closure", "speed_change", "capacity_change")
+INTERVENTION_TYPES = (
+    "lane_closure", "full_closure", "speed_change", "capacity_change", "new_facility",
+)
 
 # Defaults applied ONLY when the orchestrator/caller omits a parameter. Never silent:
 # the exact applied values are always recorded in the dispatch record -> Trajectory.meta.
+# new_facility has no kernel default for kind/capacity — the caller must state them
+# (orchestrator never invents seats; PRD-F14).
 _PARAMETER_DEFAULTS: dict[str, dict] = {
     "lane_closure": {"lanes_closed": 1},
     "full_closure": {},
     "speed_change": {"max_speed_kph": 30.0},   # traffic-calming fallback; orchestrator should supply
     "capacity_change": {"capacity_factor": 1.2},  # mild widening fallback; orchestrator should supply
+    "new_facility": {},
 }
 
 # The demand model routes the "passenger" vehicle class (build_demand.py), so disallowing
@@ -219,11 +224,31 @@ def _apply_capacity_change(traci_mod, scenario: Scenario, edges: list[str]) -> d
     }
 
 
+def _apply_new_facility(traci_mod, scenario: Scenario, edges: list[str]) -> dict:
+    """Demand-only: a school/market/terminal changes travel demand (BEH-4), not geometry.
+
+    TraCI is unused. `edges` is ignored so a leftover corridor list cannot close lanes.
+    """
+    params = dict(scenario.effective_parameters())
+    return {
+        "intervention_type": "new_facility",
+        "edges": [],
+        "edge_lanes": {},
+        "parameters": params,
+        "traci_calls": [],
+        "assumptions": [
+            "new_facility changes travel demand (BEH-4), not network geometry; no TraCI lane or speed edit",
+        ],
+        "lanes_closed_legacy": 0,
+    }
+
+
 _HANDLERS = {
     "lane_closure": _apply_lane_closure,
     "full_closure": _apply_full_closure,
     "speed_change": _apply_speed_change,
     "capacity_change": _apply_capacity_change,
+    "new_facility": _apply_new_facility,
 }
 
 

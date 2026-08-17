@@ -52,9 +52,25 @@ def test_provisional_constants_match_module_literals():
 
 def test_every_scored_equation_is_in_conformance_ledger():
     scored_ids = {r.equation_id for r in _all_scored_results()}
-    # BEH-4 lives in demand_delta, not the five module score() paths
+    # BEH-4 is scored only when Trajectory.meta carries a demand_delta summary
     expected = {eid for eid in EQUATION_CONFORMANCE if eid != "BEH-4"}
     assert scored_ids == expected
+
+
+def test_beh4_scored_when_demand_delta_present_is_in_ledger():
+    traj = _sample_traj()
+    traj.meta["demand_delta"] = {
+        "demand_trips_total": 2700,
+        "equation_id": "BEH-4",
+        "input_dataset_ids": ["Calderon2014"],
+        "confidence": "L",
+        "unit": "trips/window",
+        "references": ["Calderon2014"],
+        "assumptions": ["equation BEH-4"],
+    }
+    ids = {r.equation_id for r in behavioral.score(traj, baseline={"C0": 100, "C1": 50})}
+    assert "BEH-4" in ids
+    assert "BEH-4" in EQUATION_CONFORMANCE
 
 
 def test_conformance_tags_cover_all_ledger_entries():

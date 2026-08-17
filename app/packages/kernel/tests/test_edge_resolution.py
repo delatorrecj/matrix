@@ -159,3 +159,48 @@ def test_location_of_interest_uses_first_edge_only_not_a_centroid(monkeypatch):
     monkeypatch.setattr(geo, "edge_midpoint_lonlat", fake_midpoint)
     runner._location_of_interest(["first", "second", "third"], "keyword-match")
     assert seen_edge_ids == ["first"]
+
+
+def test_new_facility_site_is_facility_demand_not_a_corridor(monkeypatch):
+    """A school in Molo must not close Avanceña or hash onto the busiest edge."""
+    monkeypatch.setattr(runner, "_keyword_edges", lambda loc: ["AVANCENA"])
+    monkeypatch.setattr(runner, "_busiest_baseline_edges", lambda top_n=1: ["BUSIEST"])
+    monkeypatch.setattr(runner, "_edge_ids", lambda: frozenset({"E_molo_plaza"}))
+    import matrix_kernel.gazetteer as gaz
+
+    class _Hit:
+        sumo_edge = "E_molo_plaza"
+        provisional = True
+        street_name = "Avanceña"
+
+    monkeypatch.setattr(gaz, "resolve_colloquial_term", lambda loc: _Hit())
+    sc = Scenario(
+        "s1",
+        "3000-seat school in Molo",
+        intervention_type="new_facility",
+        location="Molo",
+        parameters={"facility_kind": "school", "capacity": 3000},
+    )
+    edges, method = runner.resolve_intervention_site(sc)
+    assert edges == []
+    assert method == "facility-demand"
+    assert not method.startswith("busiest-baseline-fallback")
+    assert runner._location_of_interest(edges, method) is None
+
+
+def test_facility_demand_meta_is_beh4_summary_without_trips():
+    sc = Scenario(
+        "s1",
+        "3000-seat school in Molo",
+        intervention_type="new_facility",
+        location="Molo",
+        parameters={"facility_kind": "school", "capacity": 3000},
+    )
+    meta = runner.facility_demand_meta(sc)
+    assert meta is not None
+    assert meta["demand_trips_total"] == 2700
+    assert meta["equation_id"] == "BEH-4"
+    assert meta["input_dataset_ids"] == ["Calderon2014"]
+    assert meta["confidence"] == "L"
+    assert "trips" not in meta
+    assert runner.facility_demand_meta(Scenario("s", "d", location="Molo")) is None
