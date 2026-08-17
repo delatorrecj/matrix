@@ -76,6 +76,27 @@ jobs:
       - name: Run kernel tests
         run: uv run --no-sync python -m pytest -q
 
+      # Startup-generated ledgers. Untracked on purpose (see app/.gitignore). VAL-01 is
+      # NOT_RUN here until a CI-seedable SUMO fixture exists; credibility is fixture-backed
+      # and should always write. Upload so the published FAIL/NOT_RUN is CI-reproducible.
+      - name: Generate validation and credibility reports
+        env:
+          MATRIX_REDIS_URL: redis://localhost:59998/0
+        run: |
+          uv run --no-sync python -m matrix_kernel.build_validation_report
+          uv run --no-sync python -c "from matrix_kernel.credibility import write_credibility_report; print(write_credibility_report())"
+
+      - name: Upload validation and credibility reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-credibility-reports
+          path: |
+            app/validation_report.json
+            app/validation_report.md
+            app/credibility_report.json
+          if-no-files-found: error
+          retention-days: 30
+
   api:
     name: api (pytest)
     runs-on: ubuntu-latest

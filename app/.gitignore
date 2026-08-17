@@ -34,9 +34,13 @@ fcd-output*.xml
 *.duckdb
 .tmp/
 
-# Generated validation report (CR-007 PR 5b): a computed, baseline-dependent artifact
-# produced by `python -m matrix_kernel.build_validation_report`. GET /validation serves it
-# when present, else the live module reports NOT_RUN. Deliberately NOT committed — generate
-# it at deploy once demand is calibrated; an uncalibrated VAL-01 is withheld, not shipped.
+# Generated at API startup and in CI (`python -m matrix_kernel.build_validation_report`
+# plus write_credibility_report). GET /validation and GET /credibility serve them when
+# present. Not committed — CI uploads them as artifacts so the ledger is reproducible,
+# not whatever the last laptop produced. Without the SUMO net, VAL-01 is NOT_RUN
+# (honest); a live FAIL publishes when a baseline exists (CR-014).
 validation_report.json
+validation_report.md
+credibility_report.json
 packages/kernel/validation_report.json
+packages/kernel/credibility_report.json
