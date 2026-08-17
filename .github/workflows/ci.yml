@@ -8,9 +8,20 @@
 #   Redis that lacks the seeded baseline/demo keys (`tests/test_timing_probe.py` calls
 #   `load_baseline()`, which raises KeyError on an empty Redis). Seeding requires the
 #   gitignored ~42 MB SUMO network (`app/packages/kernel/data/iloilo.net.xml`), which a CI
-#   clone does not have. Expected kernel result in CI: ~20 passed, 3 skipped (the documented
-#   "SUMO up, Redis down" mode — see CLAUDE.md / docs/qad-matrix.md). If a CI-seedable
-#   fixture ever lands, add `services: redis: image: redis:7` back to the kernel job.
+#   clone does not have. If a CI-seedable fixture ever lands, add
+#   `services: redis: image: redis:7` back to the kernel job.
+# * Three things are absent from a CI clone, and each has its own guard — don't add a
+#   test that assumes any of them without one, or it fails here while passing locally:
+#     - Redis            -> the test pings it and skips (tests/test_timing_probe.py).
+#     - the SUMO network -> module-level `if not NET.exists(): pytest.skip(...)`
+#       (tests/test_geometry_sumolib.py, tests/test_timing_probe.py). NOTE that
+#       `pytest.importorskip("sumo")` does NOT cover this: `uv sync` installs the
+#       eclipse-sumo wheel, so the import guard passes and the DATA is what's missing.
+#     - `data/raw/`      -> gitignored (data/.gitignore); the matrix_kernel.datasets
+#       loaders backed by it return None and the modules degrade to confidence L. Assert
+#       that contract by patching the loader seam, not by assuming the files are there
+#       (tests/test_economic.py, tests/test_societal.py).
+#   Deliberately no expected pass/skip count here — it went stale twice. Read the job log.
 # * Playwright e2e runs against a MOCKED backend (page.route / page.routeWebSocket in
 #   tests/e2e/_mock-backend.ts) — hermetic, so it needs only the Next.js server, no API/
 #   Redis/SUMO. A *full-stack* e2e (live API + seeded data) still does not run here: it
@@ -60,7 +71,7 @@ jobs:
       - name: Sync dependencies (locked, includes eclipse-sumo)
         run: uv sync --locked --extra dev
 
-      # Expected: ~20 passed, 3 skipped (Redis-bound integration tests skip — see header).
+      # Redis / SUMO-network / data-raw-bound tests skip themselves — see header.
       - name: Run kernel tests
         run: uv run --no-sync python -m pytest -q
 

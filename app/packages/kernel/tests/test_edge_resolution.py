@@ -137,6 +137,10 @@ def test_location_of_interest_none_for_any_fallback_variant():
 
 def test_location_of_interest_set_for_keyword_match(monkeypatch):
     import matrix_kernel.geometry as geo
+    # _location_of_interest evaluates _net() as the first argument, BEFORE the patched
+    # midpoint runs -- patching only edge_midpoint_lonlat still reads the real (gitignored)
+    # net, so this passed locally and failed in CI. Patch the net seam too, like the tests above.
+    monkeypatch.setattr(runner, "_net", lambda: object())
     monkeypatch.setattr(geo, "edge_midpoint_lonlat", lambda net, eid: (122.123456, 10.654321))
     assert runner._location_of_interest(["e1", "e2"], "keyword-match") == [122.12346, 10.65432]
 
@@ -151,6 +155,7 @@ def test_location_of_interest_uses_first_edge_only_not_a_centroid(monkeypatch):
         seen_edge_ids.append(eid)
         return (1.0, 2.0)
 
+    monkeypatch.setattr(runner, "_net", lambda: object())   # see note above
     monkeypatch.setattr(geo, "edge_midpoint_lonlat", fake_midpoint)
     runner._location_of_interest(["first", "second", "third"], "keyword-match")
     assert seen_edge_ids == ["first"]
