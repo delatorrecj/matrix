@@ -208,6 +208,46 @@ def _windows_path_for_docker(p: Path) -> str:
     return f"/{drive[0].lower()}{posix_rest}"
 
 
+def _netconvert_args(osm_files: str, output_file: str) -> list[str]:
+    """Shared netconvert flags (Docker stage2 and the native CI path)."""
+    return [
+        "--osm-files", osm_files,
+        "--output-file", output_file,
+        "--geometry.remove", "true",
+        "--roundabouts.guess", "true",
+        "--junctions.join", "true",
+        "--remove-edges.isolated",
+        "--keep-edges.by-type", _KEEP_TYPES,
+        "--no-internal-links", "true",
+        "--osm.turn-lanes",
+        "--output.original-names",
+        "--output.street-names", "true",
+        "--xml-validation", "never",
+    ]
+
+
+def stage2_netconvert_native(osm_path: Path, net_path: Path) -> Path:
+    """Run the eclipse-sumo wheel's netconvert (CI — no Docker)."""
+    if not osm_path.exists():
+        raise FileNotFoundError(f"OSM input not found: {osm_path}")
+    net_path.parent.mkdir(parents=True, exist_ok=True)
+    sys.path.insert(0, str(APP / "packages" / "kernel"))
+    from matrix_kernel import sumo_env
+
+    cmd = [sumo_env.bin_path("netconvert"), *_netconvert_args(str(osm_path), str(net_path))]
+    print(f"[stage2] native netconvert {osm_path.name} -> {net_path.name}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    for line in (result.stdout + result.stderr).strip().splitlines()[-20:]:
+        print(f"  [nc] {line}")
+    if result.returncode != 0:
+        print(result.stderr)
+        raise RuntimeError(f"netconvert exited {result.returncode}")
+    if not net_path.exists():
+        raise FileNotFoundError(f"netconvert returned 0 but {net_path} missing")
+    print(f"[stage2] OK wrote {net_path.name} ({net_path.stat().st_size:,} bytes)")
+    return net_path
+
+
 def stage2_netconvert(osm_path: Path, net_path: Path) -> Path:
     """Run netconvert inside the SUMO Docker image → iloilo.net.xml.
 
@@ -232,32 +272,7 @@ def stage2_netconvert(osm_path: Path, net_path: Path) -> Path:
         "-v", f"{mount_src}:/data",
         SUMO_IMG,
         "netconvert",
-        # ── input / output ──
-        "--osm-files",            f"/data/{osm_path.name}",
-        "--output-file",          f"/data/{net_path.name}",
-        # ── network simplification ──
-        "--geometry.remove",      "true",
-        "--roundabouts.guess",    "true",
-        "--junctions.join",       "true",
-        "--remove-edges.isolated",
-        # ── vehicle network (pedestrian layer deferred to SOCI-4, Milestone B) ──
-        "--keep-edges.by-type",   _KEEP_TYPES,
-        # ── junction / lane detail ──
-        # Internal-link geometry is the dominant net-size driver. Disable it for the
-        # Milestone A vehicle sim — BEH-1/2/3 are edge-level trip-count / V·C metrics that
-        # don't need intersection micro-dynamics. Re-enable for higher-fidelity junctions.
-        "--no-internal-links",    "true",
-        "--osm.turn-lanes",
-        # ── output metadata ──
-        "--output.original-names",
-        # Write the OSM `name` tag onto each edge so the kernel can resolve a scenario's
-        # NAMED corridor (runner.target_edges; the VAL-01 corridor→edge mapping) instead of
-        # silently falling back to the busiest baseline edge. Without this every edge's
-        # getName() is empty, so keyword/NL location targeting never matches (PRD-F14: a
-        # silent busiest-edge fallback mislabeled as a keyword match). Stage 1 already
-        # preserves the `name` way-tag, so this only needs the netconvert flag.
-        "--output.street-names",  "true",
-        "--xml-validation",       "never",   # suppress DTD warnings
+        *_netconvert_args(f"/data/{osm_path.name}", f"/data/{net_path.name}"),
     ]
 
     print(f"[stage2] running netconvert inside {SUMO_IMG} …")
@@ -457,6 +472,12 @@ def main() -> int:
     ap.add_argument(
         "--validate", action="store_true",
         help="After building the network, validate it with sumolib")
+    ap.add_argument(
+        "--from-osm", type=Path, default=None,
+        help="Skip stage 1 and netconvert this OSM file (CI fixture path)")
+    ap.add_argument(
+        "--native", action="store_true",
+        help="Run netconvert from the eclipse-sumo wheel instead of Docker")
     args = ap.parse_args()
 
     osm_path = KERNEL_DATA / "iloilo.osm"
@@ -467,11 +488,27 @@ def main() -> int:
     ok = True
 
     try:
+        if args.from_osm:
+            osm_path = args.from_osm.resolve()
+            if args.native:
+                stage2_netconvert_native(osm_path, net_path)
+            else:
+                stage2_netconvert(osm_path, net_path)
+            if args.validate or run_all:
+                ok = validate_net(net_path)
+            if ok:
+                print("\n[build_network] Pipeline complete.")
+                print(f"  {net_path}")
+            return 0 if ok else 1
+
         if run_all or args.stage == 1:
             stage1_json_to_osm()
 
         if run_all or args.stage == 2:
-            stage2_netconvert(osm_path, net_path)
+            if args.native:
+                stage2_netconvert_native(osm_path, net_path)
+            else:
+                stage2_netconvert(osm_path, net_path)
             if args.validate or run_all:
                 ok = validate_net(net_path)
 
