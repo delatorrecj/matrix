@@ -33,6 +33,22 @@ vi.mock("@deck.gl/geo-layers", () => ({
 // Sibling panels own their own fetches/markup — not under test here.
 vi.mock("@/components/InspectDrawer", () => ({ default: () => null }));
 vi.mock("@/components/ValidationPanel", () => ({ default: () => null }));
+// CR-013 bootstrap awaits getScenario/getLatestRun before opening the WS — stub them so
+// the page's own effect resolves in a microtask instead of racing a real network call.
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return {
+    ...actual,
+    getScenario: vi.fn().mockResolvedValue({
+      scenario_id: "scn-test",
+      description: "",
+      intervention_type: null,
+      location: null,
+      geometry: null,
+    }),
+    getLatestRun: vi.fn().mockResolvedValue(null),
+  };
+});
 vi.mock("@/components/BiasAuditLog", () => ({ default: () => null }));
 
 function stateAfter(events: RunEvent[]) {
@@ -130,10 +146,10 @@ describe("RunProgress", () => {
   });
 
   it("starts honestly at zero", () => {
+    // CR-013 (44631f3): a fresh run never claims placeholder progress — it's
+    // "Connecting…" until the socket opens, not "0/5 · 0/17 results".
     render(<RunProgress runState={initialRunState()} />);
-    expect(screen.getByTestId("progress-line")).toHaveTextContent(
-      "0/5 dimensions · 0/17 results",
-    );
+    expect(screen.getByTestId("progress-line")).toHaveTextContent("Connecting…");
   });
 
   it("shows the per-stage breakdown when DONE carries timings", () => {
@@ -260,14 +276,21 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     return ws;
   }
 
-  it("connects to the scenario's simulate stream via the WS URL builder", () => {
+  /** Render + flush the async CR-013 bootstrap (getScenario/getLatestRun) before the
+   *  WS-opening effect runs, so the socket is deterministically present afterward. */
+  async function renderScenario() {
     render(<ScenarioSimulation />);
+    await act(async () => {});
+  }
+
+  it("connects to the scenario's simulate stream via the WS URL builder", async () => {
+    await renderScenario();
     expect(FakeWebSocket.instances).toHaveLength(1);
     expect(lastSocket().url).toBe("ws://localhost:8000/simulate/scn-test");
   });
 
-  it("shows initializing state while the run is active, then summary cards after DONE", () => {
-    render(<ScenarioSimulation />);
+  it("shows initializing state while the run is active, then summary cards after DONE", async () => {
+    await renderScenario();
     const ws = lastSocket();
     act(() => {
       ws.onopen?.();
@@ -277,14 +300,20 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     // CR-010: active runs show InitializingState, not per-dimension skeletons.
     expect(screen.getByTestId("initializing-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
+    // CR-013 (44631f3): zero results reads as "Running traffic simulation…", not a
+    // "0/5 · 0/17" placeholder.
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
-      "0/5 dimensions · 0/17 results",
+      "Running traffic simulation…",
     );
 
     act(() => ws.emit(RESULT_BEH_1));
 
-    expect(screen.getByTestId("initializing-panel")).toBeInTheDocument();
-    expect(screen.queryByText("Trips on the affected road (morning rush)")).not.toBeInTheDocument();
+    // The first real result flips the panel from InitializingState straight to
+    // SummaryView — it doesn't wait for DONE (page.tsx: `results.length === 0`).
+    expect(screen.queryByTestId("initializing-panel")).not.toBeInTheDocument();
+    expect(screen.getByText("Mode shift")).toBeInTheDocument();
+    expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
+    expect(screen.getByTestId("skeleton-ecological")).toBeInTheDocument();
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
       "1/5 dimensions · 1/17 results",
     );
@@ -292,13 +321,13 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     act(() => ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 }));
 
     expect(screen.queryByTestId("initializing-panel")).not.toBeInTheDocument();
-    expect(screen.getByText("Trips on the affected road (morning rush)")).toBeInTheDocument();
+    expect(screen.getByText("Mode shift")).toBeInTheDocument();
     expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
     expect(screen.getByTestId("skeleton-ecological")).toBeInTheDocument();
   });
 
-  it("renders the map layer legend and ingests EDGE_COUNTS without disrupting the run", () => {
-    render(<ScenarioSimulation />);
+  it("renders the map layer legend and ingests EDGE_COUNTS without disrupting the run", async () => {
+    await renderScenario();
     const ws = lastSocket();
 
     // Layer toggles are present (congestion/confidence/flood are assembled by useMapLayers).
@@ -321,8 +350,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.getByTestId("ws-status")).toHaveTextContent("Running…");
   });
 
-  it("survives unknown event types without losing state", () => {
-    render(<ScenarioSimulation />);
+  it("survives unknown event types without losing state", async () => {
+    await renderScenario();
     const ws = lastSocket();
     act(() => {
       ws.onopen?.();
@@ -334,8 +363,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
   });
 
-  it("shows the queue position while QUEUED", () => {
-    render(<ScenarioSimulation />);
+  it("shows the queue position while QUEUED", async () => {
+    await renderScenario();
     const ws = lastSocket();
     act(() => {
       ws.onopen?.();
@@ -346,8 +375,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.getByTestId("ws-status")).toHaveTextContent("Queued #2");
   });
 
-  it("cancel closes the socket and marks the run cancelled (not failed, not done)", () => {
-    render(<ScenarioSimulation />);
+  it("cancel closes the socket and marks the run cancelled (not failed, not done)", async () => {
+    await renderScenario();
     const ws = lastSocket();
     act(() => {
       ws.onopen?.();
@@ -365,8 +394,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.getByTestId("skeleton-social")).toHaveTextContent("No results received");
   });
 
-  it("renders the ERROR banner and retry opens a fresh socket", () => {
-    render(<ScenarioSimulation />);
+  it("renders the ERROR banner and retry opens a fresh socket", async () => {
+    await renderScenario();
     const first = lastSocket();
     act(() => {
       first.onopen?.();
@@ -393,8 +422,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
   });
 
-  it("shows a disconnect banner when the socket drops mid-run, and reconnects", () => {
-    render(<ScenarioSimulation />);
+  it("shows a disconnect banner when the socket drops mid-run, and reconnects", async () => {
+    await renderScenario();
     const first = lastSocket();
     act(() => {
       first.onopen?.();
@@ -410,12 +439,13 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /reconnect/i }));
     expect(FakeWebSocket.instances).toHaveLength(2);
-    // Accumulated stream state resets for the fresh run.
-    expect(screen.getByTestId("progress-line")).toHaveTextContent("0/17 results");
+    // Accumulated stream state resets for the fresh run, back to "Connecting…"
+    // (CR-013, 44631f3) until the new socket opens.
+    expect(screen.getByTestId("progress-line")).toHaveTextContent("Connecting…");
   });
 
-  it("on DONE shows the duration and per-stage timings, never a disconnect banner", () => {
-    render(<ScenarioSimulation />);
+  it("on DONE shows the duration and per-stage timings, never a disconnect banner", async () => {
+    await renderScenario();
     const ws = lastSocket();
     act(() => {
       ws.onopen?.();
