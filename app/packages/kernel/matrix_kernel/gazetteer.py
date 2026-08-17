@@ -31,6 +31,8 @@ class GazetteerEntry:
     # True until osm_id/sumo_edge are verified against the deployed OSM extract + SUMO net.
     # Defaults True so an entry missing the flag is treated as unverified, never as ground truth.
     provisional: bool = True
+    # OSM/SUMO street-name keyword used when `sumo_edge` is missing from the live net.
+    street_name: str = ""
 
 
 def load_gazetteer() -> dict[str, GazetteerEntry]:
@@ -87,8 +89,9 @@ def annotate_query_with_gazetteer(query: str) -> str:
     # Inject canonical context into the query for the LLM to consume. The PROVISIONAL marker
     # rides along so the model never treats an unverified placeholder id as ground truth.
     flag = " PROVISIONAL-id" if entry.provisional else ""
+    street = f", street: {entry.street_name}" if entry.street_name else ""
     injection = (
         f"\n[GAZETTEER HIT{flag}: '{entry.canonical_name}' (OSM: {entry.osm_id}, "
-        f"SUMO Edge: {entry.sumo_edge})]"
+        f"SUMO Edge: {entry.sumo_edge}{street})]"
     )
     return query + injection

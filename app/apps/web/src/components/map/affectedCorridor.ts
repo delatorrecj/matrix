@@ -1,8 +1,10 @@
 /**
  * Honest "where we edited the net" helpers for the results map.
  *
- * Overlay + second fly only when edge_resolution is a real match
- * (geometry / gazetteer / keyword). Fallback resolutions draw nothing.
+ * Overlay + camera fly only when edge_resolution is a real match
+ * (geometry / gazetteer / keyword / gazetteer-alias). Fallback draws
+ * nothing and leaves the city default view (no location marker, no
+ * GET /scenario gazetteer pan).
  */
 
 import type { EdgesFeatureCollection, Feature, LonLat } from "./types";
@@ -79,6 +81,38 @@ export function affectedBounds(
     if (lat > maxLat) maxLat = lat;
   }
   return expandBboxByMeters([minLng, minLat, maxLng, maxLat], bufferM);
+}
+
+export type ResultsCameraFly =
+  | { kind: "stay" }
+  | { kind: "corridor"; bbox: [number, number, number, number] };
+
+/** Camera follows the corridor box only. No district-centroid / LoI point fly. */
+export function resultsCameraFly(
+  collection: EdgesFeatureCollection | null,
+): ResultsCameraFly {
+  const bbox = affectedBounds(collection);
+  if (!bbox) return { kind: "stay" };
+  return { kind: "corridor", bbox };
+}
+
+/** Unpadded corridor midpoint for the location marker. Null when there is no overlay. */
+export function corridorAnchorLonLat(
+  collection: EdgesFeatureCollection | null,
+): [number, number] | null {
+  const bbox = affectedBounds(collection, 0);
+  if (!bbox) return null;
+  return [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
+}
+
+/** Hydrated completed runs must not auto-fly — that is the refresh zoom-out. */
+export function shouldFlyToCorridor(liveSimulation: boolean): boolean {
+  return liveSimulation;
+}
+
+/** Pan/zoom-in to fit a corridor; never pull the camera farther out. */
+export function zoomWithoutPullingOut(currentZoom: number, fittedZoom: number): number {
+  return Math.max(currentZoom, fittedZoom);
 }
 
 /** Rough Web-Mercator zoom so `spanDeg` fills ~70% of a 800px view. */

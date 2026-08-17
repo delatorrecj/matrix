@@ -117,6 +117,13 @@ def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
         if entry and entry.sumo_edge and entry.sumo_edge in _edge_ids():
             flag = " (PROVISIONAL-id)" if entry.provisional else ""
             return [entry.sumo_edge], f"gazetteer-match{flag}"
+        # District / colloquial names often have no live edge id. A curated street_name
+        # (e.g. Molo → Avanceña, Diversion Rd → Aquino Jr) is still an honest match.
+        alias = (getattr(entry, "street_name", "") or "") if entry else ""
+        if alias:
+            kw_alias = _keyword_edges(alias)
+            if kw_alias:
+                return kw_alias, "gazetteer-alias"
 
     kw = _keyword_edges(loc)
     if kw:
@@ -147,7 +154,8 @@ def _location_of_interest(affected: list[str], edge_resolution: str) -> list[flo
     across all affected edges: a street name can match segments in unrelated
     neighborhoods, and averaging those would land the marker in a meaningless spot
     between them. Only a real resolution (geometry/gazetteer/keyword) earns a marker --
-    showing one for busiest-baseline-fallback would be a glass-box lie (PRD-F14)."""
+    showing one for busiest-baseline-fallback would be a glass-box lie (PRD-F14).
+    The results-map camera uses the corridor box, not this point."""
     if not affected or edge_resolution.startswith("busiest-baseline-fallback"):
         return None
     from matrix_kernel.geometry import edge_midpoint_lonlat

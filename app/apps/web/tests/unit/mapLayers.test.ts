@@ -30,7 +30,7 @@ import {
   withAlpha,
 } from '@/components/map/colors';
 import { congestionLayer, CONGESTION_LAYER_ID } from '@/components/map/congestionLayer';
-import { affectedEdgesLayer, AFFECTED_EDGES_LAYER_ID } from '@/components/map/affectedEdgesLayer';
+import { affectedEdgesLayer, AFFECTED_EDGES_LAYER_ID, AFFECTED_HALO_ALPHA } from '@/components/map/affectedEdgesLayer';
 import {
   confidenceLayer,
   normalizeConfidenceTier,
@@ -193,12 +193,13 @@ describe('congestionLayer', () => {
 });
 
 describe('affectedEdgesLayer', () => {
-  it('draws a non-pickable primary halo', () => {
+  it('draws a non-pickable magenta halo, not primary cobalt', () => {
     const layer = affectedEdgesLayer(EDGES)!;
     expect(layer).toBeInstanceOf(GeoJsonLayer);
     expect(layer.props.id).toBe(AFFECTED_EDGES_LAYER_ID);
     expect(layer.props.pickable).toBe(false);
-    expect(layer.props.getLineColor).toEqual(withAlpha(TOKEN_RGB.primary, 230));
+    expect(layer.props.getLineColor).toEqual(withAlpha(TOKEN_RGB.affected, AFFECTED_HALO_ALPHA));
+    expect(layer.props.lineCapRounded).toBe(false);
   });
 
   it('returns null when there is nothing to halo', () => {

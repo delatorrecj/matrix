@@ -58,7 +58,7 @@ def test_annotate_query_injects_context():
 
 
 def test_annotate_query_noop_on_miss():
-    query = "what if we build a new brt along diversion road"
+    query = "what if we add a roundabout with no named place"
     annotated = annotate_query_with_gazetteer(query)
     assert annotated == query
 
@@ -67,8 +67,17 @@ def test_molo_exact_and_query_substring():
     entry = resolve_colloquial_term("Molo")
     assert entry is not None
     assert entry.canonical_name == "Molo"
+    assert entry.street_name == "Avanceña"
     assert location_coordinates("Molo") == [122.5446, 10.6969]
     assert location_coordinates("3-storey school in MOLO") == [122.5446, 10.6969]
+
+
+def test_diversion_aliases_resolve_to_aquino():
+    for term in ("Diversion Road", "Diversion Rd", "diversion"):
+        entry = resolve_colloquial_term(term)
+        assert entry is not None, term
+        assert entry.canonical_name == "Benigno S. Aquino Jr. Avenue"
+        assert entry.street_name == "Aquino Jr"
 
 
 def test_location_coordinates_miss():
