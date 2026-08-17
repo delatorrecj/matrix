@@ -412,7 +412,13 @@ def test_db_seam_persists_run_and_results(fast_pipeline, client, monkeypatch):
     assert dims[1:] == ("run-1", 5)
     assert done[1:4] == ("persisted", "run-1", "done")
     assert isinstance(done[4], int)  # duration_ms
-    assert set(done[5]) == {"sumo_ms", "modules_ms", "llm_ms", "total_ms"}  # timings
+    # CR-013 (454b4cf): affected_edges/edge_resolution ride along in the persisted
+    # timings JSONB -- the API's public view (_run_public_view) splits them back
+    # out for the client; the raw storage seam keeps them.
+    assert set(done[5]) == {
+        "sumo_ms", "modules_ms", "llm_ms", "total_ms",
+        "affected_edges", "edge_resolution",
+    }
 
 
 def test_db_seam_tolerates_legacy_signature(fast_pipeline, client, monkeypatch):
