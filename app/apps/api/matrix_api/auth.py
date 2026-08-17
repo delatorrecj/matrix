@@ -43,7 +43,7 @@ from starlette.websockets import WebSocket
 # Routes that stay open even with auth enabled: the ops probe (/health), the
 # public-trust validation page (/validation), and the interactive docs.
 EXEMPT_PATHS = frozenset(
-    {"/health", "/validation", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+    {"/health", "/validation", "/credibility", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
 )
 
 DEFAULT_ALLOWED_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")

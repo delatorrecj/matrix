@@ -7,7 +7,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import DeckGL from "@deck.gl/react";
 import {
-  Users, Briefcase, Leaf, HeartHandshake, Route, Map as MapIcon,
+  Users, Briefcase, Leaf, HeartHandshake, Route,
   Layers, Play, Loader2, WifiOff, AlertTriangle, SlidersHorizontal,
   GraduationCap, TrainFront, CloudRain, X, LayoutList
 } from "lucide-react";
@@ -22,9 +22,9 @@ import { HeaderControls } from "@/components/HeaderControls";
 import { MapAttribution } from "@/components/MapAttribution";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
-import { PlaybackBar } from "@/components/PlaybackBar";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
+import { useHasMounted } from "@/lib/useHasMounted";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
 
@@ -95,11 +95,7 @@ export default function MatrixCockpit() {
     handleContextMenu,
   } = useMapContextMenu({ mapRef });
 
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.getMap().setStyle(theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT);
-    }
-  }, [theme]);
+
 
   const [showResultsPanel, setShowResultsPanel] = useState(true);
   // Mobile only: the scenario panel is a bottom sheet that peeks (query visible)
@@ -113,7 +109,6 @@ export default function MatrixCockpit() {
   const [clarification, setClarification] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sampleMode, setSampleMode] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [inspectMetric, setInspectMetric] = useState<string | null>(null);
   const [showLayers, setShowLayers] = useState(false);
   const [activeNavId, setActiveNavId] = useState("home");
@@ -130,37 +125,47 @@ export default function MatrixCockpit() {
     }
   }, [inspectMetric]);
 
-  // Layer Toggles
+  // Layer Toggles — only buildings are live on the cockpit (agents/confidence need a run).
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
     buildings: true,
-    agents: false,
-    confidence: false,
   });
 
   const handleToggleLayer = (id: string) => {
     setActiveLayers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapMounted = useHasMounted();
+
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const updateBuildingVisibility = () => {
-      syncBuilding3dLayer(map, theme, activeLayers.buildings);
+    const syncBuildings = (e?: { type: string; sourceId?: string }) => {
+      if (e && e.type === "sourcedata" && e.sourceId !== "openmaptiles") return;
+      if (map.getSource("openmaptiles")) {
+        try {
+          syncBuilding3dLayer(map, theme, activeLayers.buildings);
+        } catch {
+          // Style not fully ready yet — the next sourcedata/style.load event retries.
+        }
+      }
     };
 
     if (map.isStyleLoaded()) {
-      updateBuildingVisibility();
+      syncBuildings();
     }
 
-    map.on("style.load", updateBuildingVisibility);
+    map.on("style.load", syncBuildings);
+    map.on("sourcedata", syncBuildings);
     const disposeMissingImage = registerMissingImageFallback(map);
 
     return () => {
-      map.off("style.load", updateBuildingVisibility);
+      map.off("style.load", syncBuildings);
+      map.off("sourcedata", syncBuildings);
       disposeMissingImage();
     };
-  }, [activeLayers.buildings, theme]);
+  }, [theme, activeLayers.buildings, mapLoaded]);
 
   const handleNavigation = (id: string) => {
     setActiveNavId(id);
@@ -243,6 +248,7 @@ export default function MatrixCockpit() {
           className="absolute inset-0 z-0"
           onContextMenu={handleContextMenu}
         >
+          {mapMounted ? (
           <DeckGL
             viewState={{
               ...viewState,
@@ -262,8 +268,12 @@ export default function MatrixCockpit() {
               mapLib={maplibregl}
               attributionControl={false}
               reuseMaps
+              onLoad={() => setMapLoaded(true)}
             />
           </DeckGL>
+          ) : (
+            <div className="absolute inset-0 bg-background" aria-hidden="true" />
+          )}
           {menuPosition && menuLngLat && (
             <MapContextMenu
               position={menuPosition}
@@ -403,8 +413,6 @@ export default function MatrixCockpit() {
             <LayerLegend
               layers={[
                 { id: "buildings", label: "3D Buildings", icon: Layers, active: activeLayers.buildings },
-                { id: "agents", label: "Agent Trajectories", icon: Route, active: activeLayers.agents },
-                { id: "confidence", label: "Confidence Heatmap", icon: MapIcon, active: activeLayers.confidence },
               ]}
               onToggleLayer={handleToggleLayer}
             />
@@ -484,14 +492,7 @@ export default function MatrixCockpit() {
           </div>
         )}
 
-        {/* BOTTOM BAR: Playback Bar — hidden on mobile (no trajectories on the home
-            map yet, and it would collide with the scenario bottom sheet). */}
-        <div className="hidden md:block absolute bottom-4 left-4 right-4 z-10 pointer-events-auto">
-          <PlaybackBar
-            isPlaying={isPlaying}
-            onTogglePlay={() => setIsPlaying(!isPlaying)}
-          />
-        </div>
+        {/* Playback lives on /scenario/[id] after a real run — no inert transport chrome here. */}
       </div>
 
       {/* INSPECT DRAWER — only reachable from sample-mode cards; carries sample-labeled provenance */}

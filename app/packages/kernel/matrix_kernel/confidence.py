@@ -82,6 +82,15 @@ def method_capped_confidence(
     return _BY_RANK[min(_RANK[data_tier], _RANK[method_maturity])]
 
 
+def provisional_capped_confidence(input_dataset_ids: Sequence[str]) -> Confidence:
+    """Cap at L for any equation backed by a methods §3.6 PROVISIONAL constant.
+
+    Methods §2 Low-Confidence Protocol: a PROVISIONAL proxy is directional only until
+    replaced with survey/FOI/sourced data — never inherit H/M from the cited datasets alone.
+    """
+    return method_capped_confidence(input_dataset_ids, "L")
+
+
 def earned_confidence_interval(
     point: float,
     sample: Callable[[], float],

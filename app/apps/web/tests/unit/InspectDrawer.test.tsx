@@ -126,6 +126,24 @@ describe("InspectDrawer", () => {
     expect(screen.getByTestId("dataset-meta-cchain")).toBeInTheDocument();
   });
 
+  it("surfaces a VAL-01 uncalibrated-volume notice for corridor metrics", () => {
+    renderDrawer({
+      data: {
+        ...DATA,
+        confidence: "L",
+        equationId: "BEH-1",
+        assumptions: [
+          "confidence capped at L: VAL-01 published FAIL — corridor volumes are directional, not city-calibrated",
+        ],
+      },
+    });
+    expect(screen.getByTestId("inspect-fidelity-notice")).toHaveTextContent(
+      /directional/i
+    );
+    expect(screen.getByTestId("inspect-fidelity-notice")).toHaveTextContent(/VAL-01/);
+    expect(screen.getByTestId("inspect-fidelity-notice")).not.toHaveTextContent(/withheld/i);
+  });
+
   it("shows the computed confidence level — not a hardcoded label", () => {
     renderDrawer();
     expandDrawerDetails();

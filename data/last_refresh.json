@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-08-06T03:13:20+00:00",
+  "removed": [
+    "raw\\osm\\iloilo_osm.json",
+    "raw\\economic\\psa_openstat_aspbi2022_accommodation_food_by_region.csv",
+    "raw\\economic\\psa_openstat_aspbi2022_wholesale_retail_by_region.csv",
+    "raw\\economic\\psa_openstat_fies2023_gini_by_region.csv",
+    "raw\\economic\\psa_openstat_fies2023_income_expenditure_by_region.csv",
+    "raw\\economic\\psa_openstat_gva_accommodation_food_service.csv",
+    "raw\\economic\\psa_openstat_poverty_threshold_by_region.csv",
+    "raw\\economic\\psa_openstat_tourism_expenditure_national.csv",
+    "raw\\economic\\psa_openstat_trade_establishments_2015.csv",
+    "raw\\hdx\\brgy_geography.csv",
+    "raw\\hdx\\calendar.csv",
+    "raw\\hdx\\climate_indices.csv",
+    "raw\\hdx\\disease.csv",
+    "raw\\hdx\\disease_fhsis_totals.csv",
+    "raw\\hdx\\disease_lgu_disaggregated_totals.csv",
+    "raw\\hdx\\disease_pidsr_totals.csv",
+    "raw\\hdx\\disease_psa_totals.csv",
+    "raw\\hdx\\esa_worldcover.csv",
+    "raw\\hdx\\geoportal_doh_poi_health.csv",
+    "raw\\hdx\\google_open_buildings.csv",
+    "raw\\hdx\\location.csv",
+    "raw\\hdx\\mapbox_health_facility_brgy_isochrones.csv",
+    "raw\\hdx\\mapbox_health_facility_city_isochrones.csv",
+    "raw\\hdx\\nighttime_lights.csv",
+    "raw\\hdx\\ookla_internet_speed.csv",
+    "raw\\hdx\\osm_poi_amenity.csv",
+    "raw\\hdx\\osm_poi_health.csv",
+    "raw\\hdx\\osm_poi_sanitation.csv",
+    "raw\\hdx\\osm_poi_total.csv",
+    "raw\\hdx\\osm_poi_water_body.csv",
+    "raw\\hdx\\project_noah_hazards.csv",
+    "raw\\hdx\\tm_open_buildings.csv",
+    "raw\\hdx\\tm_relative_wealth_index.csv",
+    "raw\\hdx\\worldpop_population.csv"
+  ],
+  "flags": {
+    "force_osm": true,
+    "force_economic": true,
+    "force_cchain_raw": true,
+    "subset_cchain": true
+  },
+  "exit_code": 0,
+  "next_steps": [
+    "If OSM changed: rebuild net via packages/data/build_network.py",
+    "Then: build_demand.py --calibrate && run_nightly_baseline()",
+    "Then: python -m matrix_kernel.build_validation_report"
+  ]
+}

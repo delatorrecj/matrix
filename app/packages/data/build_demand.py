@@ -2,12 +2,13 @@
 """Phase 2.1 / U3 — Baseline vehicle demand for the Iloilo SUMO network.
 
 Generates `iloilo.rou.xml`: routed passenger-vehicle trips across the network. This is the
-baseline demand the nightly run (U4) simulates and the scenario delta (U7) perturbs. For
-Milestone A the demand is a *reproducible* random trip set, fringe-weighted so arterials
-(e.g. Diversion Rd) carry through-traffic. POI/TAZ/LPTRP + Calderon-2014 calibration is a
-fidelity upgrade (Milestone B) — so Behavioral *behavior* confidence stays Medium (methods §3.1).
+baseline demand the nightly run (U4) simulates and the scenario delta (U7) perturbs.
 
-  input_dataset_ids: ["OSM-ILO", "SUMO-NET"]   confidence: M (uncalibrated random demand)
+Tier-B volume calibration (CR-012 T1.3): pass `--calibrate` to set `--period` from CCHAIN
+WorldPop + planning trip rates (independent of Calderon VAL-01 targets). Optional
+MATRIX_DEMAND_SCALE multiplies the WorldPop-derived vehicle target.
+
+  input_dataset_ids: ["OSM-ILO", "SUMO-NET", "CCHAIN"]   confidence: M (Tier-B volume)
 
 Uses the eclipse-sumo bundled randomTrips.py + duarouter + sumo (via matrix_kernel.sumo_env),
 so it must run with the kernel venv python:
@@ -26,11 +27,15 @@ KERNEL_DATA = APP / "packages" / "kernel" / "data"
 
 sys.path.insert(0, str(APP / "packages" / "kernel"))
 from matrix_kernel import sumo_env  # noqa: E402  (wires SUMO_HOME + tools onto sys.path)
+from matrix_kernel.demand_calibration import (  # noqa: E402
+    recommend_calibration,
+    write_calibration_artifact,
+)
 
 DEMAND_PROVENANCE = {
-    "input_dataset_ids": ["OSM-ILO", "SUMO-NET"],
+    "input_dataset_ids": ["OSM-ILO", "SUMO-NET", "CCHAIN"],
     "confidence": "M",
-    "generator": "build_demand.py randomTrips (Phase 2.1 / U3)",
+    "generator": "build_demand.py randomTrips (Phase 2.1 / U3 + CR-012 T1.3 Tier-B)",
 }
 
 
@@ -98,6 +103,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Build MATRIX baseline vehicle demand (Phase 2.1 / U3)")
     ap.add_argument("--end", type=float, default=3600.0, help="departure horizon in sim seconds")
     ap.add_argument("--period", type=float, default=2.0, help="seconds between departures (~end/period vehicles)")
+    ap.add_argument(
+        "--calibrate",
+        action="store_true",
+        help="set --period from CCHAIN WorldPop Tier-B anchor (ignores --period; CR-012 T1.3)",
+    )
     ap.add_argument("--seed", type=int, default=42, help="RNG seed (reproducibility, methods §7)")
     ap.add_argument("--fringe-factor", type=float, default=5.0, help="bias trips to start/end at the network fringe")
     ap.add_argument("--no-smoke", action="store_true", help="skip the headless sumo smoke run")
@@ -105,10 +115,23 @@ def main() -> int:
 
     net = KERNEL_DATA / "iloilo.net.xml"
     rou = KERNEL_DATA / "iloilo.rou.xml"
+    period = args.period
     try:
-        build_demand(net, rou, args.end, args.period, args.seed, args.fringe_factor)
+        if args.calibrate:
+            cal = recommend_calibration(end_s=args.end)
+            period = cal.period_s
+            artifact = write_calibration_artifact(
+                cal, KERNEL_DATA / "demand_calibration.json"
+            )
+            print(f"[calibrate] source={cal.source} pop={cal.population:.0f} "
+                  f"vintage={cal.population_vintage} target_veh={cal.target_vehicles:.0f} "
+                  f"period={period:.3f}s scale={cal.scale}")
+            print(f"[calibrate] wrote {artifact}")
+            for line in cal.assumptions:
+                print(f"  · {line}")
+        build_demand(net, rou, args.end, period, args.seed, args.fringe_factor)
         ok = True if args.no_smoke else smoke_sim(net, rou)
-    except (FileNotFoundError, RuntimeError) as e:
+    except (FileNotFoundError, RuntimeError, ValueError) as e:
         print(f"\n[build_demand] ERROR: {e}", file=sys.stderr)
         return 1
     if ok:

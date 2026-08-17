@@ -30,6 +30,7 @@ import {
   withAlpha,
 } from '@/components/map/colors';
 import { congestionLayer, CONGESTION_LAYER_ID } from '@/components/map/congestionLayer';
+import { affectedEdgesLayer, AFFECTED_EDGES_LAYER_ID } from '@/components/map/affectedEdgesLayer';
 import {
   confidenceLayer,
   normalizeConfidenceTier,
@@ -188,6 +189,21 @@ describe('congestionLayer', () => {
   it('returns null when there are no features', () => {
     expect(congestionLayer({ type: 'FeatureCollection', features: [] }, { e1: 1 })).toBeNull();
     expect(congestionLayer({ type: 'FeatureCollection' } as any, { e1: 1 })).toBeNull();
+  });
+});
+
+describe('affectedEdgesLayer', () => {
+  it('draws a non-pickable primary halo', () => {
+    const layer = affectedEdgesLayer(EDGES)!;
+    expect(layer).toBeInstanceOf(GeoJsonLayer);
+    expect(layer.props.id).toBe(AFFECTED_EDGES_LAYER_ID);
+    expect(layer.props.pickable).toBe(false);
+    expect(layer.props.getLineColor).toEqual(withAlpha(TOKEN_RGB.primary, 230));
+  });
+
+  it('returns null when there is nothing to halo', () => {
+    expect(affectedEdgesLayer(null)).toBeNull();
+    expect(affectedEdgesLayer({ type: 'FeatureCollection', features: [] })).toBeNull();
   });
 });
 

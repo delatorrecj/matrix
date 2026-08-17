@@ -22,6 +22,7 @@ Public API (the WS handler wires these post-merge — see the seam note in main.
     save_run(scenario_id, run_id=None, status=..., duration_ms=..., timings=...,
              agent_count=...) -> run_id         # upsert; later calls update status/timings
     get_run(run_id) -> dict | None              # includes "results": full provenance list
+    get_latest_run_for_scenario(scenario_id) -> dict | None  # latest done run + results
     save_dimension_results(run_id, results) -> int
     save_audit_entry(entry, run_id=None) -> entry_id
     get_audit(run_id) -> list[dict]
@@ -362,6 +363,77 @@ def get_run(run_id: str) -> dict[str, Any] | None:
         if run is None:
             return None
         return {**run, "results": [dict(r) for r in _mem_results.get(run_id, [])]}
+
+
+def get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
+    """Most recent *done* run for a scenario_id (with dimension results), or None.
+
+    The web results URL is `/scenario/{scenario_id}`; internal UUID run_ids never
+    reach the client, so reload/share hydrates through this lookup.
+    """
+    _ensure_init()
+    if _backend == "postgres":
+        try:
+            return _pg_get_latest_run_for_scenario(scenario_id)
+        except Exception as exc:
+            _flip_to_memory(exc)
+    with _lock:
+        candidates = [
+            r for r in _mem_runs.values()
+            if r.get("scenario_id") == scenario_id and r.get("status") == "done"
+        ]
+        if not candidates:
+            return None
+        # Prefer completed_at, then created_at; fall back to dict order.
+        def _sort_key(r: dict[str, Any]) -> str:
+            return str(r.get("completed_at") or r.get("created_at") or "")
+
+        latest = max(candidates, key=_sort_key)
+        run_id = latest["run_id"]
+        return {**latest, "results": [dict(r) for r in _mem_results.get(run_id, [])]}
+
+
+def _pg_get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
+    from psycopg.rows import dict_row
+
+    with _connect() as conn:
+        cur = conn.cursor(row_factory=dict_row)
+        run = cur.execute(
+            "SELECT run_id, scenario_id, baseline_id, status, duration_ms, agent_count,"
+            "  timings, created_at, completed_at FROM runs"
+            " WHERE scenario_id = %s AND status = 'done'"
+            " ORDER BY COALESCE(completed_at, created_at) DESC NULLS LAST"
+            " LIMIT 1",
+            (scenario_id,),
+        ).fetchone()
+        if run is None:
+            return None
+        run_id = run["run_id"]
+        rows = cur.execute(
+            'SELECT dimension, metric, equation_id, value, range_low, range_high, unit,'
+            '  confidence, directional_only, input_dataset_ids, "references", assumptions'
+            " FROM dimension_results WHERE run_id = %s ORDER BY created_at, equation_id",
+            (run_id,),
+        ).fetchall()
+    run["created_at"] = _iso(run["created_at"])
+    run["completed_at"] = _iso(run["completed_at"])
+    run["results"] = [
+        {
+            "dimension": r["dimension"],
+            "metric": r["metric"],
+            "equation_id": r["equation_id"],
+            "value": r["value"],
+            "range": [r["range_low"], r["range_high"]],
+            "unit": r["unit"],
+            "confidence": r["confidence"],
+            "directional": r["directional_only"],
+            "input_dataset_ids": list(r["input_dataset_ids"] or []),
+            "references": list(r["references"] or []),
+            "assumptions": r["assumptions"] or [],
+        }
+        for r in rows
+    ]
+    return run
 
 
 def _pg_get_run(run_id: str) -> dict[str, Any] | None:

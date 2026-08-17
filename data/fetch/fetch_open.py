@@ -102,21 +102,40 @@ def overpass():
 out body geom;
 """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        data = urllib.parse.urlencode({"data": query}).encode()
-        # overpass-api.de returns 406 for browser-like UAs and without an Accept header
-        with _open("https://overpass-api.de/api/interpreter", data=data,
-                   extra_headers={"Accept": "application/json",
-                                  "User-Agent": "overpass-matrix-fetch"}) as r:
-            payload = r.read()
-        obj = json.loads(payload)
-        n = len(obj.get("elements", []))
-        dest.write_bytes(payload)
-        print(f"  OK    {key}: {n:,} elements, {len(payload):,} B -> raw/osm/iloilo_osm.json")
-        results["ok"].append(key) if n else results["fail"].append(key)
-    except Exception as e:
-        print(f"  FAIL  {key}: {e}")
-        results["fail"].append(key)
+    data = urllib.parse.urlencode({"data": query}).encode()
+    # overpass-api.de returns 406 for browser-like UAs and without an Accept header.
+    # Rotate mirrors on 5xx/timeout — primary often 504 under load.
+    mirrors = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.openstreetmap.ru/api/interpreter",
+    ]
+    last_err: Exception | None = None
+    for url in mirrors:
+        try:
+            with _open(
+                url,
+                data=data,
+                extra_headers={
+                    "Accept": "application/json",
+                    "User-Agent": "overpass-matrix-fetch",
+                },
+            ) as r:
+                payload = r.read()
+            obj = json.loads(payload)
+            n = len(obj.get("elements", []))
+            dest.write_bytes(payload)
+            print(
+                f"  OK    {key}: {n:,} elements, {len(payload):,} B "
+                f"via {url} -> raw/osm/iloilo_osm.json"
+            )
+            results["ok"].append(key) if n else results["fail"].append(key)
+            return
+        except Exception as e:
+            last_err = e
+            print(f"  retry {key} via {url}: {e}")
+    print(f"  FAIL  {key}: {last_err}")
+    results["fail"].append(key)
 
 
 def ckan(key, base, dataset_id, subdir, max_bytes=None):

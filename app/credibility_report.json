@@ -1,0 +1,197 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-06T03:16:49+00:00",
+  "llm_invents_numbers": false,
+  "llm_note": "Kernel DimensionResult values are the sole numeric source; synthesis.strip_uncited_claims drops any LLM magnitude lacking a valid [EQUATION_ID] with non-empty input_dataset_ids (PRD-F14).",
+  "non_goals": [
+    "No PTV Vissim / Aimsun / Replica cross-simulation",
+    "No TomTom/HERE live traffic twin",
+    "Scenario impacts have no commercial third-party oracle",
+    "Demand Tier-B uses WorldPop — not fitted to Calderon VAL-01 targets",
+    "No government FOI / agency OD (CR-016 open-data-only)",
+    "VAL-01 corridor volumes are directional under literature mode-share (M)",
+    "VAL-02 2024-event IoU stays NOT_RUN; LiPAD is hazard-skill only"
+  ],
+  "open_data_policy": "CR-016",
+  "mode_share_anchor": {
+    "source": "Calderon2014+LPTRP literature",
+    "confidence_floor": "M",
+    "invented": false
+  },
+  "provisional_constants": {
+    "_PM25_PER_CO2E_PROXY": 0.05,
+    "_PHP_PER_TRIP_PROXY": 50.0,
+    "_VENDORS_PER_CLOSED_LANE": 12,
+    "_GENERIC_POP_DENSITY": 5843.0
+  },
+  "equations": [
+    {
+      "equation_id": "BEH-1",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "H",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "BEH-2",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "BEH-3",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "H",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "BEH-4",
+      "conformance": "provisional_proxy",
+      "confidence_ceiling": "L",
+      "requires_directional": true,
+      "external_checks": []
+    },
+    {
+      "equation_id": "ECO-1",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "H",
+      "requires_directional": false,
+      "external_checks": [
+        "who_emep_ef"
+      ]
+    },
+    {
+      "equation_id": "ECO-2",
+      "conformance": "provisional_proxy",
+      "confidence_ceiling": "L",
+      "requires_directional": true,
+      "external_checks": [
+        "openaq_pm25_scale"
+      ]
+    },
+    {
+      "equation_id": "ECO-3",
+      "conformance": "honest_stub",
+      "confidence_ceiling": "H",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "ECO-4",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "ECON-1",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "ECON-2",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "ECON-3",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOC-1",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOC-2",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOC-3",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOCI-1",
+      "conformance": "scalar_standin",
+      "confidence_ceiling": "L",
+      "requires_directional": true,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOCI-2",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOCI-3",
+      "conformance": "provisional_proxy",
+      "confidence_ceiling": "L",
+      "requires_directional": true,
+      "external_checks": []
+    },
+    {
+      "equation_id": "SOCI-4",
+      "conformance": "equation_backed",
+      "confidence_ceiling": "M",
+      "requires_directional": false,
+      "external_checks": []
+    }
+  ],
+  "gates": {
+    "VAL-01": {
+      "status": "FAIL",
+      "value": 4.738583,
+      "threshold": 0.3,
+      "metric": "normalized_rmse",
+      "notes": ""
+    },
+    "VAL-02": {
+      "status": "NOT_RUN",
+      "value": null,
+      "threshold": 0.5,
+      "metric": "length_weighted_iou",
+      "notes": "no simulated flood-closure set supplied — needs a flood-scenario kernel run"
+    },
+    "VAL-03": {
+      "status": "PASS",
+      "value": 0.020000000000000018,
+      "threshold": 0.03,
+      "note": "bias_auditor MODE_SHARE_TOLERANCE ±3% (static pool on-anchor by construction)"
+    }
+  },
+  "external": {
+    "who_emep_ef": {
+      "status": "PASS",
+      "ef_g_per_km": 120.0,
+      "band_lo": 110.0,
+      "band_hi": 160.0,
+      "source": "WHO/EMEP-EEA air pollutant emission inventory guidebook — fleet-average CO2 band for mixed urban LDV+PUV fleets (planning excerpt for MATRIX ECO-1 spot-check; not a full EMEP table dump).",
+      "note": "Band covers typical urban Philippines mixed fleet averages used as planning norms (≈110–160 g/km). ECO-1's 120 g/km fleet average must sit inside this band."
+    },
+    "openaq_pm25_scale": {
+      "status": "SKIPPED",
+      "reason": "no ECO-2 magnitude supplied for scale comparison",
+      "ambient_pm25_ug_m3": 18.5,
+      "ambient_source": "fixture (Committed offline fixture for OpenAQ Iloilo/nearby PM2.5 scale check (Credibility Phase 1). Replace by running data/fetch/fetch_openaq.py when OPENAQ_API_KEY is set.)"
+    }
+  }
+}

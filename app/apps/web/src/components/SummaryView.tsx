@@ -69,6 +69,18 @@ export function SummaryView({
         );
       })}
 
+      {results.some(
+        (c) => c.directional && (c.equationId === "BEH-1" || c.equationId === "BEH-3")
+      ) && (
+        <p
+          className="text-xs leading-relaxed text-foreground bg-warning/10 border border-warning/30 rounded-xl px-3 py-2"
+          data-testid="uncalibrated-demand-notice"
+        >
+          Iloilo corridor volumes are directional, not city-calibrated. VAL-01 vs
+          Calderon 2014 is a published FAIL — open Analytics for the live NRMSE and
+          pass threshold.
+        </p>
+      )}
       {results.length > 0 && (
         <button
           type="button"

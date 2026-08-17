@@ -57,9 +57,9 @@ export default function Landing() {
 
           <Reveal delay={0.08}>
             <p className="mt-6 max-w-[65ch] text-pretty text-lg leading-relaxed text-text-muted">
-              Drop a proposed project on a city map. Get scored,
-              confidence-anchored estimates across five impact dimensions, every
-              number traceable.
+              Describe a proposed project in plain language, or pick a preset.
+              Get scored, confidence-anchored estimates across five impact
+              dimensions — every number inspectable.
             </p>
           </Reveal>
 

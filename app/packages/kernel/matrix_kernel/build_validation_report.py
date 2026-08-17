@@ -20,17 +20,19 @@ Writes ``app/validation_report.json`` (gitignored; served by GET /validation whe
 live module reports NOT_RUN). When the baseline/net is unavailable both gates are written NOT_RUN —
 never a fabricated number.
 
-STATUS (CR-007 PR 5b): against the *uncalibrated* synthetic demand the corridor flow proxy ran ~an
-order of magnitude above the Calderon maxima (NRMSE ~12 — a FAIL): a mode-share calibration gap
-(P1-6) + a proxy/unit reconciliation, NOT a model validation, so the report was **withheld**.
+STATUS (CR-007 PR 5b / CR-014): against uncalibrated open-data demand the corridor flow proxy
+fails the Calderon back-test (live NRMSE published as FAIL vs threshold 0.30). That is a
+valid published result — never withheld, never massaged into a pass.
 
 CR-012 WS-1 T1.2 (proxy reconciliation): the proxy now measures peak *transit* passenger flow —
 `simulated_corridor_flows_from_baseline` restricts the all-vehicle edge throughput to the
 transit-vehicle share (`validation.transit_vehicle_share`, ~13% from the Iloilo anchor) before
-applying the jeepney occupancy, which removes ~8x of the over-count (anchor math; unit-tested). The
-residual is the demand-volume calibration (WS-1 T1.3 / WS-2). Confirm the live NRMSE at deploy
-(needs the seeded baseline) before un-withholding and re-locking methods §VAL-01; an unvalidated
-FAIL is still not a validation result (PRD-F14).
+applying the jeepney occupancy, which removes ~8x of the over-count (anchor math; unit-tested).
+
+Credibility Phase 1 / CR-012 T1.4: when a Redis baseline exists, `generate()` publishes a live
+NRMSE (PASS or honest FAIL) into ``validation_report.json``; API startup regenerates it. Residual
+demand-volume gap (T1.3) may still FAIL — that is a valid published result (never massaged).
+Without baseline/net the gate stays NOT_RUN with an explicit reason.
 """
 from __future__ import annotations
 
@@ -94,29 +96,64 @@ def calderon_corridor_edges(
 
 def generate() -> dict:
     """Build the report dict: live VAL-01 if the net+baseline are available, else NOT_RUN.
-    VAL-02 is always NOT_RUN here (PROVISIONAL fixture / no live flood run)."""
-    
-    # CR-008 Item 5: exercise the VAL-02 flood helper so the GeoJSON→closures path is staged and
-    # observable, but DO NOT feed it to run_validation_gates — there is no real Sentinel-1 GFM
-    # ground-truth extent to score against, so VAL-02 stays NOT_RUN (no fabricated IoU; PRD-F14).
-    placeholder_flood = {
-        "type": "Polygon",
-        "coordinates": [[[122.54, 10.70], [122.58, 10.70], [122.58, 10.74], [122.54, 10.74], [122.54, 10.70]]]
-    }
-    flood_closures = flood_closures_from_geojson(placeholder_flood)
-    print(f"[val-02] helper staged (placeholder extent): {len(flood_closures)} segments would close; "
-          "gate stays NOT_RUN until real flood ground-truth is wired", file=sys.stderr)
+
+    VAL-02: live IoU only when a non-provisional flood fixture exists *and* a sourced
+    S1-GFM extent is on disk (MATRIX_FLOOD_EXTENT or data/raw/flood/s1_gfm_iloilo_2024.geojson).
+    Otherwise NOT_RUN — never fabricate IoU against the placeholder fixture (PRD-F14).
+    """
+    import json
+    import os
+    from matrix_kernel.validation import FLOOD_FIXTURE, load_fixture
+
+    flood_simulated = None
+    flood_source = None
+    extent_path = os.environ.get("MATRIX_FLOOD_EXTENT")
+    default_extent = Path(__file__).resolve().parents[4] / "data" / "raw" / "flood" / "s1_gfm_iloilo_2024.geojson"
+    extent = Path(extent_path) if extent_path else default_extent
+
+    try:
+        fx = load_fixture(FLOOD_FIXTURE)
+        if (not fx.get("provisional")) and extent.is_file():
+            raw = json.loads(extent.read_text(encoding="utf-8"))
+            if raw.get("type") == "FeatureCollection":
+                geom = (raw.get("features") or [{}])[0].get("geometry") or {}
+            elif raw.get("type") == "Feature":
+                geom = raw.get("geometry") or {}
+            else:
+                geom = raw
+            flood_simulated = flood_closures_from_geojson(geom)
+            if flood_simulated:
+                flood_source = f"live-flood:geojson-intersect ({extent.name})"
+                print(f"[val-02] live IoU path: {len(flood_simulated)} simulated closures",
+                      file=sys.stderr)
+            else:
+                print("[val-02] extent present but intersect empty; VAL-02 -> NOT_RUN",
+                      file=sys.stderr)
+        else:
+            placeholder_flood = {
+                "type": "Polygon",
+                "coordinates": [[[122.54, 10.70], [122.58, 10.70],
+                                 [122.58, 10.74], [122.54, 10.74], [122.54, 10.70]]]
+            }
+            n = len(flood_closures_from_geojson(placeholder_flood))
+            print(f"[val-02] helper staged (placeholder): {n} segments; "
+                  "gate stays NOT_RUN until non-provisional S1-GFM fixture + extent",
+                  file=sys.stderr)
+    except Exception as exc:
+        print(f"[val-02] staging failed ({exc}); VAL-02 -> NOT_RUN", file=sys.stderr)
 
     try:
         mapping = calderon_corridor_edges()
     except Exception as exc:  # net missing/unnamed, bad mapping — honest NOT_RUN
         print(f"[val-01] corridor mapping unavailable ({exc}); VAL-01 -> NOT_RUN", file=sys.stderr)
-        return run_validation_gates()
+        return run_validation_gates(
+            flood_simulated=flood_simulated, flood_source=flood_source or "")
 
     flows = simulated_corridor_flows_from_baseline(mapping)
     if flows is None:  # no eclipse-sumo import chain / no Redis / no cached baseline
         print("[val-01] baseline unavailable; VAL-01 -> NOT_RUN", file=sys.stderr)
-        return run_validation_gates()
+        return run_validation_gates(
+            flood_simulated=flood_simulated, flood_source=flood_source or "")
 
     print(f"[val-01] simulated corridor flows (live-baseline): "
           + ", ".join(f"{k}={v:.1f}" for k, v in flows.items()))
@@ -126,6 +163,8 @@ def generate() -> dict:
         calderon_source="live-baseline:redis (peak per-edge transit passenger-flow proxy; "
                         "CR-012 transit-vehicle-share x 14 pax/jeepney)",
         calderon_quantity=VAL01_QUANTITY,
+        flood_simulated=flood_simulated,
+        flood_source=flood_source or "",
     )
 
 
@@ -137,7 +176,7 @@ def write_markdown_artifact(report: dict, md_path: Path):
         "|---|---|---|---|---|"
     ]
     for g in report["gates"]:
-        status = f"**{g['status']}**" if g["status"] != "NOT_RUN" else "*WITHHELD/PROVISIONAL*"
+        status = f"**{g['status']}**" if g["status"] != "NOT_RUN" else "*NOT_RUN*"
         val = f"{g['value']} {g['metric']}" if g["value"] is not None else "—"
         lines.append(f"| {g['gate_id']} | {g['name']} | {status} | {val} | {g['comparator']} {g['threshold']} |")
     

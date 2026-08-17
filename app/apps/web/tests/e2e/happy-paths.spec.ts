@@ -15,6 +15,8 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     // Target the summary cards (buttons) — the hidden print brief mirrors the same label
     // text, so a bare getByText is ambiguous under Playwright strict mode.
     await expect(page.getByRole('button', { name: /Trips on the affected road/ })).toBeVisible();
+    await expect(page.getByTestId('uncalibrated-demand-notice')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Trips on the affected road/ })).toContainText(/Directional only/);
     const displacementCard = page.getByRole('button', { name: /People at risk of displacement/ });
     await expect(displacementCard).toBeVisible();
     await expect(displacementCard).toContainText('+12'); // SOC-2 (signed, 0 dp)
@@ -35,6 +37,9 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     await expect(page.getByText(/nagapahapos sang trapiko/)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Validation & Back-Testing' })).toBeVisible();
     await expect(page.getByTestId('gate-VAL-01')).toBeVisible();
+    await expect(page.getByTestId('status-VAL-01')).toContainText('FAIL');
+    await expect(page.getByTestId('gate-VAL-01')).toContainText('4.738583');
+    await expect(page.getByTestId('gate-VAL-01')).toContainText('0.3');
     await expect(page.getByText('Bias Audit Log (Public)')).toBeVisible();
   });
 
@@ -51,6 +56,7 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     // so the id chip "BEH-1" doesn't also match the "…BEH-1 is registered…" equation-text fallback.
     await expect(drawer.getByText('BEH-1', { exact: true })).toBeVisible();
     await expect(drawer.getByRole('heading', { name: 'Δ trips on affected corridor (AM-peak)' })).toBeVisible();
+    await expect(drawer.getByTestId('inspect-fidelity-notice')).toBeVisible();
 
     await drawer.getByRole('button', { name: /Show details/i }).click();
     await expect(drawer.getByText(/ΔT_c = Σ_a/)).toBeVisible();

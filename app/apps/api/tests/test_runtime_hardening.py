@@ -29,7 +29,12 @@ from matrix_kernel.trajectory import Frame, Trajectory
 FAKE_TRAJ = Trajectory(
     edge_counts={"edge-1": 10},
     frames=[Frame(tick=0.0, agents=[{"id": "a1", "lon": 122.56, "lat": 10.72, "mode": "jeepney"}])],
-    meta={"kind": "scenario"},
+    meta={
+        "kind": "scenario",
+        "edge_resolution": "keyword-match",
+        "location_of_interest": [122.56, 10.72],
+        "affected_edges": ["edge-1"],
+    },
 )
 
 
@@ -116,6 +121,11 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
     # after the frames and before the dimension results.
     edge_evt = next(e for e in events if e["type"] == "EDGE_COUNTS")
     assert edge_evt["edge_counts"] == FAKE_TRAJ.edge_counts
+    # CR-013: location_of_interest/edge_resolution ride along on EDGE_COUNTS -- the
+    # results view's ground-truth source for panning/marking the map (NL-only queries).
+    assert edge_evt["location_of_interest"] == [122.56, 10.72]
+    assert edge_evt["edge_resolution"] == "keyword-match"
+    assert edge_evt["affected_edges"] == ["edge-1"]
     assert types.index("EDGE_COUNTS") > types.index("PLAYBACK_FRAME")
     assert types.index("EDGE_COUNTS") < types.index("DIMENSION_RESULT")
 
@@ -130,6 +140,22 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
         timings["sumo_ms"], timings["modules_ms"], timings["llm_ms"]
     )
     assert done["duration_ms"] == timings["total_ms"]
+
+
+def test_edge_counts_location_of_interest_is_null_for_fallback_resolution(monkeypatch, fast_pipeline, client):
+    """A fallback resolution (busiest-baseline) must surface location_of_interest: null --
+    never a fabricated point for a location that wasn't actually resolved."""
+    fallback_traj = Trajectory(
+        edge_counts={"edge-1": 5},
+        frames=[],
+        meta={"kind": "scenario", "edge_resolution": "busiest-baseline-fallback (no location given)",
+              "location_of_interest": None},
+    )
+    monkeypatch.setattr(main, "_get_trajectory", lambda scenario_id: fallback_traj)
+    with client.websocket_connect("/simulate/s2") as ws:
+        events = _drain(ws)
+    edge_evt = next(e for e in events if e["type"] == "EDGE_COUNTS")
+    assert edge_evt["location_of_interest"] is None
 
 
 # --- stage timeouts -> typed ERROR --------------------------------------------------
@@ -386,7 +412,13 @@ def test_db_seam_persists_run_and_results(fast_pipeline, client, monkeypatch):
     assert dims[1:] == ("run-1", 5)
     assert done[1:4] == ("persisted", "run-1", "done")
     assert isinstance(done[4], int)  # duration_ms
-    assert set(done[5]) == {"sumo_ms", "modules_ms", "llm_ms", "total_ms"}  # timings
+    # CR-013 (454b4cf): affected_edges/edge_resolution ride along in the persisted
+    # timings JSONB -- the API's public view (_run_public_view) splits them back
+    # out for the client; the raw storage seam keeps them.
+    assert set(done[5]) == {
+        "sumo_ms", "modules_ms", "llm_ms", "total_ms",
+        "affected_edges", "edge_resolution",
+    }
 
 
 def test_db_seam_tolerates_legacy_signature(fast_pipeline, client, monkeypatch):

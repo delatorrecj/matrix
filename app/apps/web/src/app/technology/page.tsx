@@ -282,9 +282,11 @@ export default function TechnologyPage() {
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight">Validation</h2>
             <p className="mt-4 max-w-[72ch] text-text-muted">
-              Validation machinery is shipped and tested. Headline ground-truth
-              results are withheld until mode-share and demand calibration is
-              complete. Uncalibrated demand cannot produce an honest RMSE yet.
+              Validation machinery is shipped and tested. VAL-01 against Calderon
+              2014 is a published FAIL: live normalized RMSE is compared to the
+              pass threshold (≤ 0.30) in the in-product validation ledger. Iloilo
+              corridor volumes are directional, not city-calibrated. Uncalibrated
+              demand is why the gate fails — it is not a reason to hide the RMSE.
             </p>
           </Reveal>
 
@@ -297,11 +299,12 @@ export default function TechnologyPage() {
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-text-muted">
                   Back-test against the Calderon et al. (2014) BRT corridor
-                  model for Iloilo City. Computed into{" "}
+                  model for Iloilo City. The live NRMSE and pass threshold are
+                  published in{" "}
                   <code className="font-mono text-xs">
                     validation_report.json
-                  </code>
-                  . Calibration pending on corridor-to-edge mapping.
+                  </code>{" "}
+                  and shown as FAIL in the simulator&apos;s validation panel.
                 </p>
               </article>
             </Reveal>
@@ -324,13 +327,13 @@ export default function TechnologyPage() {
               <div className="grid gap-4 sm:grid-cols-[12rem_1fr] sm:gap-8 sm:items-start">
                 <h3 className="font-semibold">Next steps</h3>
                 <p className="text-sm leading-relaxed text-text-muted">
-                  The path to publishing an honest VAL-01 RMSE is calibration:
-                  aligning simulated demand and mode share to ground truth. We are
-                  in active contact with the Iloilo City government (CPDO) for the
-                  corridor and transit data this depends on. As anyone who has
-                  worked with Philippine LGUs knows, official data-sharing moves
-                  slowly, so we are pacing calibration to that reality rather than
-                  overpromising a date.
+                  The path to a VAL-01 PASS is still calibration: aligning
+                  simulated demand and mode share to an independent volume source.
+                  Until then the FAIL, the live NRMSE, and the 0.30 threshold stay
+                  on screen so planners are not shown a silent High-confidence
+                  magnitude. We are in contact with Iloilo CPDO for corridor and
+                  transit data; official data-sharing moves slowly, so we do not
+                  overpromise a date.
                 </p>
               </div>
             </div>

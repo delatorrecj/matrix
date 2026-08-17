@@ -16,6 +16,7 @@ from matrix_kernel.confidence import (
     confidence_rubric,
     earned_confidence_interval,
     method_capped_confidence,
+    provisional_capped_confidence,
 )
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
@@ -80,7 +81,7 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         value=delta_pm25,
         range=(lo2, hi2),
         unit="µg/m³",
-        confidence=confidence_rubric(["EMB", "S5P-NO2"]),
+        confidence=provisional_capped_confidence(["EMB", "S5P-NO2"]),
         input_dataset_ids=["EMB", "S5P-NO2"],
         references=[],
         assumptions=[
@@ -88,6 +89,7 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
             f"PM2.5/CO2e proxy coefficient = {_PM25_PER_CO2E_PROXY} — PROVISIONAL, "
             "uncalibrated Milestone-A stand-in for the methods §3.2 dispersion-to-station "
             "model; no published coefficient backs this value (placeholder, not a measurement)",
+            "confidence capped at L: §3.6 PROVISIONAL constant (methods §2 low-confidence protocol)",
         ],
     ))
 
@@ -108,25 +110,67 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
     ))
 
     # ── ECO-4: Flood-exposure Δ ──
-    # Methods §3.2: "H (hazard) / M (redistribution)". The hazard layers (CCHAIN/LIPAD/DEM)
-    # are High, but the value emitted is the *redistribution* of exposed population, whose
-    # method is literature-calibrated → M. Cap on that weaker factor (worst-factor rule).
-    val4 = 0.0
+    # Methods §3.2: "H (hazard) / M (redistribution)". Wired to CCHAIN NOAH × WorldPop when
+    # the scenario is a flood shock; lane-only closures leave exposure unchanged (0).
+    flood = bool(
+        trajectory.meta.get("flood_hazard")
+        or trajectory.meta.get("scenario_kind") == "flood"
+        or trajectory.meta.get("compound_flood")
+    )
+    assumptions4: list[str]
+    if flood:
+        from matrix_kernel.datasets import (
+            flood_exposed_population_100yr,
+            lipad_hazard_closed_edges,
+        )
+
+        loaded = flood_exposed_population_100yr()
+        lipad = lipad_hazard_closed_edges()
+        if loaded is None:
+            val4 = 0.0
+            assumptions4 = [
+                "flood scenario requested but CCHAIN NOAH/WorldPop missing — exposure = 0",
+                "confidence capped at M: method maturity (methods §3.2)",
+            ]
+        else:
+            city_exposed, haz_year = loaded
+            # Prefer LiPAD∩network edge count when open hazard fixture exists (CR-016).
+            n_closed = len(lipad[0]) if lipad else (len(corridor) if corridor else 0)
+            redistrib = min(1.0, 0.02 * max(n_closed, 1))
+            val4 = city_exposed * redistrib
+            assumptions4 = [
+                f"city 100-yr-high flood exposure = {city_exposed:.0f} persons "
+                f"(CCHAIN project_noah_hazards × WorldPop; hazard vintage {haz_year})",
+                f"redistribution fraction = {redistrib:.4f} (0.02 × closed edges, capped at 1)",
+                (
+                    f"closed-edge count from LiPAD 25yr∩SUMO fixture ({n_closed} edges)"
+                    if lipad
+                    else "closed-edge count from scenario corridor (LiPAD fixture absent)"
+                ),
+                "confidence capped at M: exposure-redistribution method (methods §3.2)",
+                "LiPAD is hazard-skill open data — not 2024-event VAL-02 GT (CR-016)",
+            ]
+    else:
+        val4 = 0.0
+        assumptions4 = [
+            "lane closure does not alter flood routing (no flood_hazard in scenario meta)",
+            "confidence capped at M: flood-hazard inputs are H but the exposure-"
+            "redistribution method is literature-calibrated (methods §3.2)",
+        ]
+
+    lo4, hi4 = earned_confidence_interval(
+        val4, lambda: val4 * rng.uniform(0.7, 1.3), n=500) if val4 else (0.0, 0.0)
     results.append(DimensionResult(
         dimension="ecological",
         metric="Flood-exposure Δ",
         equation_id="ECO-4",
         value=val4,
-        range=(val4, val4),
+        range=(lo4, hi4),
         unit="persons",
         confidence=method_capped_confidence(["CCHAIN", "LIPAD", "DEM"], "M"),
         input_dataset_ids=["CCHAIN", "LIPAD", "DEM"],
         references=[],
-        assumptions=[
-            "lane closure does not alter flood routing (Milestone A)",
-            "confidence capped at M: flood-hazard inputs are H but the exposure-"
-            "redistribution method is literature-calibrated (methods §3.2)",
-        ],
+        assumptions=assumptions4,
     ))
 
     return results

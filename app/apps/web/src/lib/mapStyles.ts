@@ -47,7 +47,7 @@ export function syncBuilding3dLayer(
       source: "openmaptiles",
       "source-layer": "building",
       type: "fill-extrusion",
-      minzoom: 14,
+      minzoom: 13,
       paint: {
         // Some OpenMapTiles building features carry a null render_min_height /
         // render_height; coalesce to 0 so MapLibre's expression evaluator does not
@@ -63,6 +63,13 @@ export function syncBuilding3dLayer(
   }
 
   map.setLayoutProperty(BUILDING_3D_LAYER_ID, "visibility", visible ? "visible" : "none");
+
+  // Also toggle the basemap's own flat "building" layer (present in both
+  // OpenFreeMap dark and liberty styles) so the toggle controls all building
+  // rendering — not just the 3D extrusions.
+  if (map.getLayer("building")) {
+    map.setLayoutProperty("building", "visibility", visible ? "visible" : "none");
+  }
 }
 
 /**

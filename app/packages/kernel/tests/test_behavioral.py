@@ -35,14 +35,21 @@ def test_beh_results_are_glass_box():
 
     beh1 = next(r for r in results if r.equation_id == "BEH-1")
     assert beh1.value == -90.0          # (20-100) + (40-50)
-    assert beh1.confidence == "H"       # OSM-ILO + OVERTURE + PERSONA-POOL all High
+    # VAL-01 FAIL / uncalibrated demand caps corridor *magnitudes* at L (directional),
+    # even though OSM/SUMO inputs are H (methods §2: validation is a worst factor).
+    assert beh1.confidence == "L"
+    assert beh1.directional is True
+    assert any("VAL-01" in a and "FAIL" in a for a in beh1.assumptions)
+    assert any("not city-calibrated" in a.lower() or "uncalibrated" in a.lower()
+               for a in beh1.assumptions)
     assert beh1.range[0] < beh1.range[1]
 
     beh2 = next(r for r in results if r.equation_id == "BEH-2")
     assert beh2.confidence == "M"       # Calderon2014 caps mode-share at Medium
 
     beh3 = next(r for r in results if r.equation_id == "BEH-3")
-    assert beh3.confidence == "H"
+    assert beh3.confidence == "L"
+    assert beh3.directional is True
     assert beh3.value > 0
 
 

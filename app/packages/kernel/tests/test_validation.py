@@ -306,3 +306,19 @@ def test_report_revalidation_rejects_massaged_gate(tmp_path):
     path.write_text(json.dumps(raw), encoding="utf-8")
     with pytest.raises(ValueError, match="contradicts"):
         load_validation_report(path)
+
+
+def test_markdown_ledger_publishes_val01_fail_not_withheld(tmp_path):
+    from matrix_kernel.build_validation_report import write_markdown_artifact
+
+    report = run_validation_gates(
+        calderon_simulated=_calderon_sim(3.0), calderon_source="injected:test"
+    )
+    md_path = tmp_path / "validation_report.md"
+    write_markdown_artifact(report, md_path)
+    text = md_path.read_text(encoding="utf-8")
+    assert "**FAIL**" in text
+    assert "VAL-01" in text
+    assert str(VAL01_THRESHOLD_NRMSE) in text or "<= 0.3" in text
+    assert "withheld" not in text.lower()
+    assert "WITHHELD" not in text

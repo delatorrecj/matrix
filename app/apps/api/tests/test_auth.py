@@ -152,6 +152,7 @@ def test_exempt_routes_stay_open(client, monkeypatch):
     # /validation is exempt by path; the route lands in a later PR, so just
     # prove auth doesn't intercept it (404 from the router, never 401).
     assert client.get("/validation").status_code != 401
+    assert client.get("/credibility").status_code != 401
 
 
 # ----------------------------------------------------------------- rate limit

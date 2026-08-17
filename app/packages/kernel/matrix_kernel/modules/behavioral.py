@@ -1,13 +1,16 @@
-"""Behavioral impact module (U8). Confidence: High (network physics) / Medium (mode behavior).
+"""Behavioral impact module (U8). Mode-share: Medium. Corridor volumes: Low / directional.
 
 Scores the ONE scenario trajectory (vs the cached baseline) into three glass-box results --
 exactly the equations in docs/methods-matrix.md §3.1:
 
-  BEH-1  Δ trips on the affected corridor (scenario − baseline)  OSM-ILO, OVERTURE, PERSONA-POOL  -> H
+  BEH-1  Δ trips on the affected corridor (scenario − baseline)  OSM-ILO, OVERTURE, PERSONA-POOL
+         -> L while VAL-01 is a published FAIL (uncalibrated demand; methods §2 validation factor)
   BEH-2  Mode-share shift (±3% anchor)                           PERSONA-POOL, Calderon2014, CCHAIN -> M
-  BEH-3  Peak saturation V/C on the corridor                     SUMO-NET, OSM-ILO                  -> H
+  BEH-3  Peak saturation V/C on the corridor                     SUMO-NET, OSM-ILO
+         -> L while VAL-01 FAIL (same volume-calibration cap as BEH-1)
 
-Confidence is COMPUTED (confidence_rubric, methods §2); the range is EARNED
+Network-physics inputs are High; live Calderon back-test FAIL caps *magnitudes* at directional
+(methods §2: worst factor includes validation). Confidence is COMPUTED; the range is EARNED
 (earned_confidence_interval, PRD-F15). Numbers come from the trajectory + these equations,
 never an LLM (glass box, PRD-F14). DimensionResult's invariants reject any black-box result.
 """
@@ -16,10 +19,22 @@ from __future__ import annotations
 import random
 
 from matrix_kernel.baseline import SIM_END, load_baseline
-from matrix_kernel.confidence import confidence_rubric, earned_confidence_interval
+from matrix_kernel.confidence import (
+    confidence_rubric,
+    earned_confidence_interval,
+    method_capped_confidence,
+)
 from matrix_kernel.personas import ILOILO_MODE_SHARE
 from matrix_kernel.results import DimensionResult
 from matrix_kernel.trajectory import Trajectory
+
+# VAL-01 vs Calderon 2014 is a published FAIL under open-data demand — corridor
+# volume magnitudes are directional, not city-calibrated (QAD §8, CR-014/CR-016).
+_VAL01_VOLUME_CAP_NOTE = (
+    "confidence capped at L: VAL-01 published FAIL against Calderon 2014 "
+    "(NRMSE vs threshold in GET /validation) — Iloilo corridor volumes are "
+    "directional, not city-calibrated (uncalibrated demand)"
+)
 
 _LANE_CAP_VPH = 1800.0  # HCM nominal per-lane capacity (veh/h)
 
@@ -48,13 +63,15 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         value=window_delta,
         range=(lo1, hi1),
         unit="Δ trips/window",
-        confidence=confidence_rubric(["OSM-ILO", "OVERTURE", "PERSONA-POOL"]),
+        confidence=method_capped_confidence(
+            ["OSM-ILO", "OVERTURE", "PERSONA-POOL"], "L"),
         input_dataset_ids=["OSM-ILO", "OVERTURE", "PERSONA-POOL"],
         references=["Calderon2014"],
         assumptions=[
             f"sim window = {SIM_END:.0f}s AM-peak slice",
             "demand = uncalibrated random baseline (Milestone A; daily expansion deferred)",
             f"corridor = {len(corridor)} edge(s): {corridor[:3]}",
+            _VAL01_VOLUME_CAP_NOTE,
         ],
     ))
 
@@ -95,12 +112,13 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         value=vc,
         range=(lo3, hi3),
         unit="ratio",
-        confidence=confidence_rubric(["SUMO-NET", "OSM-ILO"]),
+        confidence=method_capped_confidence(["SUMO-NET", "OSM-ILO"], "L"),
         input_dataset_ids=["SUMO-NET", "OSM-ILO"],
         references=[],
         assumptions=[
             f"capacity = {_LANE_CAP_VPH:.0f} veh/h/lane (HCM nominal)",
             f"{lanes_closed} lane(s) closed on the corridor",
+            _VAL01_VOLUME_CAP_NOTE,
         ],
     ))
     return results

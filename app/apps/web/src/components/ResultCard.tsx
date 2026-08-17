@@ -16,6 +16,8 @@ export interface ResultCardData {
   rawValue: number;
   /** Raw [lo, hi] range, or null when the stream omitted it. */
   rawRange: [number, number] | null;
+  /** Low-confidence / directional-only (PRD-F5) — never present a precise headline. */
+  directional?: boolean;
   provData: ProvenanceData;
 }
 
@@ -36,6 +38,8 @@ export function ResultCard({ card, onInspect, variant = "panel" }: ResultCardPro
   // The exact raw value still lives in the Inspect drawer (glass box).
   const value = formatMetricValue(card.rawValue, card.equationId, { precise: true }).display;
   const range = formatRange(card.rawRange, card.equationId, { precise: true });
+  const directionalOnly =
+    card.directional === true || toConfidenceLevel(card.conf) === "Low";
 
   return (
     <div
@@ -53,6 +57,11 @@ export function ResultCard({ card, onInspect, variant = "panel" }: ResultCardPro
         <span className="text-2xl font-bold font-mono tabular-nums tracking-tight print:text-black">{value}</span>
         <span className="text-xs text-text-muted mb-1 print:text-black">{card.unit}</span>
       </div>
+      {directionalOnly && (
+        <div className="text-xs font-medium text-text-muted mb-1 print:text-black">
+          Directional only — not a precise estimate
+        </div>
+      )}
       {isPanel && (
         <div className="text-xs text-text-muted font-mono flex items-center justify-between gap-2 print:text-black">
           <span className="truncate">

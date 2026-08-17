@@ -1,0 +1,18 @@
+{
+  "population": 424837.2094116211,
+  "population_vintage": "2020",
+  "target_vehicles": 8000.0,
+  "period_s": 0.5,
+  "end_s": 3600.0,
+  "scale": 1.0,
+  "source": "cchain_worldpop_tier_b",
+  "assumptions": [
+    "population = 424837 (CCHAIN WorldPop 2020, Iloilo barangay sum)",
+    "trips/capita/day = 1.2 (PH secondary-city planning norm, tier M)",
+    "motorized share = 0.7",
+    "AM-peak share of daily = 0.1",
+    "MATRIX_DEMAND_SCALE = 1.0",
+    "target vehicles capped at 8000/h then scaled to window",
+    "Independent Tier-B anchor \u2014 NOT fitted to Calderon passenger_flow_max (CR-012 \u00a74)"
+  ]
+}

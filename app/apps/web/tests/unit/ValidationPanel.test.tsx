@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ValidationPanel, { ValidationGate } from "@/components/ValidationPanel";
 import { apiFetch } from "@/lib/api";
@@ -85,12 +85,33 @@ describe("ValidationPanel", () => {
 
     expect(screen.getByTestId("status-VAL-01")).toHaveTextContent("PASS");
     expect(screen.getByText(/normalized_rmse:/)).toHaveTextContent("0.27");
-    expect(screen.getByText(/threshold ≤ 0.3/)).toBeInTheDocument();
+    expect(within(screen.getByTestId("gate-VAL-01")).getByText(/threshold ≤ 0.3/)).toBeInTheDocument();
     // Provenance shows on the always-visible line and inside the details expansion.
     expect(screen.getAllByText(/Calderon et al\./).length).toBeGreaterThan(0);
     // No hardcoded theater numbers from the old panel.
     expect(screen.queryByText(/0\.082/)).not.toBeInTheDocument();
     expect(screen.queryByText(/89%/)).not.toBeInTheDocument();
+  });
+
+  it("publishes VAL-01 FAIL with live NRMSE and threshold, never withheld", async () => {
+    const val01Fail: ValidationGate = {
+      ...PASS_GATE,
+      value: 4.738583,
+      status: "FAIL",
+      notes: "published FAIL — uncalibrated demand; corridor volumes are directional",
+    };
+    mockApiFetch.mockReturnValue(jsonOk({ gates: [val01Fail] }));
+    render(<ValidationPanel />);
+
+    expect(await screen.findByTestId("gate-VAL-01")).toBeInTheDocument();
+    expect(screen.getByTestId("status-VAL-01")).toHaveTextContent("FAIL");
+    expect(screen.getByText(/normalized_rmse:/)).toHaveTextContent("4.738583");
+    expect(within(screen.getByTestId("gate-VAL-01")).getByText(/threshold ≤ 0.3/)).toBeInTheDocument();
+    expect(screen.getByTestId("validation-open-data-framing")).toHaveTextContent(
+      /directional/i
+    );
+    expect(screen.queryByText(/withheld/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no RMSE yet/i)).not.toBeInTheDocument();
   });
 
   it("renders a FAIL gate as FAIL and flags a provisional fixture", async () => {

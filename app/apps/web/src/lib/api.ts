@@ -101,3 +101,74 @@ export async function createScenario(
 
   return res.json();
 }
+
+/** A saved scenario's parsed fields, as returned by `GET /scenario/{id}`. */
+export interface ScenarioRecord {
+  scenario_id: string;
+  description: string;
+  intervention_type: string | null;
+  location: string | null;
+  geometry: ScenarioGeometry | null;
+  /** Camera [lon, lat] from map-drop geometry or gazetteer; null if unknown. */
+  location_of_interest?: [number, number] | null;
+}
+
+/**
+ * `GET /scenario/{id}` — fetch a previously parsed scenario's fields, notably
+ * `location`/`geometry`, so the results view can pan/zoom the map to the scenario's
+ * location of interest. Throws `ApiUnreachableError` when the API is down, and a plain
+ * `Error` for any other non-2xx response (including a 404).
+ */
+export async function getScenario(scenarioId: string): Promise<ScenarioRecord> {
+  const res = await apiFetch(`/scenario/${scenarioId}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `Scenario lookup failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+/** One dimension result as returned by `GET /runs/{id}` / `latest-run`. */
+export interface StoredDimensionResult {
+  dimension: string;
+  metric: string;
+  equation_id: string;
+  value: number;
+  range: [number, number] | number[];
+  unit: string;
+  confidence: string;
+  directional?: boolean;
+  input_dataset_ids?: string[];
+  references?: string[];
+  assumptions?: string[];
+}
+
+/** Completed run payload for hydrate-on-reload (no re-SUMO). */
+export interface LatestRunRecord {
+  run_id: string;
+  scenario_id: string;
+  status: string;
+  duration_ms?: number | null;
+  timings?: Record<string, number> | null;
+  affected_edges?: string[] | null;
+  edge_resolution?: string | null;
+  results: StoredDimensionResult[];
+}
+
+/**
+ * `GET /scenarios/{id}/latest-run` — most recent *done* run for this scenario.
+ * Returns `null` on 404 (no completed run yet). Throws on other failures / unreachable.
+ */
+export async function getLatestRun(
+  scenarioId: string
+): Promise<LatestRunRecord | null> {
+  const res = await apiFetch(
+    `/scenarios/${encodeURIComponent(scenarioId)}/latest-run`
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `Latest run lookup failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}

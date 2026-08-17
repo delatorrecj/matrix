@@ -6,7 +6,7 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 **Confidence:** H/M/L (propagates to the product's per-dimension confidence layer)
 **Dim:** Behav · Soc · Econ · Eco · Societal · KB (knowledge base for GraphRAG) · Base (engine)
 **Bbox (Iloilo City Proper):** `10.65,122.50,10.78,122.61` · **Metro Iloilo–Guimaras:** `10.55,122.40,10.85,122.80`
-**Last refresh:** 2026-06-03 (OSM, CCHAIN + Iloilo subset, Overture, literature, LPTRP, economic: PSA OpenStat poverty/trade/tourism/GVA + **FIES 2023 (incl. City of Iloilo) + ASPBI 2022** by region, World Bank indicators, HDX poverty XLSX, **BIR zonal values RDO 74 — DO17-2021 .xls**)
+**Last refresh:** 2026-08-06 (ops cadence: CCHAIN+OpenStat refresh; OSM re-fetch 14,360 el after Overpass recovery; CR-016 open-data-only + LiPAD hazard. OpenAQ key unset — offline fixture.)
 
 ---
 
@@ -15,11 +15,11 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 ### Engine / geospatial base
 | ID | Dataset | Dim | Vintage | License | Access | Conf | Status |
 |---|---|---|---|---|---|---|---|
-| OSM-ILO | [OSM Iloilo extract (Overpass)](https://overpass-api.de/api/interpreter) — roads, transit, POIs, heritage | Base | live | ODbL | API (bbox) | H | ✅ 14,068 el |
+| OSM-ILO | [OSM Iloilo extract (Overpass)](https://overpass-api.de/api/interpreter) — roads, transit, POIs, heritage | Base | live | ODbL | API (bbox) | H | ✅ 14,362 el (2026-08-05; mirrors in `fetch_open.py`) |
 | OVERTURE | [Overture Maps](https://docs.overturemaps.org/download/) — buildings + places (POIs) + transportation | Base/Econ | 2026-05 | ODbL/CDLA | S3/Explorer (`pip overturemaps`) | H | ✅ 202k feat |
 | HOTOSM | [HOTOSM PH roads](https://data.humdata.org/dataset/hotosm_phl_roads) + [buildings](https://data.humdata.org/dataset/hotosm_phl_buildings) | Base | rolling | ODbL | direct (HDX) | H | ☐ |
 | DEM-GLO30 | [Copernicus GLO-30 DEM](https://copernicus-dem-30m.s3.amazonaws.com/) | Base/Eco | 2021 | open | AWS COG | H | ⏳ |
-| LIPAD | [PhilLiDAR/LiPAD Iloilo flood 5yr/25yr 10m](https://lipad-fmc.dream.upd.edu.ph/layers/geonode:ph063022000_fh25yr_10m) + DTM | Eco/Behav | 2015-17 | open | direct (no reg.) | H | ☐ |
+| LIPAD | [PhilLiDAR/LiPAD Iloilo flood 5yr/25yr 10m](https://lipad-fmc.dream.upd.edu.ph/layers/geonode:ph063022000_fh25yr_10m) + DTM | Eco/Behav | 2015-17 | open | WFS GeoJSON (`fetch_lipad_flood.py`) | H | ✅ `raw/flood/lipad_iloilo_fh25yr.geojson` (EPSG:4326, Var≥1) → hazard fixture `flood_hazard_lipad_closures.json` (CR-016). Not VAL-02 event GT. |
 | HAZHUNTER | [HazardHunterPH](https://hazardhunter.georisk.gov.ph/map) multi-hazard report | Eco | live | open | web report | H | ☐ |
 | WORLDCOVER | [ESA WorldCover 10m](https://esa-worldcover.org/en/data-access) + [Dynamic World](https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_DYNAMICWORLD_V1) | Eco/Soc | 2021 / live | CC BY 4.0 | AWS / GEE | H | ⏳ |
 
@@ -50,10 +50,10 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 ### Ecological / Societal
 | ID | Dataset | Dim | Vintage | License | Access | Conf | Status |
 |---|---|---|---|---|---|---|---|
-| OPENAQ | [OpenAQ API](https://docs.openaq.org/) + [EMB live air](https://air.emb.gov.ph/ambient-air-quality-monitoring/) (PM2.5/PM10/NO2/SO2/CO/O3) | Eco | live | open | API (key) | H | ⏳ |
+| OPENAQ | [OpenAQ API](https://docs.openaq.org/) + [EMB live air](https://air.emb.gov.ph/ambient-air-quality-monitoring/) (PM2.5/PM10/NO2/SO2/CO/O3) | Eco | live | open | API (key) | H | ⏳ live / ✅ offline fixture (`matrix_kernel/data/openaq_iloilo_fixture.json`) + `data/fetch/fetch_openaq.py` for Credibility Phase 1 ECO-2 scale check |
 | S5P-NO2 | [Sentinel-5P NO₂](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S5P_OFFL_L3_NO2) | Eco | live | open | GEE | M | ⏳ |
 | LST | [Landsat 8/9 LST](https://www.usgs.gov/landsat-missions) (urban heat island) | Eco/Societal | live | open | GEE/USGS | M | ⏳ |
-| S1-GFM | [Copernicus Global Flood Monitoring](https://global-flood.emergency.copernicus.eu/) — 2024 Iloilo flood extent (validation) | Eco | 2015→ | open | direct | M | ⏳ |
+| S1-GFM | [Copernicus Global Flood Monitoring](https://global-flood.emergency.copernicus.eu/) — 2024 Iloilo flood extent (validation) | Eco | 2015→ | open | STAC / portal | M | ⏳ **BLOCKED 2026-08-05** — EODC STAC scanned (`fetch_s1_gfm_iloilo.py`); City Proper mostly exclusion/nodata; see `raw/flood/S1_GFM_ACQUISITION.md`. VAL-02 NOT_RUN. |
 | PAGASA-NOAH | [PAGASA flood maps](https://bagong.pagasa.dost.gov.ph/products-and-services/flood-hazard-maps) + [Project NOAH](https://noah.up.edu.ph/) | Eco | current | open | direct | H | ☐ |
 | NHCP | [NHCP declared heritage sites](https://nhcp.gov.ph/) + OSM heritage tags | Societal | current | open | direct/API | M | ☐ |
 
@@ -86,11 +86,11 @@ Master manifest of every dataset. Single source of truth for *what we have, wher
 
 ---
 
-## Tier C — fidelity upgrades that need a human (open substitute already in hand → never a blocker)
-Send-ready drafts in [`outreach/`](outreach/). See each file for who / exact ask / full message.
-| ID | Who | Ask | Open substitute we already have | Draft |
+## Tier C — archived outreach (WONT-FILE under CR-016)
+Drafts kept under [`outreach/`](outreach/) for history only. **Do not file.** Open substitutes are the production path ([OPEN_REFRESH.md](OPEN_REFRESH.md)).
+| ID | Who | Ask (archived) | Open substitute we use | Draft |
 |---|---|---|---|---|
-| C-LTFRB | LTFRB Region VI + Iloilo transport office | authoritative route geometries, headways, fleet, ridership | published LPTRP guides + OSM (~80%, Medium conf) | `outreach/ltfrb-vi-foi.md` |
-| C-CBMS | PSA Iloilo (033) 327-9219 | detailed CBMS poverty/household-profile tables | public barangay population + CCHAIN | `outreach/psa-cbms-request.md` |
-| C-LIPAD | PhilLiDAR/LiPAD (lipad@dream.upd.edu.ph) | 1m DTM / classified LAZ | open 10m flood maps + GLO-30 DEM | `outreach/lipad-dtm-request.md` |
-| C-CAA | Clean Air Asia (SMMR) | Iloilo data-inventory report | public article (enrichment only, not a sim input) | `outreach/clean-air-asia-smmr.md` |
+| C-LTFRB | LTFRB Region VI + Iloilo transport office | authoritative route geometries, headways, fleet, ridership | literature mode-share + OSM PT + Tier-B WorldPop | `outreach/ltfrb-vi-foi.md` |
+| C-CBMS | PSA Iloilo (033) 327-9219 | detailed CBMS poverty/household-profile tables | CCHAIN WorldPop / RWI | `outreach/psa-cbms-request.md` |
+| C-LIPAD | PhilLiDAR/LiPAD (lipad@dream.upd.edu.ph) | 1m DTM / classified LAZ | **✅ open 10 m flood WFS** (`fetch_lipad_flood.py`) + GLO-30 | `outreach/lipad-dtm-request.md` |
+| C-CAA | Clean Air Asia (SMMR) | Iloilo data-inventory report | OpenAQ fixture / EMB scale check | `outreach/clean-air-asia-smmr.md` |

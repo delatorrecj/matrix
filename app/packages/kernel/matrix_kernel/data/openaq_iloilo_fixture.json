@@ -1,0 +1,8 @@
+{
+  "provenance": "Committed offline fixture for OpenAQ Iloilo/nearby PM2.5 scale check (Credibility Phase 1). Replace by running data/fetch/fetch_openaq.py when OPENAQ_API_KEY is set.",
+  "location": "Iloilo City vicinity (placeholder station aggregate)",
+  "median_pm25_ug_m3": 18.5,
+  "unit": "µg/m³",
+  "n_observations": 48,
+  "note": "Order-of-magnitude ambient only — not a scenario dispersion ground truth."
+}

@@ -261,7 +261,7 @@ def stage2_netconvert(osm_path: Path, net_path: Path) -> Path:
     ]
 
     print(f"[stage2] running netconvert inside {SUMO_IMG} …")
-    print(f"[stage2] mount: {data_dir!s} → /data  (Docker: {mount_src})")
+    print(f"[stage2] mount: {data_dir!s} -> /data  (Docker: {mount_src})")
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 

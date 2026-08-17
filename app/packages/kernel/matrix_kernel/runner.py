@@ -19,6 +19,7 @@ import os
 import subprocess
 import tempfile
 import time
+import uuid
 import xml.etree.ElementTree as ET
 from functools import lru_cache
 from pathlib import Path
@@ -36,6 +37,12 @@ def _net():
     import sumolib
 
     return sumolib.net.readNet(str(NET))
+
+
+@lru_cache(maxsize=1)
+def _edge_ids() -> frozenset[str]:
+    """All edge ids in the net, cached -- avoids rescanning ~36k edges per gazetteer check."""
+    return frozenset(e.getID() for e in _net().getEdges())
 
 
 def _mode_for(vehicle_id: str) -> str:
@@ -100,11 +107,14 @@ def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
             return edges, "geometry"
 
     loc = scenario.effective_location
-    
+
     if loc:
         from matrix_kernel.gazetteer import resolve_colloquial_term
         entry = resolve_colloquial_term(loc)
-        if entry and entry.sumo_edge:
+        # A gazetteer hit is only a real match if its sumo_edge actually exists in the
+        # deployed net (PRD-F14): a curated entry can carry a stale/placeholder id, and
+        # claiming "gazetteer-match" while touching zero edges would be a glass-box lie.
+        if entry and entry.sumo_edge and entry.sumo_edge in _edge_ids():
             flag = " (PROVISIONAL-id)" if entry.provisional else ""
             return [entry.sumo_edge], f"gazetteer-match{flag}"
 
@@ -131,6 +141,21 @@ def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:
     return _resolve_edges(scenario, top_n)[0]
 
 
+def _location_of_interest(affected: list[str], edge_resolution: str) -> list[float] | None:
+    """[lon, lat] of the first affected edge's midpoint, ground truth for the results-
+    view map marker/pan (CR-013) -- or None for a fallback resolution. Never a centroid
+    across all affected edges: a street name can match segments in unrelated
+    neighborhoods, and averaging those would land the marker in a meaningless spot
+    between them. Only a real resolution (geometry/gazetteer/keyword) earns a marker --
+    showing one for busiest-baseline-fallback would be a glass-box lie (PRD-F14)."""
+    if not affected or edge_resolution.startswith("busiest-baseline-fallback"):
+        return None
+    from matrix_kernel.geometry import edge_midpoint_lonlat
+
+    lon, lat = edge_midpoint_lonlat(_net(), affected[0])
+    return [round(lon, 5), round(lat, 5)]
+
+
 def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
              max_frames: int = 40) -> Trajectory:
     """Run the scenario via TraCI as a delta vs the cached baseline -> one Trajectory."""
@@ -139,6 +164,8 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
     import traci
 
     affected, edge_resolution = _resolve_edges(scenario)
+    location_of_interest = _location_of_interest(affected, edge_resolution)
+
     with tempfile.TemporaryDirectory() as td:
         add = Path(td) / "ed.add.xml"
         edge_out = Path(td) / "edgeout.xml"
@@ -155,14 +182,25 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "--ignore-route-errors", "true",  # an edit may strand a route -> drop it, don't abort
         ]
         os.environ["SUMO_HOME"] = sumo_env.sumo_home()
-        traci.start(cmd)
+        # A unique label per call (not the implicit "default") -- traci's module-level
+        # _connections dict is process-global, so two concurrent simulate() calls (the
+        # /simulate concurrency gate admits MATRIX_MAX_CONCURRENT_SIMS, default 2) both
+        # starting under "default" collide with "Connection 'default' is already
+        # active." getConnection() returns a connection object whose .edge/.lane/
+        # .simulation domains are bound to THIS socket specifically (traci's
+        # domain._register binds a per-connection copy, independent of whichever
+        # connection is globally "switched" current) -- genuinely thread-safe.
+        label = f"matrix-{uuid.uuid4().hex}"
+        traci.start(cmd, label=label)
+        conn = traci.getConnection(label)
+        conn.TraCIException = traci.TraCIException  # scenario.py handlers read this off traci_mod
         try:
             # Apply the scenario's network edit via the per-intervention dispatcher.
-            applied = apply_intervention(traci, scenario, affected)
-            while traci.simulation.getMinExpectedNumber() > 0 and traci.simulation.getTime() < end:
-                traci.simulationStep()
+            applied = apply_intervention(conn, scenario, affected)
+            while conn.simulation.getMinExpectedNumber() > 0 and conn.simulation.getTime() < end:
+                conn.simulationStep()
         finally:
-            traci.close()
+            conn.close()
 
         edge_counts = _parse_edgecounts(edge_out)
         frames = _parse_frames(fcd_out, max_frames)
@@ -179,6 +217,9 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "affected_edges": affected,
             "applied": applied,  # dispatch record: edges touched, parameters, TraCI calls, assumptions
             "edge_resolution": edge_resolution,  # "geometry" (map-drop) or "keyword-match"
+            # [lon, lat] of the first affected edge's midpoint, or None for a fallback
+            # resolution (CR-013: the results-view map marker/pan; ground truth, not a guess).
+            "location_of_interest": location_of_interest,
             # -- legacy keys: the five modules read these as "the affected corridor" -- keep. --
             "closed_edges": affected,
             "edge_lanes": applied["edge_lanes"],

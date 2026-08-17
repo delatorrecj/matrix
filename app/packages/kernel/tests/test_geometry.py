@@ -11,6 +11,7 @@ import pytest
 
 from matrix_kernel import geometry
 from matrix_kernel.geometry import (
+    edge_midpoint_lonlat,
     edges_in_polygon,
     edges_near_point,
     geometries,
@@ -61,8 +62,17 @@ class FakeNet:
     def convertLonLat2XY(self, lon, lat):
         return lon, lat
 
+    def convertXY2LonLat(self, x, y):
+        return x, y
+
     def getEdges(self):
         return list(self._edges)
+
+    def getEdge(self, edge_id):
+        for e in self._edges:
+            if e.getID() == edge_id:
+                return e
+        raise KeyError(edge_id)
 
     def getNeighboringEdges(self, x, y, r=0.1, includeJunctions=True, allowFallback=True):
         out = []
@@ -298,3 +308,13 @@ def test_resolve_geometry_honest_empty_for_offnetwork(net):
 def test_resolve_geometry_raises_for_unsupported(net):
     with pytest.raises(ValueError):
         resolve_geometry(net, {"type": "LineString", "coordinates": [[0, 0], [1, 1]]})
+
+
+# --------------------------------------------------------------------------- #
+# edge_midpoint_lonlat -- ground-truth location-of-interest (CR-013:
+# matrix_kernel.runner derives the results-view marker/pan from this)
+# --------------------------------------------------------------------------- #
+
+def test_edge_midpoint_lonlat_returns_middle_shape_point(net):
+    # B_horizontal's shape is [(0.0, 5.0), (10.0, 5.0)] -- 2 points, midpoint index 1.
+    assert edge_midpoint_lonlat(net, "B_horizontal") == (10.0, 5.0)

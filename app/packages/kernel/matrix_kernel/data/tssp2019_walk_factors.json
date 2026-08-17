@@ -1,0 +1,7 @@
+{
+  "sidewalk_weight": 0.45,
+  "bike_infra_weight": 0.35,
+  "traffic_stress_penalty": 0.20,
+  "source": "TSSP 2019 Macalalag et al. — Factors Influencing Bicycle Use in Iloilo City (planning-factor excerpt for SOCI-4; local copy data/raw/literature/TSSP2019_Iloilo_bicycle_use.pdf)",
+  "notes": "Weights sum to 1.0. Used as relative importance of sidewalk coverage, bike infrastructure presence, and traffic-stress penalty when scoring walkability Δ. Not a survey re-estimation."
+}

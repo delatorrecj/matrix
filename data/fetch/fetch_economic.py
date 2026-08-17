@@ -216,7 +216,7 @@ def fetch_psa_openstat():
     # National; 2000-2025. Useful tourism-sector economic activity proxy.
     pxweb_csv(
         "PSA-GVA",
-        "DB/DB__2B__NA/",
+        "DB/2B/NA/AN/15AFSA/0662B5BFSA1.px",
         "psa_openstat_gva_accommodation_food_service.csv",
         query_filter=None,
     )
@@ -227,7 +227,7 @@ def fetch_psa_openstat():
     # Table 1 has Region VI, Iloilo province, and a City-of-Iloilo HUC row.
     pxweb_csv(
         "FIES2023-IE",
-        "DB/1E/IE/001E3ANIE0.px",
+        "DB/1E/IE/0011E3ANIE0.px",
         "psa_openstat_fies2023_income_expenditure_by_region.csv",
         query_filter=None,
     )
@@ -244,13 +244,13 @@ def fetch_psa_openstat():
     # Far richer than the 2015 wholesale/retail subset previously in hand.
     pxweb_csv(
         "ASPBI2022-WRT",
-        "DB/2D/2022/0222D4BAG00.px",
+        "DB/2D/2022/0012D4BAG00.px",
         "psa_openstat_aspbi2022_wholesale_retail_by_region.csv",
         query_filter=None,
     )
     pxweb_csv(
         "ASPBI2022-ACC",
-        "DB/2D/2022/0222D4BAI00.px",
+        "DB/2D/2022/0032D4BAI00.px",
         "psa_openstat_aspbi2022_accommodation_food_by_region.csv",
         query_filter=None,
     )

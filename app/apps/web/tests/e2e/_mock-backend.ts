@@ -21,7 +21,7 @@ import type { Page } from "@playwright/test";
 // their real metric names/units/magnitudes so the Summary formatter produces sensible
 // humanized output (e.g. BEH-1 = trips, not %).
 const DIMENSION_RESULTS = [
-  { type: "DIMENSION_RESULT", dimension: "behavioral", metric: "Δ trips on affected corridor (AM-peak)", value: -14, unit: "trips/window", range: [-17, -10], confidence: "H", equation_id: "BEH-1", input_dataset_ids: ["PERSONA-POOL", "OSM-ILO"], assumptions: ["illustrative e2e fixture"], references: [] },
+  { type: "DIMENSION_RESULT", dimension: "behavioral", metric: "Δ trips on affected corridor (AM-peak)", value: -14, unit: "trips/window", range: [-17, -10], confidence: "L", directional: true, equation_id: "BEH-1", input_dataset_ids: ["PERSONA-POOL", "OSM-ILO"], assumptions: ["confidence capped at L: VAL-01 published FAIL — corridor volumes are directional, not city-calibrated"], references: [] },
   { type: "DIMENSION_RESULT", dimension: "ecological", metric: "Transport CO₂e Δ", value: -0.05, unit: "ktCO₂e/yr", range: [-0.08, -0.03], confidence: "M", equation_id: "ECO-1", input_dataset_ids: ["CCHAIN"], assumptions: [], references: [] },
   { type: "DIMENSION_RESULT", dimension: "social", metric: "Displacement risk count", value: 12, unit: "count", range: [10, 14], confidence: "H", equation_id: "SOC-2", input_dataset_ids: ["CCHAIN", "OSM-ILO"], assumptions: [], references: [] },
   { type: "DIMENSION_RESULT", dimension: "economic", metric: "Footfall Δ per zone", value: -16.8, unit: "visits/day", range: [-20, -13], confidence: "H", equation_id: "ECON-2", input_dataset_ids: ["PERSONA-POOL", "OVERTURE"], assumptions: [], references: [] },
@@ -68,13 +68,29 @@ const DONE = {
 /** Full canned stream, in server-event order. */
 const STREAM: readonly unknown[] = [{ type: "ACCEPTED" }, ...DIMENSION_RESULTS, SYNTHESIS, DONE];
 
-/** GET /validation — two NOT_RUN gates (matrix_kernel.validation.GateResult.to_dict shape). */
+/** GET /validation — VAL-01 published FAIL matches the live ledger shape. */
 const VALIDATION = {
   source: "e2e-fixture",
   note: "Illustrative gates for the mocked e2e run.",
-  generated_at: "2026-06-20T00:00:00Z",
+  generated_at: "2026-08-16T06:22:55Z",
   gates: [
-    { gate_id: "VAL-01", name: "Behavioral corridor RMSE", metric: "RMSE", value: null, unit: "veh/h", threshold: 0.15, comparator: "<=", status: "NOT_RUN", fixture_id: "calderon2014", fixture_provenance: "Calderon 2014 BRT model", simulated_source: null, threshold_provenance: "QAD VAL-01" },
+    {
+      gate_id: "VAL-01",
+      name: "Behavioral corridor back-test (Calderon 2014, Ungka–Iloilo corridors)",
+      metric: "normalized_rmse",
+      value: 4.738583,
+      unit: "fraction of mean observed volume",
+      threshold: 0.3,
+      comparator: "<=",
+      status: "FAIL",
+      fixture_id: "LIT-CALDERON",
+      fixture_provenance: "Calderon et al. (2014, TSSP) JICA STRADA 3 transit-model values.",
+      fixture_provisional: false,
+      simulated_source: "live-baseline:redis",
+      n_points: 2,
+      threshold_provenance: "FHWA Travel Model Validation Manual (2nd ed., 2010).",
+      notes: "published FAIL — uncalibrated demand; corridor volumes are directional",
+    },
     { gate_id: "VAL-02", name: "Flood redistribution IoU", metric: "IoU", value: null, unit: "ratio", threshold: 0.5, comparator: ">=", status: "NOT_RUN", fixture_provisional: true, fixture_provenance: "placeholder extent" },
   ],
 };

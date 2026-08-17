@@ -157,6 +157,69 @@ def test_scenario_ambiguous_returns_400(client, monkeypatch):
     assert resp.json()["is_ambiguous"] is True
 
 
+# ─── GET /scenario/{id} (CR-013: results view fly-to-location) ──────────────────────────
+
+
+def test_get_scenario_returns_location_and_geometry(client, monkeypatch):
+    monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: _fake_scenario("scn-get-1"))
+    client.post("/scenario", json={"query": "close a lane on Diversion Rd"})
+
+    resp = client.get("/scenario/scn-get-1")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["scenario_id"] == "scn-get-1"
+    assert body["location"] == "Diversion Rd"
+    assert body["geometry"] == {"type": "Point", "coordinates": [122.5621, 10.7202]}
+    assert body["location_of_interest"] == [122.5621, 10.7202]
+
+
+def test_get_scenario_location_of_interest_from_gazetteer(client, monkeypatch):
+    """NL place name, no map-drop: camera point comes from gazetteer coords, not geometry."""
+    sc = SimpleNamespace(
+        scenario_id="scn-molo-1",
+        description="3-storey school in Molo",
+        corridor="Molo",
+        lanes_closed=1,
+        intervention_type="lane_closure",
+        location="Molo",
+        geometry=None,
+        parameters={"lanes_closed": 1},
+    )
+    monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: sc)
+    client.post("/scenario", json={"query": "I want a 3-storey school in MOLO"})
+
+    resp = client.get("/scenario/scn-molo-1")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["geometry"] is None
+    assert body["location_of_interest"][0] == pytest.approx(122.5446)
+    assert body["location_of_interest"][1] == pytest.approx(10.6969)
+
+
+def test_get_scenario_location_of_interest_null_when_unknown(client, monkeypatch):
+    sc = SimpleNamespace(
+        scenario_id="scn-unk-1",
+        description="somewhere unknown",
+        corridor="",
+        lanes_closed=1,
+        intervention_type="lane_closure",
+        location="NotAPlaceInTheGazetteer",
+        geometry=None,
+        parameters={"lanes_closed": 1},
+    )
+    monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: sc)
+    client.post("/scenario", json={"query": "build at NotAPlaceInTheGazetteer"})
+
+    resp = client.get("/scenario/scn-unk-1")
+    assert resp.status_code == 200
+    assert resp.json()["location_of_interest"] is None
+
+
+def test_get_scenario_404_when_missing(client):
+    resp = client.get("/scenario/does-not-exist")
+    assert resp.status_code == 404
+
+
 # ─── the seam fix: a live run simulates the PERSISTED scenario, not a blank stand-in ─────
 
 
@@ -282,6 +345,50 @@ def test_unknown_run_is_404(client):
     resp = client.get("/runs/never-ran")
     assert resp.status_code == 404
     assert resp.json()["error"] == "run not found"
+
+
+def test_latest_run_for_scenario_happy_and_404(client):
+    assert client.get("/scenarios/scn-none/latest-run").status_code == 404
+
+    scenario_id = db.save_scenario(_fake_scenario("scn-latest"), raw_input="q")
+    run_id = db.save_run(scenario_id, status="running")
+    # Incomplete run must not hydrate.
+    assert client.get("/scenarios/scn-latest/latest-run").status_code == 404
+
+    assert db.save_dimension_results(run_id, _results()) == 2
+    db.save_run(
+        scenario_id,
+        run_id=run_id,
+        status="done",
+        duration_ms=1000,
+        timings={
+            "sumo_ms": 10,
+            "modules_ms": 20,
+            "llm_ms": 5,
+            "total_ms": 1000,
+            "affected_edges": ["e-molo"],
+            "edge_resolution": "keyword-match",
+        },
+    )
+
+    resp = client.get("/scenarios/scn-latest/latest-run")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["run_id"] == run_id
+    assert body["scenario_id"] == "scn-latest"
+    assert body["status"] == "done"
+    assert body["affected_edges"] == ["e-molo"]
+    assert body["edge_resolution"] == "keyword-match"
+    assert body["timings"] == {
+        "sumo_ms": 10,
+        "modules_ms": 20,
+        "llm_ms": 5,
+        "total_ms": 1000,
+    }
+    assert "affected_edges" not in (body["timings"] or {})
+    assert {r["equation_id"] for r in body["results"]} == {"BEH-1", "ECO-2"}
+    eco = next(r for r in body["results"] if r["equation_id"] == "ECO-2")
+    assert eco["directional"] is True  # confidence L
 
 
 # ─── audit log (PRD-F6) ─────────────────────────────────────────────────────────────────
@@ -414,6 +521,23 @@ def test_validation_honest_when_module_missing(client, tmp_path, monkeypatch):
     monkeypatch.setitem(sys.modules, "matrix_kernel.validation", None)  # forces ImportError
     body = client.get("/validation").json()
     assert body == {"gates": [], "note": "validation module not available"}
+
+
+def test_credibility_serves_report_file(client, tmp_path, monkeypatch):
+    report = {"schema_version": "1.0", "llm_invents_numbers": False, "equations": []}
+    path = tmp_path / "credibility_report.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+    monkeypatch.setenv("MATRIX_CREDIBILITY_REPORT", str(path))
+    assert client.get("/credibility").json() == report
+
+
+def test_credibility_builds_live_when_file_missing(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("MATRIX_CREDIBILITY_REPORT", str(tmp_path / "missing.json"))
+    monkeypatch.delenv("OPENAQ_API_KEY", raising=False)
+    body = client.get("/credibility").json()
+    assert body.get("llm_invents_numbers") is False
+    assert "equations" in body
+    assert "external" in body
 
 
 # ─── Postgres round-trip (skips cleanly without a reachable DATABASE_URL) ───────────────

@@ -27,6 +27,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | Compliance (RA 10173, licenses) | [clr-matrix.md](clr-matrix.md) | - |
 | Data: what we have, links, confidence | [../data/INVENTORY.md](../data/INVENTORY.md) + [../data/READINESS.md](../data/READINESS.md) | [MATRIX_Iloilo_Data_Sources.md](../MATRIX_Iloilo_Data_Sources.md) = sourcing *rationale* only |
 | Execution order · phase gates · checkpoints | [implementation-plan-matrix.md](implementation-plan-matrix.md) | the *when / in-what-order / done-when*; BUILD owns *how* |
+| Teammate onboarding (reading path) | [onboarding-matrix.md](onboarding-matrix.md) | study guide; **not** canonical. Stack Q&A points at SDD / BUILD / RFC |
 
 **Rule:** a fact lives in its canonical doc; everything else links. This is the anti-poisoning contract.
 
@@ -36,6 +37,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 
 | Document | File | Version | Status | Last Updated | Last Reconciled |
 |----------|------|---------|--------|--------------|-----------------|
+| Onboarding primer | [onboarding-matrix.md](onboarding-matrix.md) | 0.1 | Draft | 2026-08-16 | 2026-08-16 (reading path + stack Q&A; not Locked) |
 | BRD - Business Requirements | - | - | N/A - covered by [MATRIX.md](../MATRIX.md) §1–3, §Appendix B | - | - |
 | PRD - Product Requirements | [prd-matrix.md](prd-matrix.md) | 0.1 | **Locked** | 2026-06-24 | 2026-06-24 (CR-010 - PRD-F7 amended to the BLUF bilingual synthesis brief + re-locked; prior: CR-005 verified vs as-built `app/`) |
 | DSD - Design System | [dsd-matrix.md](dsd-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (CR-010 UX updates; verified anti-pattern register status) |

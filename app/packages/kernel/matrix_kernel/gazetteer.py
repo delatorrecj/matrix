@@ -67,6 +67,14 @@ def resolve_colloquial_term(term: str) -> GazetteerEntry | None:
     return None
 
 
+def location_coordinates(term: str) -> list[float] | None:
+    """Camera [lon, lat] for a place name. Does not require a live SUMO edge."""
+    entry = resolve_colloquial_term(term)
+    if not entry or len(entry.coordinates) < 2:
+        return None
+    return [float(entry.coordinates[0]), float(entry.coordinates[1])]
+
+
 def annotate_query_with_gazetteer(query: str) -> str:
     """Pre-process a query string by injecting canonical context if a colloquial term hits.
     
