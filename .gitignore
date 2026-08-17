@@ -66,5 +66,9 @@ presentation/deck/PPT Template AAIH (student).pptx
 
 # Note: data/raw and data/interim are ignored by data/.gitignore (nested).
 # Note: app/.gitignore covers .venv, node_modules, .next, dist, etc. for app/.
+# Startup-generated ledgers (also listed in app/.gitignore). CI regenerates and
+# uploads them; do not commit laptop copies.
+app/validation_report.md
+app/credibility_report.json
 
 .env
