@@ -176,9 +176,19 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       }}
       data-testid="inspect-drawer"
     >
-      {/* Header */}
-      <div className="p-6 border-b border-border flex items-start justify-between bg-surface-elevated shrink-0">
-        <div className="flex-1 pr-4">
+      {/* Close button floats above the scrollable content so it's never pushed
+          out of view by a long value, a wrapped title, or the fidelity notice. */}
+      <button
+        onClick={onClose}
+        aria-label="Close inspector"
+        className="absolute top-4 right-4 z-10 p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      {/* Header + peek content: scrolls as one region so nothing gets clipped. */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="p-6 pr-16 border-b border-border bg-surface-elevated">
           <div className="mb-2">
             <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono inline-block">
               {data?.equationId || "..."}
@@ -187,9 +197,9 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
           <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
             {data?.metric || "Loading..."}
           </h3>
-          <div className="flex flex-col mt-4">
-            <span className="text-4xl font-mono font-bold tracking-tight">{data?.value}</span>
-            <span className="text-xs font-mono text-text-muted mt-1">range: {data?.range}</span>
+          <div className="flex flex-col mt-4 min-w-0">
+            <span className="text-4xl font-mono font-bold tracking-tight wrap-break-word">{data?.value}</span>
+            <span className="text-xs font-mono text-text-muted mt-1 wrap-break-word">range: {data?.range}</span>
             {fidelityNotice && (
               <p
                 className="mt-3 text-xs leading-relaxed text-foreground bg-warning/10 border border-warning/30 rounded-lg px-2.5 py-2"
@@ -200,26 +210,9 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
             )}
           </div>
         </div>
-          <button
-            onClick={onClose}
-            aria-label="Close inspector"
-            className="p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {!isExpanded && (
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="w-full py-2 bg-surface hover:bg-surface-elevated text-xs font-semibold text-primary transition-colors flex items-center justify-center gap-2 mt-auto"
-          >
-            Show details
-          </button>
-        )}
 
         {isExpanded && (
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 min-h-0">
+          <div className="p-6 flex flex-col gap-8">
           {/* Confidence */}
           <section>
             <h4 className="text-sm font-medium text-text-muted mb-3 uppercase tracking-wider">
@@ -414,15 +407,25 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
           )}
           </div>
         )}
-
-        {isExpanded && (
-          <button
-            onClick={() => setIsExpanded(false)}
-            className="w-full py-3 bg-surface hover:bg-surface-elevated text-xs font-semibold text-text-muted border-t border-border transition-colors flex items-center justify-center gap-2"
-          >
-            Collapse details
-          </button>
-        )}
       </div>
+
+      {!isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="w-full py-2 bg-surface hover:bg-surface-elevated text-xs font-semibold text-primary transition-colors flex items-center justify-center gap-2 shrink-0"
+        >
+          Show details
+        </button>
+      )}
+
+      {isExpanded && (
+        <button
+          onClick={() => setIsExpanded(false)}
+          className="w-full py-3 bg-surface hover:bg-surface-elevated text-xs font-semibold text-text-muted border-t border-border transition-colors flex items-center justify-center gap-2 shrink-0"
+        >
+          Collapse details
+        </button>
+      )}
+    </div>
   );
 }
