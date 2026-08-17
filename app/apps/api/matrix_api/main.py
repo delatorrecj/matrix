@@ -265,18 +265,19 @@ def get_scenario(scenario_id: str) -> dict:
     }
 
 
-_CLIENT_TIMING_KEYS = ("sumo_ms", "modules_ms", "llm_ms", "total_ms")
+_CORRIDOR_TIMING_KEYS = ("affected_edges", "edge_resolution")
 
 
 def _run_public_view(run: dict) -> dict:
-    """Split corridor fields stuffed into timings JSONB so the client timings
-    contract stays {sumo,modules,llm,total}_ms only."""
+    """Lift the corridor fields stuffed into timings JSONB into their own top-level
+    keys. Every other timings entry passes through untouched -- this must not
+    silently drop provenance (PRD-F14) for keys outside the standard stage set."""
     out = dict(run)
     timings = out.get("timings")
     if isinstance(timings, dict):
         out["affected_edges"] = timings.get("affected_edges")
         out["edge_resolution"] = timings.get("edge_resolution")
-        out["timings"] = {k: timings[k] for k in _CLIENT_TIMING_KEYS if k in timings}
+        out["timings"] = {k: v for k, v in timings.items() if k not in _CORRIDOR_TIMING_KEYS}
     else:
         out.setdefault("affected_edges", None)
         out.setdefault("edge_resolution", None)

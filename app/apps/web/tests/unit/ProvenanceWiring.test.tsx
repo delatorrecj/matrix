@@ -35,6 +35,22 @@ vi.mock("@deck.gl/geo-layers", () => ({
 // SynthesisNarrative stay REAL — the citation→drawer wiring is what's under test.
 vi.mock("@/components/ValidationPanel", () => ({ default: () => null }));
 vi.mock("@/components/BiasAuditLog", () => ({ default: () => null }));
+// CR-013 bootstrap awaits getScenario/getLatestRun before opening the WS — stub them so
+// the page's own effect resolves in a microtask instead of racing a real network call.
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return {
+    ...actual,
+    getScenario: vi.fn().mockResolvedValue({
+      scenario_id: "scn-test",
+      description: "",
+      intervention_type: null,
+      location: null,
+      geometry: null,
+    }),
+    getLatestRun: vi.fn().mockResolvedValue(null),
+  };
+});
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -103,8 +119,11 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
     vi.unstubAllGlobals();
   });
 
-  function streamRun() {
+  async function streamRun() {
     render(<ScenarioSimulation />);
+    // Flush the async CR-013 bootstrap (getScenario/getLatestRun) before the
+    // WS-opening effect runs, so the socket is deterministically present after.
+    await act(async () => {});
     const ws = FakeWebSocket.instances.at(-1);
     if (!ws) throw new Error("no WebSocket was opened");
     act(() => {
@@ -119,8 +138,8 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
     return ws;
   }
 
-  it("renders the synthesis narrative with citation chips", () => {
-    streamRun();
+  it("renders the synthesis narrative with citation chips", async () => {
+    await streamRun();
     const synthesis = screen.getByTestId("synthesis-narrative");
     expect(synthesis).toHaveTextContent("dominates the corridor");
     expect(within(synthesis).getByTestId("cite-BEH-1")).toBeEnabled();
@@ -128,8 +147,8 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
     expect(within(synthesis).getByTestId("cite-ECO-1")).toBeDisabled();
   });
 
-  it("clicking a citation chip opens the InspectDrawer on the matching result", () => {
-    streamRun();
+  it("clicking a citation chip opens the InspectDrawer on the matching result", async () => {
+    await streamRun();
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("cite-BEH-1"));
@@ -142,8 +161,8 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
     expect(within(dialog).getByTestId("dataset-row-lptrp-2023")).toBeInTheDocument();
   });
 
-  it("Escape closes the drawer opened from a citation chip", () => {
-    streamRun();
+  it("Escape closes the drawer opened from a citation chip", async () => {
+    await streamRun();
     fireEvent.click(screen.getByTestId("cite-BEH-1"));
     expect(screen.getByRole("region")).toBeInTheDocument();
 
@@ -151,8 +170,8 @@ describe("Provenance wiring: synthesis citations → InspectDrawer", () => {
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
-  it("a disabled chip never opens a drawer", () => {
-    streamRun();
+  it("a disabled chip never opens a drawer", async () => {
+    await streamRun();
     fireEvent.click(screen.getByTestId("cite-ECO-1"));
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });

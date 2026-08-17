@@ -9,7 +9,17 @@ pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in
 
 from matrix_kernel.runner import Scenario, simulate
 from matrix_kernel.trajectory import Trajectory
-from matrix_kernel.baseline import load_baseline
+from matrix_kernel.baseline import NET, ROU, load_baseline
+
+# Every test here drives the REAL simulate() against the real net + demand, which are
+# gitignored large assets (~42 MB). The importorskip above only proves the eclipse-sumo
+# WHEEL is installed -- CI installs it, then these ran straight into FileNotFoundError.
+# Skip at module level on the data, mirroring tests/test_geometry_sumolib.py.
+if not NET.exists() or not ROU.exists():
+    pytest.skip(
+        f"{NET.name}/{ROU.name} missing -- run build_network.py + build_demand.py",
+        allow_module_level=True,
+    )
 
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
 
