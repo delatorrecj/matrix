@@ -67,6 +67,7 @@ import {
   createScenario,
   type ScenarioGeometry,
 } from "@/lib/api";
+import { savePromptHandoff } from "@/lib/promptHandoff";
 import { LogoMark } from "@/components/Logo";
 
 // ── Domain types ─────────────────────────────────────────────────────────────
@@ -275,6 +276,13 @@ export default function ScenarioBuilder() {
       // resolves edges from exactly what was drawn (PRD-F14). The review query still
       // shows the suffix verbatim — what you see is still what is sent.
       const scenario = await createScenario(query, drawnGeometryToGeoJSON(state.geometry));
+      savePromptHandoff(scenario.scenario_id, {
+        rawInput: scenario.raw_input ?? query,
+        description: scenario.description ?? "",
+        interventionType: scenario.intervention_type ?? null,
+        location: scenario.location ?? null,
+        parameters: scenario.parameters ?? {},
+      });
       router.push(`/scenario/${scenario.scenario_id}`);
       // Keep the spinner up while Next.js navigates away.
     } catch (err) {

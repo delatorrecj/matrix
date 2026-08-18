@@ -21,6 +21,7 @@ import RunProgress from "@/components/RunProgress";
 import RunStatusBanner from "@/components/RunStatusBanner";
 import { InitializingState } from "@/components/InitializingState";
 import { IconNavRail } from "@/components/IconNavRail";
+import { ScenarioPromptReview } from "@/components/ScenarioPromptReview";
 import {
   DIMENSIONS,
   EXPECTED_RESULTS,
@@ -39,8 +40,11 @@ import {
   affectedEdgesLayer,
   filterAffectedFeatures,
   honestAffectedEdgeIds,
-  affectedBounds,
+  resultsCameraFly,
+  corridorAnchorLonLat,
+  shouldFlyToCorridor,
   zoomForBbox,
+  zoomWithoutPullingOut,
 } from "@/components/map";
 import type {
   ConfidenceCell,
@@ -53,12 +57,22 @@ import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft 
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
-import { getScenario, getLatestRun, type ScenarioGeometry, type StoredDimensionResult } from "@/lib/api";
+import { getLatestRun, getScenario, type StoredDimensionResult } from "@/lib/api";
+import { takePromptHandoff, type PromptHandoff } from "@/lib/promptHandoff";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
+import { loadMapView, saveMapView } from "@/components/map/mapViewMemory";
 import type { MapRef } from "react-map-gl/maplibre";
 import type { DimensionId, RunTimings } from "@/lib/simulationRun";
+
+const DEFAULT_VIEW = {
+  longitude: 122.56,
+  latitude: 10.72,
+  zoom: 13,
+  pitch: 45,
+  bearing: 0,
+};
 
 const ILOILO_BOUNDS = {
   minLng: 122.48,
@@ -77,35 +91,6 @@ const handleViewStateChange = ({ viewState }: any) => ({
   latitude: Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat),
   zoom: Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom),
 });
-
-/** Reduce a scenario's GeoJSON geometry to a single [lng, lat] to fly the map to —
- * a Point's own coordinates, or the centroid (mean of the outer ring, excluding the
- * closing duplicate vertex) for a Polygon. Mirrors ScenarioBuilder's centroid logic. */
-function geometryToLngLat(geometry: ScenarioGeometry | null): [number, number] | null {
-  if (!geometry) return null;
-  if (geometry.type === "Point") {
-    const coords = geometry.coordinates as number[];
-    return [coords[0], coords[1]];
-  }
-  const ring = (geometry.coordinates as number[][][])[0];
-  if (!ring || ring.length === 0) return null;
-  const vertices = ring.slice(0, -1).length > 0 ? ring.slice(0, -1) : ring;
-  const n = vertices.length;
-  const cx = vertices.reduce((s, v) => s + v[0], 0) / n;
-  const cy = vertices.reduce((s, v) => s + v[1], 0) / n;
-  return [cx, cy];
-}
-
-function recordLocationOfInterest(record: {
-  location_of_interest?: [number, number] | null;
-  geometry: ScenarioGeometry | null;
-}): [number, number] | null {
-  const loi = record.location_of_interest;
-  if (Array.isArray(loi) && loi.length === 2 && typeof loi[0] === "number" && typeof loi[1] === "number") {
-    return [loi[0], loi[1]];
-  }
-  return geometryToLngLat(record.geometry);
-}
 
 /** Map a stored GET /runs|/latest-run result into the same card shape as DIMENSION_RESULT. */
 function storedResultToCard(r: StoredDimensionResult, index: number): ResultCardData {
@@ -191,19 +176,26 @@ export default function ScenarioSimulation() {
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const mapMounted = useHasMounted();
-  const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
+  const [promptReview, setPromptReview] = useState<PromptHandoff | null>(null);
 
-  // CR-013: fetch the scenario's own parsed location once, so the results view can pan/
-  // zoom to it instead of sitting at the generic Iloilo-wide default.
   useEffect(() => {
     let cancelled = false;
+    const handoff = takePromptHandoff(scenarioId);
+    if (handoff) setPromptReview(handoff);
+
     getScenario(scenarioId)
       .then((record) => {
         if (cancelled) return;
-        setLocationOfInterest(recordLocationOfInterest(record));
+        setPromptReview({
+          rawInput: record.raw_input ?? "",
+          description: record.description ?? "",
+          interventionType: record.intervention_type,
+          location: record.location,
+          parameters: record.parameters ?? {},
+        });
       })
       .catch(() => {
-        // No scenario metadata (404 / API down) — keep the default view, no error surfaced.
+        // Keep the handoff card if GET 404s (in-memory/Postgres split).
       });
     return () => {
       cancelled = true;
@@ -249,13 +241,33 @@ export default function ScenarioSimulation() {
   const [panelView, setPanelView] = useState<"summary" | "analytics">("summary");
   const [inspectingMetric, setInspectingMetric] = useState<string | null>(null);
 
-  const [viewState, setViewState] = useState({
-    longitude: 122.56,
-    latitude: 10.72,
-    zoom: 13,
-    pitch: 45,
-    bearing: 0
-  });
+  const [viewState, setViewState] = useState(DEFAULT_VIEW);
+  const [viewReady, setViewReady] = useState(false);
+
+  useEffect(() => {
+    const saved = loadMapView(scenarioId);
+    if (saved) setViewState((prev) => ({ ...prev, ...saved }));
+    setViewReady(true);
+  }, [scenarioId]);
+
+  useEffect(() => {
+    if (!viewReady) return;
+    saveMapView(scenarioId, {
+      longitude: viewState.longitude,
+      latitude: viewState.latitude,
+      zoom: viewState.zoom,
+      pitch: viewState.pitch,
+      bearing: viewState.bearing,
+    });
+  }, [
+    viewReady,
+    scenarioId,
+    viewState.longitude,
+    viewState.latitude,
+    viewState.zoom,
+    viewState.pitch,
+    viewState.bearing,
+  ]);
 
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [runAttempt, setRunAttempt] = useState(0);
@@ -298,22 +310,6 @@ export default function ScenarioSimulation() {
     setInspectingMetric(dimension);
   }, []);
 
-  // Fly to the scenario's location of interest once, as soon as both the map and the
-  // scenario metadata are ready. Cap zoom so trajectories/layers stay readable.
-  useEffect(() => {
-    if (locationOfInterest && mapLoaded) {
-      const [lng, lat] = locationOfInterest;
-      setViewState((prev) => ({
-        ...prev,
-        longitude: lng,
-        latitude: lat,
-        zoom: 15,
-        transitionDuration: 2200,
-        transitionInterpolator: new FlyToInterpolator({ speed: 1.2 }),
-      }));
-    }
-  }, [locationOfInterest, mapLoaded]);
-
   const affectedCollection = useMemo(
     () =>
       filterAffectedFeatures(
@@ -324,24 +320,29 @@ export default function ScenarioSimulation() {
   );
 
   const haloLayer = useMemo(() => affectedEdgesLayer(affectedCollection), [affectedCollection]);
+  const corridorAnchor = useMemo(
+    () => corridorAnchorLonLat(affectedCollection),
+    [affectedCollection],
+  );
 
-  // Second fly: fit honest affected edges + 300 m buffer. Skip fallback (empty collection).
+  // Live run only: pan to the corridor. Never zoom out (refresh hydrate skips this).
   useEffect(() => {
-    if (!mapLoaded || !affectedCollection) return;
-    const bbox = affectedBounds(affectedCollection);
-    if (!bbox) return;
-    const [minLng, minLat, maxLng, maxLat] = bbox;
+    if (!mapLoaded || !shouldFlyToCorridor(shouldSimulate)) return;
+    const fly = resultsCameraFly(affectedCollection);
+    if (fly.kind === "stay") return;
+    const [minLng, minLat, maxLng, maxLat] = fly.bbox;
     setViewState((prev) => ({
       ...prev,
       longitude: (minLng + maxLng) / 2,
       latitude: (minLat + maxLat) / 2,
-      zoom: zoomForBbox(bbox),
+      zoom: zoomWithoutPullingOut(prev.zoom, zoomForBbox(fly.bbox)),
       transitionDuration: 1800,
       transitionInterpolator: new FlyToInterpolator({ speed: 1.2 }),
     }));
-  }, [affectedCollection, mapLoaded]);
+  }, [affectedCollection, mapLoaded, shouldSimulate]);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const leavingRef = useRef(false);
 
   const dispatch = useCallback((event: RunEvent) => {
     setRunState((s) => reduceRunEvent(s, event));
@@ -476,6 +477,7 @@ export default function ScenarioSimulation() {
     ws.onopen = () => dispatch({ type: "WS_OPEN" });
 
     ws.onmessage = (event) => {
+      if (leavingRef.current) return;
       let msg: Record<string, unknown>;
       try {
         msg = JSON.parse(event.data);
@@ -530,11 +532,6 @@ export default function ScenarioSimulation() {
         }
         if (Array.isArray(msg.affected_edges)) {
           setAffectedEdges(msg.affected_edges.filter((id): id is string => typeof id === "string"));
-        }
-        // Only fill location when scenario fetch left it unset (avoid re-fly mid-run).
-        if (Array.isArray(msg.location_of_interest) && msg.location_of_interest.length === 2) {
-          const [lon, lat] = msg.location_of_interest as [number, number];
-          setLocationOfInterest((prev) => prev ?? [lon, lat]);
         }
       } else if (msg.type === "DIMENSION_RESULT") {
         // Build provenance data payload format expected by InspectDrawer.
@@ -622,6 +619,20 @@ export default function ScenarioSimulation() {
     wsRef.current?.close();
   }, [dispatch]);
 
+  // Home / logo: cancel an in-flight run, then leave for the cockpit. Soft
+  // `router.push` is aborted by stream-driven re-renders and the two WebGL
+  // maps; replace + hard assign is the path that actually unmounts this page.
+  const exitToCockpit = useCallback(() => {
+    leavingRef.current = true;
+    if (!isTerminal(runState.phase)) {
+      cancelRun();
+    }
+    closeInspect();
+    setIsPlaying(false);
+    router.replace("/app");
+    window.location.assign("/app");
+  }, [runState.phase, cancelRun, closeInspect, router]);
+
   // Retry/reconnect: reset accumulated stream state and open a fresh WS
   // (the server re-streams the run from the start).
   const retryRun = useCallback(() => {
@@ -697,8 +708,7 @@ export default function ScenarioSimulation() {
           activeId={panelView === "analytics" ? "analytics" : "trajectories"}
           onNavigate={(id) => {
             if (id === "home") {
-              closeInspect();
-              router.push("/app");
+              exitToCockpit();
             } else if (id === "trajectories") {
               closeInspect();
               setPanelView("summary");
@@ -810,6 +820,15 @@ export default function ScenarioSimulation() {
           </div>
 
         <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto overflow-x-hidden print:overflow-visible">
+          {promptReview && (
+            <ScenarioPromptReview
+              rawInput={promptReview.rawInput}
+              description={promptReview.description}
+              interventionType={promptReview.interventionType}
+              location={promptReview.location}
+              parameters={promptReview.parameters}
+            />
+          )}
           <div className="print:hidden">
             <RunProgress runState={runState} />
             <RunStatusBanner runState={runState} onRetry={retryRun} />
@@ -901,12 +920,25 @@ export default function ScenarioSimulation() {
             reuseMaps
             onLoad={() => setMapLoaded(true)}
           >
-            {locationOfInterest && (
-              <Marker longitude={locationOfInterest[0]} latitude={locationOfInterest[1]} anchor="bottom">
+            {corridorAnchor && (
+              <Marker
+                longitude={corridorAnchor[0]}
+                latitude={corridorAnchor[1]}
+                anchor="center"
+              >
                 <div
-                  className="h-4 w-4 -translate-y-1 rounded-full border-2 border-white bg-primary shadow-lg"
-                  title="Scenario location of interest"
-                />
+                  className="relative h-5 w-5"
+                  title="Affected corridor"
+                >
+                  <span
+                    className="absolute inset-0 rounded-full bg-[#DB2777]/40 ring-1 ring-white/95 shadow-[0_0_6px_rgba(219,39,119,0.55)]"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="absolute inset-[4px] rounded-full bg-[#DB2777] ring-1 ring-white"
+                    aria-hidden="true"
+                  />
+                </div>
               </Marker>
             )}
           </Map>

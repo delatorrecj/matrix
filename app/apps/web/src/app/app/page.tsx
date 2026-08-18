@@ -24,6 +24,7 @@ import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
+import { savePromptHandoff } from "@/lib/promptHandoff";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
@@ -185,6 +186,13 @@ export default function MatrixCockpit() {
 
     try {
       const scenario = await createScenario(text);
+      savePromptHandoff(scenario.scenario_id, {
+        rawInput: scenario.raw_input ?? text,
+        description: scenario.description ?? "",
+        interventionType: scenario.intervention_type ?? null,
+        location: scenario.location ?? null,
+        parameters: scenario.parameters ?? {},
+      });
       router.push(`/scenario/${scenario.scenario_id}`);
       // Keep the spinner visible while Next.js navigates away.
     } catch (err) {
