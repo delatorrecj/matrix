@@ -206,3 +206,36 @@ def test_non_default_gravity_exponent_branches():
     for t in dd.trips:
         d = haversine_m(t.origin_lonlat, dd.facility_lonlat)
         assert MIN_ORIGIN_DISTANCE_M - 1.0 <= d <= dd.catchment_radius_m + 1.0
+
+
+def test_prepare_uses_molo_gazetteer_coords_for_3000_seat_school():
+    """NL school in Molo: gazetteer lon/lat, 3000 seats × 0.9 trips/seat = 2700 (BEH-4)."""
+    from matrix_kernel.demand_delta import prepare_facility_demand
+
+    dd = prepare_facility_demand(
+        None, "Molo", {"facility_kind": "school", "capacity": 3000},
+    )
+    assert dd.facility_lonlat == MOLO
+    assert dd.demand_trips_total == 2700
+    assert dd.equation_id == "BEH-4"
+    assert dd.facility_kind == "school"
+    assert dd.capacity == 3000
+
+
+def test_demand_delta_summary_omits_trip_samples_and_keeps_glass_box():
+    """WebSocket meta must not dump thousands of TripDelta rows."""
+    from matrix_kernel.demand_delta import prepare_facility_demand, demand_delta_summary
+
+    dd = prepare_facility_demand(
+        None, "Molo", {"facility_kind": "school", "capacity": 3000},
+    )
+    summary = demand_delta_summary(dd)
+    assert "trips" not in summary
+    assert summary["demand_trips_total"] == 2700
+    assert summary["facility_kind"] == "school"
+    assert summary["capacity"] == 3000
+    assert summary["facility_lonlat"] == [MOLO[0], MOLO[1]]
+    assert summary["equation_id"] == "BEH-4"
+    assert summary["input_dataset_ids"] == ["Calderon2014"]
+    assert summary["confidence"] == "L"
+    assert summary["assumptions"]

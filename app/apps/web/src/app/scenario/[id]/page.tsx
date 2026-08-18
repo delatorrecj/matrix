@@ -21,6 +21,7 @@ import RunProgress from "@/components/RunProgress";
 import RunStatusBanner from "@/components/RunStatusBanner";
 import { InitializingState } from "@/components/InitializingState";
 import { IconNavRail } from "@/components/IconNavRail";
+import { ScenarioPromptReview } from "@/components/ScenarioPromptReview";
 import {
   DIMENSIONS,
   EXPECTED_RESULTS,
@@ -31,6 +32,7 @@ import {
   isTerminal,
   reduceRunEvent,
 } from "@/lib/simulationRun";
+import { accumulateTripFrame, framesToTrips } from "@/lib/playbackTrips";
 import { LayerLegend } from "@/components/LayerLegend";
 import {
   useMapLayers,
@@ -56,7 +58,8 @@ import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft 
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
-import { getLatestRun, type StoredDimensionResult } from "@/lib/api";
+import { getLatestRun, getScenario, type StoredDimensionResult } from "@/lib/api";
+import { overlayPromptHandoff, takePromptHandoff, type PromptHandoff } from "@/lib/promptHandoff";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
@@ -174,6 +177,25 @@ export default function ScenarioSimulation() {
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const mapMounted = useHasMounted();
+  const [promptReview, setPromptReview] = useState<PromptHandoff | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const handoff = takePromptHandoff(scenarioId);
+    if (handoff) setPromptReview(handoff);
+
+    getScenario(scenarioId)
+      .then((record) => {
+        if (cancelled) return;
+        setPromptReview((prev) => overlayPromptHandoff(record, prev));
+      })
+      .catch(() => {
+        // Keep the handoff card if GET 404s (in-memory/Postgres split).
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scenarioId]);
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -247,6 +269,7 @@ export default function ScenarioSimulation() {
   /** After bootstrap: open WS only when there is no completed run to hydrate (or Re-run). */
   const [shouldSimulate, setShouldSimulate] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [mapPlaybackExpired, setMapPlaybackExpired] = useState(false);
 
   const [results, setResults] = useState<ResultCardData[]>([]);
   const [tripsData, setTripsData] = useState<{ id: string, path: [number, number][], timestamps: number[] }[]>([]);
@@ -315,6 +338,7 @@ export default function ScenarioSimulation() {
   }, [affectedCollection, mapLoaded, shouldSimulate]);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const leavingRef = useRef(false);
 
   const dispatch = useCallback((event: RunEvent) => {
     setRunState((s) => reduceRunEvent(s, event));
@@ -387,6 +411,7 @@ export default function ScenarioSimulation() {
     let cancelled = false;
     setBootstrapped(false);
     setShouldSimulate(false);
+    setMapPlaybackExpired(false);
 
     void (async () => {
       // Re-run / retry always simulates.
@@ -403,14 +428,26 @@ export default function ScenarioSimulation() {
         if (run && run.status === "done" && Array.isArray(run.results) && run.results.length > 0) {
           const cards = run.results.map(storedResultToCard);
           setResults(cards);
-          setTripsData([]);
-          setEdgeCounts({});
-          setAffectedEdges(
-            Array.isArray(run.affected_edges)
-              ? run.affected_edges.filter((id): id is string => typeof id === "string")
-              : [],
-          );
-          setEdgeResolution(typeof run.edge_resolution === "string" ? run.edge_resolution : null);
+          const playback = run.playback;
+          if (playback && typeof playback.edge_counts === "object") {
+            setEdgeCounts(playback.edge_counts);
+            const { trips, maxTime } = framesToTrips(Array.isArray(playback.frames) ? playback.frames : []);
+            setTripsData(trips);
+            setMaxTime((prev) => Math.max(prev, maxTime));
+            setMapPlaybackExpired(false);
+          } else {
+            setTripsData([]);
+            setEdgeCounts({});
+            setMapPlaybackExpired(true);
+          }
+          const resolution =
+            (playback && typeof playback.edge_resolution === "string" && playback.edge_resolution) ||
+            (typeof run.edge_resolution === "string" ? run.edge_resolution : null);
+          const edges =
+            (playback && Array.isArray(playback.affected_edges) && playback.affected_edges) ||
+            (Array.isArray(run.affected_edges) ? run.affected_edges : []);
+          setEdgeResolution(resolution);
+          setAffectedEdges(edges.filter((id): id is string => typeof id === "string"));
           setSynthesis(null);
           const timings =
             run.timings && typeof run.timings === "object"
@@ -449,6 +486,7 @@ export default function ScenarioSimulation() {
     ws.onopen = () => dispatch({ type: "WS_OPEN" });
 
     ws.onmessage = (event) => {
+      if (leavingRef.current) return;
       let msg: Record<string, unknown>;
       try {
         msg = JSON.parse(event.data);
@@ -462,36 +500,11 @@ export default function ScenarioSimulation() {
       dispatch(msg as RunEvent);
 
       if (msg.type === "PLAYBACK_FRAME") {
-        // Accumulate playback frames for Deck.gl TripsLayer
         const tick = typeof msg.tick === "number" ? msg.tick : 0;
         setMaxTime((prev) => Math.max(prev, tick));
         if (Array.isArray(msg.agents)) {
-          // Hoist the narrowed array into a typed local: Array.isArray narrowing on
-          // `msg.agents` (an `unknown` field) does not survive into the setTripsData
-          // closure, so `next build` type-checks it as `unknown` without this.
           const agents = msg.agents as Array<{ id: string; lon: number; lat: number }>;
-          setTripsData((prev) => {
-            const next = [...prev];
-            for (const a of agents) {
-              const idx = next.findIndex((t) => t.id === a.id);
-              if (idx >= 0) {
-                // Agent exists, append to path and timestamps
-                next[idx] = {
-                  ...next[idx],
-                  path: [...next[idx].path, [a.lon, a.lat]],
-                  timestamps: [...next[idx].timestamps, tick],
-                };
-              } else {
-                // New agent
-                next.push({
-                  id: a.id,
-                  path: [[a.lon, a.lat]],
-                  timestamps: [tick],
-                });
-              }
-            }
-            return next;
-          });
+          setTripsData((prev) => accumulateTripFrame(prev, tick, agents));
         }
       } else if (msg.type === "EDGE_COUNTS") {
         // Aggregate per-edge counts that drive the congestion choropleth.
@@ -590,6 +603,20 @@ export default function ScenarioSimulation() {
     wsRef.current?.close();
   }, [dispatch]);
 
+  // Home / logo: cancel an in-flight run, then leave for the cockpit. Soft
+  // `router.push` is aborted by stream-driven re-renders and the two WebGL
+  // maps; replace + hard assign is the path that actually unmounts this page.
+  const exitToCockpit = useCallback(() => {
+    leavingRef.current = true;
+    if (!isTerminal(runState.phase)) {
+      cancelRun();
+    }
+    closeInspect();
+    setIsPlaying(false);
+    router.replace("/app");
+    window.location.assign("/app");
+  }, [runState.phase, cancelRun, closeInspect, router]);
+
   // Retry/reconnect: reset accumulated stream state and open a fresh WS
   // (the server re-streams the run from the start).
   const retryRun = useCallback(() => {
@@ -665,8 +692,7 @@ export default function ScenarioSimulation() {
           activeId={panelView === "analytics" ? "analytics" : "trajectories"}
           onNavigate={(id) => {
             if (id === "home") {
-              closeInspect();
-              router.push("/app");
+              exitToCockpit();
             } else if (id === "trajectories") {
               closeInspect();
               setPanelView("summary");
@@ -777,69 +803,84 @@ export default function ScenarioSimulation() {
             </div>
           </div>
 
-        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto overflow-x-hidden print:overflow-visible">
-          <div className="print:hidden">
-            <RunProgress runState={runState} />
-            <RunStatusBanner runState={runState} onRetry={retryRun} />
-          </div>
+        <div className="relative flex-1 min-h-0">
+          <div className="p-4 h-full flex flex-col gap-4 overflow-y-auto overflow-x-hidden print:overflow-visible">
+            {promptReview && (
+              <ScenarioPromptReview
+                rawInput={promptReview.rawInput}
+                description={promptReview.description}
+                interventionType={promptReview.interventionType}
+                location={promptReview.location}
+                parameters={promptReview.parameters}
+              />
+            )}
+            <div className="print:hidden">
+              <RunProgress runState={runState} />
+              {mapPlaybackExpired && (
+                <p className="mt-1 text-xs text-text-muted">
+                  Map playback expired. Re-run to restore trajectories.
+                </p>
+              )}
+              <RunStatusBanner runState={runState} onRetry={retryRun} />
+            </div>
 
-          {panelView === "analytics" ? (
-            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-              <AnalyticsView
-                results={results}
-                synthesis={synthesis}
-                scenarioId={scenarioId}
-                isRunActive={isRunActive}
-                onInspect={(card) => openInspect(card.provData, card.dimension)}
-                onCiteClick={handleCiteClick}
-              />
+            {panelView === "analytics" ? (
+              <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
+                <AnalyticsView
+                  results={results}
+                  synthesis={synthesis}
+                  scenarioId={scenarioId}
+                  isRunActive={isRunActive}
+                  onInspect={(card) => openInspect(card.provData, card.dimension)}
+                  onCiteClick={handleCiteClick}
+                />
+              </div>
+            ) : isRunActive && results.length === 0 ? (
+              <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
+                <InitializingState variant="panel" />
+              </div>
+            ) : (
+              <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
+                <SummaryView
+                  results={results}
+                  narrative={synthesis?.narrative}
+                  isRunActive={isRunActive}
+                  onInspect={(card) => openInspect(card.provData, card.dimension)}
+                  onOpenAnalytics={() => setPanelView("analytics")}
+                />
+              </div>
+            )}
+          </div>
+          <InspectDrawer
+            isOpen={isDrawerOpen}
+            onClose={closeInspect}
+            metricId={inspectData?.equationId || null}
+            data={inspectData}
+          >
+            <div className="flex flex-col gap-4 mt-2">
+              <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
+                Category Breakdown
+              </h4>
+              {DIMENSIONS.map((dim) => (
+                <DimensionResultGroup
+                  key={dim}
+                  dim={dim}
+                  dimResults={results.filter((r) => r.dimension === dim)}
+                  expectedResults={EXPECTED_RESULTS[dim]}
+                  isRunActive={isRunActive}
+                  colorClass={getDimensionColor(dim)}
+                  variant="drawer"
+                  onInspect={(card) => openInspect(card.provData, dim)}
+                />
+              ))}
             </div>
-          ) : isRunActive && results.length === 0 ? (
-            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-              <InitializingState variant="panel" />
-            </div>
-          ) : (
-            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-              <SummaryView
-                results={results}
-                narrative={synthesis?.narrative}
-                isRunActive={isRunActive}
-                onInspect={(card) => openInspect(card.provData, card.dimension)}
-                onOpenAnalytics={() => setPanelView("analytics")}
-              />
-            </div>
-          )}
+          </InspectDrawer>
         </div>
 
         {/* Map attribution — replaces MapLibre's default white control (ODbL/OpenMapTiles). */}
         <div className="px-4 py-2.5 border-t border-border shrink-0 print:hidden">
           <MapAttribution />
         </div>
-
-        <InspectDrawer
-          isOpen={isDrawerOpen}
-          onClose={closeInspect}
-          metricId={inspectData?.equationId || null}
-          data={inspectData}
-        >
-          <div className="flex flex-col gap-4 mt-2">
-            <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
-              Category Breakdown
-            </h4>
-            {DIMENSIONS.map((dim) => (
-              <DimensionResultGroup
-                key={dim}
-                dim={dim}
-                dimResults={results.filter((r) => r.dimension === dim)}
-                expectedResults={EXPECTED_RESULTS[dim]}
-                isRunActive={isRunActive}
-                colorClass={getDimensionColor(dim)}
-                variant="drawer"
-                onInspect={(card) => openInspect(card.provData, dim)}
-              />
-            ))}
-          </div>
-        </InspectDrawer>
       </div>
       )}
 

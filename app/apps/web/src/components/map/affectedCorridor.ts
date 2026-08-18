@@ -2,9 +2,9 @@
  * Honest "where we edited the net" helpers for the results map.
  *
  * Overlay + camera fly only when edge_resolution is a real match
- * (geometry / gazetteer / keyword / gazetteer-alias). Fallback draws
- * nothing and leaves the city default view (no location marker, no
- * GET /scenario gazetteer pan).
+ * (geometry / gazetteer / keyword / gazetteer-alias). Fallback and
+ * facility-demand draw nothing and leave the city default view (no
+ * location marker, no GET /scenario gazetteer pan).
  */
 
 import type { EdgesFeatureCollection, Feature, LonLat } from "./types";
@@ -16,6 +16,7 @@ const M_PER_DEG_LAT = 111_320;
 
 export function isHonestEdgeResolution(method: string | null | undefined): boolean {
   if (!method || typeof method !== "string") return false;
+  if (method === "facility-demand") return false;
   return !method.startsWith("busiest-baseline-fallback");
 }
 

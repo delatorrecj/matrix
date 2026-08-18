@@ -69,3 +69,41 @@ def test_beh_on_real_cached_scenario():
     beh1 = next(r for r in results if r.equation_id == "BEH-1")
     assert beh1.value <= 0.0            # closing a corridor lane removes trips from it
     assert beh1.input_dataset_ids and beh1.confidence in ("H", "M", "L")
+
+
+def test_beh4_emitted_only_when_demand_delta_on_trajectory():
+    """Inspectable BEH-4: 3000 seats × 0.9 = 2700 trips, copied from the demand summary."""
+    demand = {
+        "facility_kind": "school",
+        "capacity": 3000,
+        "facility_lonlat": [122.5446, 10.6969],
+        "demand_trips_total": 2700,
+        "equation_id": "BEH-4",
+        "input_dataset_ids": ["Calderon2014"],
+        "confidence": "L",
+        "unit": "trips/window",
+        "references": ["Calderon2014"],
+        "assumptions": [
+            "equation BEH-4: facility gravity redistribution (methods-matrix §3.1)",
+        ],
+    }
+    traj = Trajectory(
+        edge_counts={},
+        frames=[],
+        meta={
+            "closed_edges": [],
+            "edge_lanes": {},
+            "lanes_closed": 0,
+            "demand_delta": demand,
+        },
+    )
+    results = score(traj, baseline={})
+    ids = {r.equation_id for r in results}
+    assert ids == {"BEH-1", "BEH-2", "BEH-3", "BEH-4"}
+    beh4 = next(r for r in results if r.equation_id == "BEH-4")
+    assert beh4.value == 2700.0
+    assert beh4.confidence == "L"
+    assert beh4.directional is True
+    assert beh4.input_dataset_ids == ["Calderon2014"]
+    assert beh4.unit == "trips/window"
+    assert beh4.range[0] <= beh4.value <= beh4.range[1]

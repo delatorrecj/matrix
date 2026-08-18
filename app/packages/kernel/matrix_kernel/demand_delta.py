@@ -367,6 +367,37 @@ def compute_demand_delta(geometry: dict | None, parameters: dict,
     )
 
 
+def prepare_facility_demand(
+    geometry: dict | None,
+    location: str,
+    parameters: dict,
+    seed: int | None = None,
+) -> DemandDelta:
+    """BEH-4 for a new_facility: map-drop geometry wins; else gazetteer lon/lat for `location`.
+
+    The LLM never originates coordinates (PRD-F14). Does not mutate `parameters`.
+    """
+    params = dict(parameters)
+    if geometry is None and "facility_lonlat" not in params:
+        from matrix_kernel.gazetteer import location_coordinates
+
+        coords = location_coordinates(location)
+        if coords:
+            params["facility_lonlat"] = coords
+    return compute_demand_delta(geometry, params, seed=seed)
+
+
+def demand_delta_summary(dd: DemandDelta) -> dict:
+    """JSON-ready BEH-4 record for Trajectory.meta / WebSocket — no per-trip dump."""
+    payload = dd.as_dict()
+    payload.pop("trips", None)
+    lon, lat = dd.facility_lonlat
+    payload["facility_lonlat"] = [lon, lat]
+    payload["n_redirected"] = dd.n_redirected
+    payload["n_induced"] = dd.n_induced
+    return payload
+
+
 def _resolve_facility_lonlat(geometry: dict | None, parameters: dict) -> tuple[float, float]:
     if geometry is not None:
         return geojson_centroid(geometry)

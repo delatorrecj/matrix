@@ -7,6 +7,8 @@ Working glossary for describing bugs/behavior precisely. Grounded in the **as-bu
 | Term | Definition |
 |---|---|
 | **Scenario** | A user-submitted proposed intervention: an NL query or a map-drop location/action. Created via `POST /scenario`; identified by `scenario_id`. |
+| **new_facility** | A Scenario intervention type for a school, market, or terminal. Changes travel demand (BEH-4), not road geometry. Distinct from `lane_closure`. |
+| **Intervention truth** | A new-facility query (e.g. a 3,000-seat school in Molo) is simulated as `new_facility` / BEH-4 demand, not as a construction lane closure. Map overlay/marker stay off; trips are not yet injected into SUMO (that is SUMO proof / issue #47). |
 | **Orchestrator** | The Azure OpenAI (gpt-5.4) step that parses a Scenario into a structured simulation plan. Uses GraphRAG retrieval + gazetteer annotation as grounding. On a mis-parse it asks a clarification question rather than guessing (`AmbiguousScenarioError` on the frontend). |
 | **Unified Simulation Kernel** | The SUMO (via TraCI) + persona pool + bias auditor pipeline. Runs **once per scenario**; its single output (`Trajectory`) feeds all five impact modules, so results can't contradict each other across dimensions. |
 | **Persona pool** | The set of synthetic commuter archetypes (static literature-anchored by default, or LLM-generated when `MATRIX_PERSONA_LLM=1`) that drive SUMO agents. |

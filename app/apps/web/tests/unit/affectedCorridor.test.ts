@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   AFFECTED_BUFFER_M,
   affectedBounds,
+  corridorAnchorLonLat,
   expandBboxByMeters,
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
   resultsCameraFly,
-  corridorAnchorLonLat,
   shouldFlyToCorridor,
   zoomWithoutPullingOut,
 } from "@/components/map/affectedCorridor";
@@ -58,6 +58,11 @@ describe("honestAffectedEdgeIds", () => {
         "busy-1",
       ]),
     ).toEqual([]);
+  });
+
+  it("returns nothing for facility-demand even if edge ids leak", () => {
+    expect(isHonestEdgeResolution("facility-demand")).toBe(false);
+    expect(honestAffectedEdgeIds("facility-demand", ["e1"])).toEqual([]);
   });
 });
 

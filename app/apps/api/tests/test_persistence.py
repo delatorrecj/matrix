@@ -109,6 +109,8 @@ def test_scenario_roundtrip(client, monkeypatch):
     assert body["corridor"] == "Diversion"
     assert body["intervention_type"] == "lane_closure"  # v2 rides along
     assert body["geometry"]["type"] == "Point"  # surfaced so the client can confirm the map-drop
+    assert body["raw_input"] == "close a lane on Diversion Rd"
+    assert body["parameters"] == {"lanes_closed": 1}
 
     stored = db.get_scenario("scn-test-1")
     assert stored is not None
@@ -171,6 +173,9 @@ def test_get_scenario_returns_location_and_geometry(client, monkeypatch):
     assert body["location"] == "Diversion Rd"
     assert body["geometry"] == {"type": "Point", "coordinates": [122.5621, 10.7202]}
     assert body["location_of_interest"] == [122.5621, 10.7202]
+    assert body["raw_input"] == "close a lane on Diversion Rd"
+    assert body["intervention_type"] == "lane_closure"
+    assert body["parameters"] == {"lanes_closed": 1}
 
 
 def test_get_scenario_location_of_interest_from_gazetteer(client, monkeypatch):
@@ -251,9 +256,35 @@ def test_scenario_from_record_v1_only_is_lane_closure():
     assert sc.geometry is None
 
 
+def test_scenario_from_record_rebuilds_new_facility_not_lane_closure():
+    rec = {
+        "scenario_id": "scn-school",
+        "description": "Build a 3,000-seat school in Molo",
+        "intervention_type": "new_facility",
+        "location": "Molo",
+        "parsed_params": {
+            "corridor": "Molo",
+            "lanes_closed": 1,
+            "parameters": {"facility_kind": "school", "capacity": 3000},
+        },
+        "geometry": None,
+    }
+    sc = main._scenario_from_record(rec)
+    assert sc.intervention_type == "new_facility"
+    assert sc.location == "Molo"
+    assert sc.parameters == {"facility_kind": "school", "capacity": 3000}
+
+
 def _fake_redis_module(get_returns=None):
     """A stand-in `redis` module whose client.get(...) always returns `get_returns`."""
-    return SimpleNamespace(from_url=lambda url: SimpleNamespace(get=lambda key: get_returns))
+    class _Client:
+        def get(self, key):
+            return get_returns
+
+        def close(self):
+            pass
+
+    return SimpleNamespace(from_url=lambda *a, **k: _Client())
 
 
 def test_get_trajectory_simulates_persisted_scenario(monkeypatch):
@@ -280,6 +311,32 @@ def test_get_trajectory_simulates_persisted_scenario(monkeypatch):
     assert captured["sc"].location == "Diversion Rd"
     assert captured["sc"].geometry["type"] == "Point"
     assert captured["sc"].parameters == {"max_speed_kph": 20.0}
+
+
+def test_get_trajectory_simulates_persisted_new_facility(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=None))
+    monkeypatch.setattr(main.db, "get_scenario", lambda sid: {
+        "scenario_id": sid,
+        "description": "Build a 3,000-seat school in Molo",
+        "intervention_type": "new_facility",
+        "location": "Molo",
+        "parsed_params": {
+            "corridor": "Molo",
+            "parameters": {"facility_kind": "school", "capacity": 3000},
+        },
+        "geometry": None,
+    })
+    captured: dict = {}
+
+    def fake_simulate(scenario):
+        captured["sc"] = scenario
+        return "TRAJ"
+
+    monkeypatch.setattr(main, "simulate", fake_simulate)
+    assert main._get_trajectory("scn-school") == "TRAJ"
+    assert captured["sc"].intervention_type == "new_facility"
+    assert captured["sc"].parameters == {"facility_kind": "school", "capacity": 3000}
 
 
 def test_get_trajectory_blank_only_when_nothing_persisted(monkeypatch):
@@ -389,6 +446,163 @@ def test_latest_run_for_scenario_happy_and_404(client):
     assert {r["equation_id"] for r in body["results"]} == {"BEH-1", "ECO-2"}
     eco = next(r for r in body["results"] if r["equation_id"] == "ECO-2")
     assert eco["directional"] is True  # confidence L
+
+
+def _persist_done_latest_run(scenario_id: str = "scn-latest") -> str:
+    """Same save_scenario / save_run / results setup as test_latest_run_for_scenario_happy_and_404."""
+    db.save_scenario(_fake_scenario(scenario_id), raw_input="q")
+    run_id = db.save_run(scenario_id, status="running")
+    assert db.save_dimension_results(run_id, _results()) == 2
+    db.save_run(
+        scenario_id,
+        run_id=run_id,
+        status="done",
+        duration_ms=1000,
+        timings={
+            "sumo_ms": 10,
+            "modules_ms": 20,
+            "llm_ms": 5,
+            "total_ms": 1000,
+            "affected_edges": ["e-molo"],
+            "edge_resolution": "keyword-match",
+        },
+    )
+    return run_id
+
+
+def _assert_latest_run_public_view(body: dict, run_id: str, scenario_id: str = "scn-latest") -> None:
+    """Existing latest-run contract: results + timings with corridor keys lifted, not nested."""
+    assert body["run_id"] == run_id
+    assert body["scenario_id"] == scenario_id
+    assert body["status"] == "done"
+    assert body["affected_edges"] == ["e-molo"]
+    assert body["edge_resolution"] == "keyword-match"
+    assert body["timings"] == {
+        "sumo_ms": 10,
+        "modules_ms": 20,
+        "llm_ms": 5,
+        "total_ms": 1000,
+    }
+    assert "affected_edges" not in (body["timings"] or {})
+    assert {r["equation_id"] for r in body["results"]} == {"BEH-1", "ECO-2"}
+    eco = next(r for r in body["results"] if r["equation_id"] == "ECO-2")
+    assert eco["directional"] is True  # confidence L
+
+
+def test_latest_run_includes_playback_from_redis(client, monkeypatch):
+    from matrix_kernel.trajectory import Frame, Trajectory
+
+    traj = Trajectory(
+        edge_counts={"e-molo": 9},
+        frames=[Frame(tick=0.0, agents=[{"id": "a", "lon": 122.5, "lat": 10.7}])],
+        meta={"affected_edges": ["e-molo"], "edge_resolution": "keyword-match"},
+    )
+
+    class _R:
+        def get(self, key):
+            assert key == "scenario:scn-latest:latest"
+            return traj.to_json()
+
+        def close(self):
+            pass
+
+    import sys
+
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=lambda *a, **k: _R()))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run()
+    body = client.get("/scenarios/scn-latest/latest-run").json()
+    _assert_latest_run_public_view(body, run_id)
+    assert body["playback"]["edge_counts"] == {"e-molo": 9}
+    assert body["playback"]["edge_resolution"] == "keyword-match"
+    assert body["playback"]["affected_edges"] == ["e-molo"]
+    assert body["playback"]["frames"][0]["tick"] == 0.0
+    assert body["playback"]["frames"][0]["agents"] == [{"id": "a", "lon": 122.5, "lat": 10.7}]
+
+
+def test_latest_run_playback_null_on_cache_miss(client, monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=None))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run("scn-miss")
+    body = client.get("/scenarios/scn-miss/latest-run").json()
+    _assert_latest_run_public_view(body, run_id, scenario_id="scn-miss")
+    assert body["playback"] is None
+
+
+def test_latest_run_playback_null_on_malformed_cache(client, monkeypatch):
+    """Trajectory.from_json accepts meta:null; latest-run must still return playback:null, not 500."""
+    import sys
+
+    raw = json.dumps(
+        {
+            "edge_counts": {"e-molo": 9},
+            "frames": [{"tick": 0.0, "agents": [{"id": "a", "lon": 122.5, "lat": 10.7}]}],
+            "meta": None,
+        }
+    )
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=raw))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run("scn-bad")
+    resp = client.get("/scenarios/scn-bad/latest-run")
+    assert resp.status_code == 200
+    body = resp.json()
+    _assert_latest_run_public_view(body, run_id, scenario_id="scn-bad")
+    assert body["playback"] is None
+
+
+def test_latest_run_playback_null_on_redis_error_and_closes_client(client, monkeypatch):
+    """Bounded client: timeouts on from_url, close() in finally, any error → playback None."""
+    import sys
+
+    closed = {"n": 0}
+    captured = {}
+
+    class _R:
+        def get(self, key):
+            raise ConnectionError("redis hung")
+
+        def close(self):
+            closed["n"] += 1
+
+    def _from_url(*_a, **kwargs):
+        captured["kwargs"] = kwargs
+        return _R()
+
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=_from_url))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run("scn-timeout")
+    body = client.get("/scenarios/scn-timeout/latest-run").json()
+    _assert_latest_run_public_view(body, run_id, scenario_id="scn-timeout")
+    assert body["playback"] is None
+    assert closed["n"] == 1
+    assert captured["kwargs"]["socket_connect_timeout"] == 0.5
+    assert captured["kwargs"]["socket_timeout"] == 0.5
 
 
 # ─── audit log (PRD-F6) ─────────────────────────────────────────────────────────────────

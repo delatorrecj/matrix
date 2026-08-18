@@ -28,7 +28,7 @@ import asyncio
 import json
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
@@ -204,6 +204,8 @@ def create_scenario(input_data: ScenarioInput) -> dict:
         "intervention_type": getattr(scenario, "intervention_type", None),
         "location": getattr(scenario, "location", None),
         "geometry": getattr(scenario, "geometry", None),
+        "raw_input": input_data.query,
+        "parameters": getattr(scenario, "parameters", None) or {},
     }
 
 def _geometry_lnglat(geometry: dict | None) -> list[float] | None:
@@ -247,7 +249,8 @@ def get_scenario(scenario_id: str) -> dict:
     interest. `geometry` comes back from Postgres as a `ST_AsGeoJSON` *string*; the
     in-memory fallback stores it as a dict already -- normalize both to a dict|None here.
     `location_of_interest` is camera-only (not Scenario.geometry): map-drop centroid, else
-    gazetteer coordinates for the stored location name."""
+    gazetteer coordinates for the stored location name. `raw_input` is the planner's
+    original query so the results dock can restate it."""
     record = db.get_scenario(scenario_id)
     if record is None:
         return JSONResponse(status_code=404, content={"error": "scenario not found", "scenario_id": scenario_id})
@@ -255,11 +258,15 @@ def get_scenario(scenario_id: str) -> dict:
     if isinstance(geometry, str):
         geometry = json.loads(geometry)
     geom = geometry if isinstance(geometry, dict) else None
+    parsed = record.get("parsed_params")
+    parameters = parsed.get("parameters") if isinstance(parsed, dict) else None
     return {
         "scenario_id": record.get("scenario_id", scenario_id),
+        "raw_input": record.get("raw_input") or "",
         "description": record.get("description", ""),
         "intervention_type": record.get("intervention_type"),
         "location": record.get("location"),
+        "parameters": parameters if isinstance(parameters, dict) else {},
         "geometry": geom,
         "location_of_interest": _camera_location_of_interest(record.get("location"), geom),
     }
@@ -284,13 +291,55 @@ def _run_public_view(run: dict) -> dict:
     return out
 
 
+def _playback_from_cache(scenario_id: str) -> dict | None:
+    """Redis trajectory only. Returns None on miss/error. Must not run SUMO."""
+    client = None
+    try:
+        import redis
+        from matrix_kernel.trajectory import Trajectory
+
+        kwargs: dict = {
+            "socket_connect_timeout": 0.5,
+            "socket_timeout": 0.5,
+        }
+        try:
+            from redis.backoff import NoBackoff
+            from redis.retry import Retry
+
+            kwargs["retry"] = Retry(NoBackoff(), 0)
+        except Exception:
+            pass
+        client = redis.from_url(REDIS_URL, **kwargs)
+        raw = client.get(f"scenario:{scenario_id}:latest")
+        if not raw:
+            return None
+        traj = Trajectory.from_json(raw)
+        frames = [
+            {"tick": fr.tick, "agents": fr.agents}
+            for fr in traj.frames[:MAX_STREAM_FRAMES]
+        ]
+        return {
+            "edge_counts": traj.edge_counts,
+            "frames": frames,
+            "affected_edges": traj.meta.get("affected_edges") or [],
+            "edge_resolution": traj.meta.get("edge_resolution"),
+        }
+    except Exception:
+        return None
+    finally:
+        if client is not None:
+            with suppress(Exception):
+                client.close()
+
+
 @app.get("/scenarios/{scenario_id}/latest-run")
 def get_latest_run(scenario_id: str) -> dict:
     """Most recent completed run for a scenario (glass-box results intact).
 
     The results URL is `/scenario/{scenario_id}` — the internal UUID run_id never
     reaches the client — so reload/share hydrates via this lookup instead of
-    re-opening WS /simulate.
+    re-opening WS /simulate. Playback frames come from the Redis trajectory cache
+    only (never `_get_trajectory` / SUMO on a miss).
     """
     run = db.get_latest_run_for_scenario(scenario_id)
     if run is None:
@@ -298,7 +347,9 @@ def get_latest_run(scenario_id: str) -> dict:
             status_code=404,
             content={"error": "no completed run", "scenario_id": scenario_id},
         )
-    return _run_public_view(run)
+    view = _run_public_view(run)
+    view["playback"] = _playback_from_cache(scenario_id)
+    return view
 
 
 @app.get("/runs/{run_id}")

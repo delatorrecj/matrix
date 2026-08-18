@@ -24,6 +24,7 @@ import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import { useTheme } from "@/components/ThemeProvider";
 import { AmbiguousScenarioError, ApiUnreachableError, createScenario } from "@/lib/api";
+import { savePromptHandoff } from "@/lib/promptHandoff";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import type { MapRef } from "react-map-gl/maplibre";
@@ -185,6 +186,13 @@ export default function MatrixCockpit() {
 
     try {
       const scenario = await createScenario(text);
+      savePromptHandoff(scenario.scenario_id, {
+        rawInput: scenario.raw_input ?? text,
+        description: scenario.description ?? "",
+        interventionType: scenario.intervention_type ?? null,
+        location: scenario.location ?? null,
+        parameters: scenario.parameters ?? {},
+      });
       router.push(`/scenario/${scenario.scenario_id}`);
       // Keep the spinner visible while Next.js navigates away.
     } catch (err) {
@@ -495,49 +503,54 @@ export default function MatrixCockpit() {
         {/* Playback lives on /scenario/[id] after a real run — no inert transport chrome here. */}
       </div>
 
-      {/* INSPECT DRAWER — only reachable from sample-mode cards; carries sample-labeled provenance */}
-      <InspectDrawer
-        isOpen={!!inspectMetric}
-        onClose={() => setInspectMetric(null)}
-        metricId={inspectMetric}
-        data={SAMPLE_PROVENANCE}
-      >
-        <div className="flex flex-col gap-4 mt-2">
-          <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
-            Category Breakdown
-          </h4>
-          <DimensionCard
-            id="dim-behavioral" name="Behavioral (sample)" icon={Route} colorVar="--color-dim-behavioral"
-            score={-12.4} rangeMin={-14} rangeMax={-10} unit="%" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-social" name="Social (sample)" icon={Users} colorVar="--color-dim-social"
-            score={4.2} rangeMin={2} rangeMax={6} unit="%" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-economic" name="Economic (sample)" icon={Briefcase} colorVar="--color-dim-economic"
-            score={12500000} rangeMin={8000000} rangeMax={15000000} unit="₱" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-ecological" name="Ecological (sample)" icon={Leaf} colorVar="--color-dim-ecological"
-            score={-840} rangeMin={-900} rangeMax={-750} unit=" tCO₂e" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
-          <DimensionCard
-            id="dim-societal" name="Societal (sample)" icon={HeartHandshake} colorVar="--color-dim-societal"
-            score={8.1} rangeMin={6.5} rangeMax={9.2} unit=" index" confidence="Low"
-            confidenceReason="Sample mode: illustrative value, not computed by the kernel"
-            onInspect={setInspectMetric}
-          />
+      {/* INSPECT DRAWER — sample-mode only. Slot recreates the old top-44 box so
+          absolute inset-2 does not resolve against the full-viewport page root. */}
+      <div className={`absolute inset-x-2 top-44 bottom-2 z-30 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-48 md:w-[calc(100%-3rem)] ${inspectMetric ? "" : "pointer-events-none"}`}>
+        <div className="relative h-full min-h-0">
+          <InspectDrawer
+            isOpen={!!inspectMetric}
+            onClose={() => setInspectMetric(null)}
+            metricId={inspectMetric}
+            data={SAMPLE_PROVENANCE}
+          >
+            <div className="flex flex-col gap-4 mt-2">
+              <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
+                Category Breakdown
+              </h4>
+              <DimensionCard
+                id="dim-behavioral" name="Behavioral (sample)" icon={Route} colorVar="--color-dim-behavioral"
+                score={-12.4} rangeMin={-14} rangeMax={-10} unit="%" confidence="Low"
+                confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+                onInspect={setInspectMetric}
+              />
+              <DimensionCard
+                id="dim-social" name="Social (sample)" icon={Users} colorVar="--color-dim-social"
+                score={4.2} rangeMin={2} rangeMax={6} unit="%" confidence="Low"
+                confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+                onInspect={setInspectMetric}
+              />
+              <DimensionCard
+                id="dim-economic" name="Economic (sample)" icon={Briefcase} colorVar="--color-dim-economic"
+                score={12500000} rangeMin={8000000} rangeMax={15000000} unit="₱" confidence="Low"
+                confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+                onInspect={setInspectMetric}
+              />
+              <DimensionCard
+                id="dim-ecological" name="Ecological (sample)" icon={Leaf} colorVar="--color-dim-ecological"
+                score={-840} rangeMin={-900} rangeMax={-750} unit=" tCO₂e" confidence="Low"
+                confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+                onInspect={setInspectMetric}
+              />
+              <DimensionCard
+                id="dim-societal" name="Societal (sample)" icon={HeartHandshake} colorVar="--color-dim-societal"
+                score={8.1} rangeMin={6.5} rangeMax={9.2} unit=" index" confidence="Low"
+                confidenceReason="Sample mode: illustrative value, not computed by the kernel"
+                onInspect={setInspectMetric}
+              />
+            </div>
+          </InspectDrawer>
         </div>
-      </InspectDrawer>
+      </div>
 
     </div>
   );
