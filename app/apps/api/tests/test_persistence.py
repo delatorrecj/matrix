@@ -109,6 +109,8 @@ def test_scenario_roundtrip(client, monkeypatch):
     assert body["corridor"] == "Diversion"
     assert body["intervention_type"] == "lane_closure"  # v2 rides along
     assert body["geometry"]["type"] == "Point"  # surfaced so the client can confirm the map-drop
+    assert body["raw_input"] == "close a lane on Diversion Rd"
+    assert body["parameters"] == {"lanes_closed": 1}
 
     stored = db.get_scenario("scn-test-1")
     assert stored is not None
@@ -171,6 +173,9 @@ def test_get_scenario_returns_location_and_geometry(client, monkeypatch):
     assert body["location"] == "Diversion Rd"
     assert body["geometry"] == {"type": "Point", "coordinates": [122.5621, 10.7202]}
     assert body["location_of_interest"] == [122.5621, 10.7202]
+    assert body["raw_input"] == "close a lane on Diversion Rd"
+    assert body["intervention_type"] == "lane_closure"
+    assert body["parameters"] == {"lanes_closed": 1}
 
 
 def test_get_scenario_location_of_interest_from_gazetteer(client, monkeypatch):

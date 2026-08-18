@@ -204,6 +204,8 @@ def create_scenario(input_data: ScenarioInput) -> dict:
         "intervention_type": getattr(scenario, "intervention_type", None),
         "location": getattr(scenario, "location", None),
         "geometry": getattr(scenario, "geometry", None),
+        "raw_input": input_data.query,
+        "parameters": getattr(scenario, "parameters", None) or {},
     }
 
 def _geometry_lnglat(geometry: dict | None) -> list[float] | None:
@@ -247,7 +249,8 @@ def get_scenario(scenario_id: str) -> dict:
     interest. `geometry` comes back from Postgres as a `ST_AsGeoJSON` *string*; the
     in-memory fallback stores it as a dict already -- normalize both to a dict|None here.
     `location_of_interest` is camera-only (not Scenario.geometry): map-drop centroid, else
-    gazetteer coordinates for the stored location name."""
+    gazetteer coordinates for the stored location name. `raw_input` is the planner's
+    original query so the results dock can restate it."""
     record = db.get_scenario(scenario_id)
     if record is None:
         return JSONResponse(status_code=404, content={"error": "scenario not found", "scenario_id": scenario_id})
@@ -255,11 +258,15 @@ def get_scenario(scenario_id: str) -> dict:
     if isinstance(geometry, str):
         geometry = json.loads(geometry)
     geom = geometry if isinstance(geometry, dict) else None
+    parsed = record.get("parsed_params")
+    parameters = parsed.get("parameters") if isinstance(parsed, dict) else None
     return {
         "scenario_id": record.get("scenario_id", scenario_id),
+        "raw_input": record.get("raw_input") or "",
         "description": record.get("description", ""),
         "intervention_type": record.get("intervention_type"),
         "location": record.get("location"),
+        "parameters": parameters if isinstance(parameters, dict) else {},
         "geometry": geom,
         "location_of_interest": _camera_location_of_interest(record.get("location"), geom),
     }
