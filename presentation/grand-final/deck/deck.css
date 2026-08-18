@@ -1,0 +1,1015 @@
+/* ==========================================================================
+   MATRIX Grand Finals deck
+   Design system inherited from the shipped product (app/apps/web/src/app/globals.css):
+   same dark instrument surface, same Geist type stack, same #3B6FE0 primary,
+   same five-dimension palette. The deck should look like the thing we built.
+
+   Sizing model: one deterministic unit (--u) derived from the 16:9 stage, so
+   every measurement is authored against a 1280x720 design canvas and scales
+   exactly, on any display and in print.
+
+   impeccable-disable overused-font: Geist is MATRIX's own brand face, shipped
+   in the product. Matching it is the point; substituting a "more distinctive"
+   face would make the deck look like a different product than the one on
+   screen during the demo.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Geist";
+  src: url("fonts/GeistVF.woff") format("woff");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("fonts/GeistMonoVF.woff") format("woff");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  /* Surfaces (product dark tokens) */
+  --bg: #0A0E1A;
+  --bg-deep: #06090F;
+  --surface: #111827;
+  --border: #1E293B;
+  --hairline: rgb(148 163 184 / 0.22);
+
+  /* Ink */
+  --text: #E9EEF8;
+  --text-dim: #94A3B8;
+  /* Small mono labels sit at this weight; it clears AA (4.5:1) on both
+     --bg and --bg-deep, which slate-500 does not. */
+  --text-faint: #7C8CA8;
+
+  /* Accent: product primary, lifted for dark-surface contrast */
+  --accent: #4F82EE;
+  --accent-ink: #93B4F7;
+  --accent-wash: rgb(79 130 238 / 0.12);
+
+  /* Five-dimension palette, tuned for a dark stage */
+  --dim-behavioral: #60A5FA;
+  --dim-social: #F472B6;
+  --dim-economic: #FACC15;
+  --dim-ecological: #4ADE80;
+  --dim-societal: #C084FC;
+
+  /* Status ink for the honesty block */
+  --limit: #FBBF24;
+
+  --radius: 12px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: dark;
+}
+
+/* --------------------------------------------------------------------------
+   Browser surfaces: the parts we did not draw still carry the design.
+   -------------------------------------------------------------------------- */
+
+::selection {
+  background: rgb(79 130 238 / 0.35);
+  color: #FFFFFF;
+}
+
+* {
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Stage. One 16:9 slide is visible at a time, centred, letterboxed.
+   --u is 1/1280th of the stage width, so `calc(48 * var(--u))` means
+   "48px on the design canvas" and holds at any projector resolution.
+   -------------------------------------------------------------------------- */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  --stage-w: min(100vw, calc(100vh * 16 / 9));
+  --u: calc(var(--stage-w) / 1280);
+}
+
+.slide {
+  position: absolute;
+  width: var(--stage-w);
+  height: calc(var(--stage-w) * 9 / 16);
+  background: var(--bg);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  font-size: calc(16 * var(--u));
+  line-height: 1.5;
+}
+
+.slide[data-active] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* The slide body rises into place once. One authored entrance, not a
+   per-element confetti of fades. */
+.slide > .pad,
+.slide > .bleed {
+  height: 100%;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .slide > .pad,
+  .slide > .bleed {
+    transition: opacity 0.32s var(--ease), transform 0.42s var(--ease);
+  }
+  .slide:not([data-active]) > .pad,
+  .slide:not([data-active]) > .bleed {
+    opacity: 0;
+    transform: translateY(calc(10 * var(--u)));
+  }
+}
+
+/* Bottom padding reserves the footer band, so anything pinned with
+   `margin-top: auto` still clears the page counter. */
+.pad {
+  display: flex;
+  flex-direction: column;
+  padding: calc(64 * var(--u)) calc(80 * var(--u)) calc(80 * var(--u));
+}
+
+/* Proof slide carries the most content on the page. It buys the room back
+   from the outer margins rather than from the leading. */
+.slide[data-dense] .pad { padding-top: calc(46 * var(--u)); }
+
+/* --------------------------------------------------------------------------
+   Type scale. Five roles, obvious steps between them.
+   -------------------------------------------------------------------------- */
+
+.t-display {
+  font-size: calc(72 * var(--u));
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  font-weight: 560;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.t-head {
+  font-size: calc(46 * var(--u));
+  line-height: 1.12;
+  letter-spacing: -0.026em;
+  font-weight: 560;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.t-sub {
+  font-size: calc(26 * var(--u));
+  line-height: 1.38;
+  letter-spacing: -0.014em;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin: 0;
+  max-width: 34ch;
+}
+
+.t-body {
+  font-size: calc(19 * var(--u));
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+  margin: 0;
+  max-width: 46ch;
+}
+
+.t-meta {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(13 * var(--u));
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dim { color: var(--text-dim); }
+.faint { color: var(--text-faint); }
+.ink-accent { color: var(--accent-ink); }
+.grow { flex: 1 1 auto; }
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  margin: 0;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Chrome: brand mark, footer, progress.
+   -------------------------------------------------------------------------- */
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(10 * var(--u));
+  color: var(--text);
+}
+
+.mark svg {
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
+  display: block;
+}
+
+.mark .wordmark {
+  font-size: calc(17 * var(--u));
+  font-weight: 620;
+  letter-spacing: 0.14em;
+}
+
+.footer {
+  position: absolute;
+  left: calc(80 * var(--u));
+  right: calc(80 * var(--u));
+  bottom: calc(30 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(16 * var(--u));
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(12 * var(--u));
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer .who { display: inline-flex; align-items: center; gap: calc(12 * var(--u)); }
+
+.footer .tick {
+  display: inline-block;
+  width: 1px;
+  height: calc(11 * var(--u));
+  background: var(--hairline);
+}
+
+.slide.on-photo .footer { color: rgb(233 238 248 / 0.72); }
+.slide.on-photo .footer .tick { background: rgb(233 238 248 / 0.3); }
+
+/* Scaled, not resized: animating width thrashes layout every frame. */
+.progress {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  z-index: 40;
+  transition: transform 0.32s var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress { transition: none; }
+}
+
+/* --------------------------------------------------------------------------
+   S1 / S9: full-bleed photography with a scrim that keeps text at AA.
+   -------------------------------------------------------------------------- */
+
+.bleed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: calc(64 * var(--u)) calc(80 * var(--u)) calc(94 * var(--u));
+}
+
+.bleed > .photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.bleed > .scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.scrim-dark {
+  background:
+    linear-gradient(180deg, rgb(6 9 15 / 0.78) 0%, rgb(6 9 15 / 0.34) 34%, rgb(6 9 15 / 0.9) 100%),
+    linear-gradient(90deg, rgb(6 9 15 / 0.72) 0%, rgb(6 9 15 / 0.1) 62%);
+}
+
+.scrim-warm {
+  background:
+    linear-gradient(180deg, rgb(6 9 15 / 0.5) 0%, rgb(6 9 15 / 0.24) 40%, rgb(6 9 15 / 0.94) 100%),
+    linear-gradient(90deg, rgb(6 9 15 / 0.8) 0%, rgb(6 9 15 / 0.12) 66%);
+}
+
+.bleed > .layer {
+  position: relative;
+  z-index: 2;
+}
+
+.title-top {
+  position: absolute;
+  top: calc(56 * var(--u));
+  left: calc(80 * var(--u));
+  right: calc(80 * var(--u));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title-top .partners {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(22 * var(--u));
+  opacity: 0.85;
+}
+
+.title-top .partners img { height: calc(30 * var(--u)); display: block; }
+
+/* --------------------------------------------------------------------------
+   S2 / S4: statement slides.
+   -------------------------------------------------------------------------- */
+
+.statement {
+  justify-content: center;
+  gap: calc(32 * var(--u));
+}
+
+.statement .t-display { max-width: 21ch; }
+
+.question-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: calc(38 * var(--u));
+  justify-content: center;
+  align-content: center;
+  height: 100%;
+}
+
+.thesis {
+  padding-top: calc(26 * var(--u));
+  border-top: 1px solid var(--hairline);
+}
+
+.thesis .body b { font-weight: 620; }
+
+.thesis .body {
+  font-size: calc(27 * var(--u));
+  line-height: 1.34;
+  letter-spacing: -0.016em;
+  max-width: 40ch;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   S3: two roots + consequence cascade.
+   -------------------------------------------------------------------------- */
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: calc(72 * var(--u));
+  align-items: start;
+  margin-top: calc(38 * var(--u));
+}
+
+.roots { display: flex; flex-direction: column; }
+
+.root {
+  padding: calc(24 * var(--u)) 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.root:last-child { border-bottom: 1px solid var(--hairline); }
+
+.root p {
+  margin: 0;
+  font-size: calc(27 * var(--u));
+  line-height: 1.3;
+  letter-spacing: -0.018em;
+  font-weight: 480;
+}
+
+.cascade {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 calc(22 * var(--u));
+  border-left: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: calc(15 * var(--u));
+}
+
+.cascade li {
+  position: relative;
+  font-size: calc(18 * var(--u));
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.cascade li::before {
+  content: "";
+  position: absolute;
+  left: calc(-26 * var(--u));
+  top: calc(10 * var(--u));
+  width: calc(9 * var(--u));
+  height: 1px;
+  background: var(--hairline);
+}
+
+.cascade li:last-child {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.cascade li:last-child::before { background: var(--accent); width: calc(18 * var(--u)); left: calc(-31 * var(--u)); }
+
+.kicker-line {
+  margin-top: auto;
+  padding-top: calc(26 * var(--u));
+  border-top: 1px solid var(--hairline);
+  font-size: calc(24 * var(--u));
+  line-height: 1.32;
+  letter-spacing: -0.014em;
+  color: var(--text);
+  max-width: 44ch;
+}
+
+/* --------------------------------------------------------------------------
+   S5: five steps, then the five dimensions that score one shared run.
+   -------------------------------------------------------------------------- */
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: calc(26 * var(--u));
+  margin-top: calc(44 * var(--u));
+}
+
+.step { border-top: 1px solid var(--hairline); padding-top: calc(18 * var(--u)); }
+
+.step[data-here] { border-top-color: var(--accent); }
+
+.step h3 {
+  margin: 0 0 calc(10 * var(--u));
+  font-size: calc(28 * var(--u));
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+  font-weight: 560;
+}
+
+.step p {
+  margin: 0;
+  font-size: calc(15 * var(--u));
+  line-height: 1.42;
+  color: var(--text-dim);
+}
+
+.dimstrip {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: calc(28 * var(--u));
+  flex-wrap: wrap;
+  padding-top: calc(24 * var(--u));
+  border-top: 1px solid var(--hairline);
+}
+
+.dimstrip .lede {
+  font-size: calc(16 * var(--u));
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.dimstrip ul {
+  list-style: none;
+  display: flex;
+  gap: calc(22 * var(--u));
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.dimstrip li {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  font-size: calc(16 * var(--u));
+  font-weight: 500;
+}
+
+.dimstrip li i {
+  width: calc(10 * var(--u));
+  height: calc(10 * var(--u));
+  border-radius: 50%;
+  background: currentColor;
+  display: block;
+}
+
+.d-behavioral { color: var(--dim-behavioral); }
+.d-social { color: var(--dim-social); }
+.d-economic { color: var(--dim-economic); }
+.d-ecological { color: var(--dim-ecological); }
+.d-societal { color: var(--dim-societal); }
+
+/* --------------------------------------------------------------------------
+   S6: demo cue card. Drop assets/demo-still.png in and it goes full bleed.
+   -------------------------------------------------------------------------- */
+
+.cue {
+  justify-content: center;
+  gap: calc(30 * var(--u));
+}
+
+.beats {
+  display: flex;
+  align-items: baseline;
+  gap: calc(20 * var(--u));
+  font-size: calc(24 * var(--u));
+  letter-spacing: -0.012em;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+
+.beats b { font-weight: 500; color: var(--text); }
+
+.beats span { color: var(--accent); }
+
+.url {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(18 * var(--u));
+  color: var(--accent-ink);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(147 180 247 / 0.4);
+  padding-bottom: calc(2 * var(--u));
+  align-self: flex-start;
+}
+
+.url:hover { border-bottom-color: var(--accent-ink); }
+
+.demo-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.demo-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* --------------------------------------------------------------------------
+   S7: proof ledger + honest-limits block.
+   -------------------------------------------------------------------------- */
+
+.ledger {
+  margin-top: calc(28 * var(--u));
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger .row {
+  display: grid;
+  grid-template-columns: calc(210 * var(--u)) 1fr;
+  gap: calc(28 * var(--u));
+  padding: calc(14 * var(--u)) 0;
+  border-top: 1px solid var(--hairline);
+  align-items: baseline;
+}
+
+.ledger .row:last-child { border-bottom: 1px solid var(--hairline); }
+
+.ledger dt {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.ledger dd {
+  margin: 0;
+  font-size: calc(20 * var(--u));
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.ledger dd b { font-weight: 580; }
+
+.limits {
+  margin-top: calc(26 * var(--u));
+  padding-left: calc(24 * var(--u));
+  border-left: 2px solid var(--limit);
+}
+
+.limits h3 {
+  margin: 0 0 calc(12 * var(--u));
+  font-size: calc(18 * var(--u));
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  color: var(--limit);
+}
+
+.limits ul { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(8 * var(--u)); }
+
+.limits li {
+  font-size: calc(16 * var(--u));
+  line-height: 1.45;
+  color: var(--text-dim);
+  max-width: 78ch;
+}
+
+.closing-note {
+  margin-top: auto;
+  padding-top: calc(20 * var(--u));
+  font-size: calc(20 * var(--u));
+  letter-spacing: -0.012em;
+}
+
+/* --------------------------------------------------------------------------
+   S8: the staircase. The one authored motion moment in the deck.
+   -------------------------------------------------------------------------- */
+
+.stair {
+  margin-top: calc(46 * var(--u));
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: calc(20 * var(--u));
+  align-items: end;
+  height: calc(280 * var(--u));
+}
+
+.stair .flight {
+  position: relative;
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+  padding: calc(18 * var(--u)) calc(18 * var(--u)) calc(16 * var(--u));
+  background: linear-gradient(180deg, rgb(148 163 184 / 0.06), rgb(148 163 184 / 0));
+  transform-origin: bottom;
+}
+
+.stair .flight:nth-child(1) { height: 34%; }
+.stair .flight:nth-child(2) { height: 54%; }
+.stair .flight:nth-child(3) { height: 76%; }
+.stair .flight:nth-child(4) { height: 100%; }
+
+.stair .flight[data-here] {
+  border-top-color: var(--accent);
+  border-left-color: var(--accent);
+  background: linear-gradient(180deg, var(--accent-wash), rgb(79 130 238 / 0));
+}
+
+.stair h3 {
+  margin: 0 0 calc(6 * var(--u));
+  font-size: calc(25 * var(--u));
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-weight: 560;
+}
+
+.stair p {
+  margin: 0;
+  font-size: calc(15 * var(--u));
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.stair .here {
+  position: absolute;
+  left: calc(18 * var(--u));
+  bottom: calc(16 * var(--u));
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(12 * var(--u));
+  letter-spacing: 0.08em;
+  color: var(--accent-ink);
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stair .flight {
+    transition: transform 0.5s var(--ease), opacity 0.5s var(--ease);
+    transition-delay: calc(var(--i) * 90ms);
+  }
+  .slide:not([data-active]) .stair .flight {
+    transform: scaleY(0.82) translateY(calc(8 * var(--u)));
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Appendix slides: denser, still on the same grid.
+   -------------------------------------------------------------------------- */
+
+.slide[data-appendix] { background: var(--bg-deep); }
+
+.appendix-tag {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(12 * var(--u));
+  letter-spacing: 0.14em;
+  color: var(--accent-ink);
+  text-transform: uppercase;
+  margin: 0 0 calc(14 * var(--u));
+}
+
+.pipeline {
+  display: flex;
+  align-items: stretch;
+  gap: calc(12 * var(--u));
+  margin-top: calc(34 * var(--u));
+  flex-wrap: wrap;
+}
+
+.pipeline .node {
+  flex: 1 1 0;
+  min-width: calc(150 * var(--u));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: calc(16 * var(--u));
+  background: var(--surface);
+}
+
+.pipeline .node h3 {
+  margin: 0 0 calc(6 * var(--u));
+  font-size: calc(16 * var(--u));
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+
+.pipeline .node p { margin: 0; font-size: calc(13 * var(--u)); color: var(--text-dim); line-height: 1.4; }
+
+.pipeline .arrow {
+  align-self: center;
+  color: var(--text-faint);
+  font-size: calc(18 * var(--u));
+}
+
+.fanout {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: calc(12 * var(--u));
+  margin-top: calc(16 * var(--u));
+}
+
+.fanout .cell {
+  border-top: 2px solid currentColor;
+  padding-top: calc(10 * var(--u));
+  font-size: calc(14 * var(--u));
+  font-weight: 520;
+}
+
+.fanout .cell span { display: block; color: var(--text-dim); font-weight: 400; font-size: calc(12.5 * var(--u)); margin-top: calc(4 * var(--u)); }
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: calc(30 * var(--u));
+  font-size: calc(15 * var(--u));
+}
+
+table.grid th,
+table.grid td {
+  text-align: left;
+  padding: calc(13 * var(--u)) calc(16 * var(--u)) calc(13 * var(--u)) 0;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+table.grid th {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(12 * var(--u));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 500;
+  border-bottom-color: var(--border);
+}
+
+table.grid td.status {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.04em;
+  color: var(--limit);
+  white-space: nowrap;
+}
+
+table.grid td.status.ok { color: var(--dim-ecological); }
+
+.anatomy {
+  margin-top: calc(34 * var(--u));
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: calc(22 * var(--u));
+}
+
+.anatomy .field { border-top: 1px solid var(--hairline); padding-top: calc(16 * var(--u)); }
+
+.anatomy code {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(15 * var(--u));
+  color: var(--accent-ink);
+  display: block;
+  margin-bottom: calc(8 * var(--u));
+}
+
+.anatomy p { margin: 0; font-size: calc(15 * var(--u)); color: var(--text-dim); line-height: 1.45; }
+
+.stack-list {
+  margin-top: calc(30 * var(--u));
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: calc(0 * var(--u)) calc(56 * var(--u));
+}
+
+.stack-list div {
+  display: grid;
+  grid-template-columns: calc(160 * var(--u)) 1fr;
+  gap: calc(16 * var(--u));
+  padding: calc(12 * var(--u)) 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: calc(15 * var(--u));
+  align-items: baseline;
+}
+
+.stack-list dt {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: calc(12 * var(--u));
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.stack-list dd { margin: 0; color: var(--text); line-height: 1.4; }
+
+.path {
+  margin-top: calc(40 * var(--u));
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: calc(28 * var(--u));
+}
+
+.path .leg { border-left: 1px solid var(--hairline); padding-left: calc(20 * var(--u)); }
+.path .leg[data-here] { border-left-color: var(--accent); }
+
+.path h3 {
+  margin: 0 0 calc(8 * var(--u));
+  font-size: calc(24 * var(--u));
+  letter-spacing: -0.018em;
+  font-weight: 560;
+}
+
+.path p { margin: 0; font-size: calc(15 * var(--u)); color: var(--text-dim); line-height: 1.45; }
+
+/* --------------------------------------------------------------------------
+   Presenter notes drawer + help.
+   -------------------------------------------------------------------------- */
+
+.notes-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: min(420px, 34vw);
+  background: rgb(6 9 15 / 0.97);
+  border-left: 1px solid var(--border);
+  padding: 28px 26px 32px;
+  overflow-y: auto;
+  z-index: 50;
+  transform: translateX(100%);
+  font-size: 14px;
+  line-height: 1.62;
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .notes-panel { transition: transform 0.3s var(--ease); }
+}
+
+.notes-panel[data-open] { transform: none; }
+
+.notes-panel h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  font-weight: 580;
+  color: var(--text);
+  letter-spacing: -0.018em;
+}
+
+.notes-panel .beat {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin: 0 0 16px;
+}
+
+.notes-panel p { margin: 0 0 12px; }
+.notes-panel strong { color: var(--text); font-weight: 560; }
+
+.notes-panel .cue-say {
+  border-left: 2px solid var(--accent);
+  padding-left: 14px;
+  color: var(--text);
+}
+
+.hint {
+  position: fixed;
+  left: 18px;
+  bottom: 14px;
+  z-index: 45;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hint { transition: opacity 0.4s var(--ease); }
+}
+
+.hint[data-hidden] { opacity: 0; }
+
+/* --------------------------------------------------------------------------
+   Print: one slide per landscape page. Chrome > Print > Save as PDF,
+   background graphics on, margins none.
+   -------------------------------------------------------------------------- */
+
+@page {
+  size: 13.333in 7.5in;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    overflow: visible;
+    background: #FFFFFF;
+    height: auto;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .stage {
+    position: static;
+    display: block;
+    --stage-w: 13.333in;
+    --u: calc(13.333in / 1280);
+  }
+
+  .slide {
+    position: relative;
+    opacity: 1 !important;
+    visibility: visible !important;
+    page-break-after: always;
+    break-after: page;
+    transform: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* No trailing blank page after the last appendix slide. */
+  .slide:last-of-type {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .slide > .pad,
+  .slide > .bleed {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .stair .flight { transform: none !important; opacity: 1 !important; }
+
+  .progress, .notes-panel, .hint { display: none !important; }
+}

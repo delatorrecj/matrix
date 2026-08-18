@@ -2,7 +2,8 @@
 
 **Project slug:** `matrix`
 **Maintained by:** Carlos Jerico Dela Torre (Team ATLAN)
-**Last updated:** 2026-06-24
+**Last updated:** 2026-08-10
+**Built on FMD v1.28.1** (provenance stamp added 2026-08-10)
 
 ---
 

@@ -8,6 +8,12 @@
       "port": 8099
     },
     {
+      "name": "grand-final-deck",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8100", "--directory", "presentation/grand-final/deck"],
+      "port": 8100
+    },
+    {
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "app/apps/web", "run", "dev"],

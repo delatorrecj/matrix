@@ -10,6 +10,7 @@ The pitch deck for the **ASEAN AI Hackathon 2026** (Smart Cities track), built f
 
 ```
 presentation/
+  grand-final/      # Grand Finals narrative pack (strategy, claims, script, deck, demo, evidence)
   deck/
     build_deck.py   # the generator (python-pptx) — builds all slides on the AAIH brand chrome
     _assets/        # brand chrome consumed by the build: bg*.png + logo_*.png (tracked)
@@ -22,6 +23,8 @@ presentation/
   CONTENT-OUTLINE.md  # the scrutinized/debunked/refined content rationale
   DESIGN-NOTES.md     # design discipline (taste-skill dials, DSD palette, no fake precision)
 ```
+
+**Grand Finals:** start at [grand-final/README.md](grand-final/README.md). That pack owns the story spine; semi-final files above remain for assets and Q&A depth.
 
 ## Build the deck
 From this folder, regenerate `Smart Cities_PUP_ATLAN_PitchDeck.pptx` from source:

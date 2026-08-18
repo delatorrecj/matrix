@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MATRIX · Grand Finals · Team ATLAN</title>
+<meta name="description" content="MATRIX helps cities see the consequences of infrastructure decisions before those consequences become reality. ASEAN AI Hackathon 2026 Grand Finals deck, Team ATLAN, PUP.">
+<link rel="stylesheet" href="deck.css">
+</head>
+<body>
+
+<!-- ============================================================
+     Reusable brand mark. The pentad is the product logo: one kernel,
+     five impact dimensions. Same geometry as app/apps/web/public/logo.svg.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pentad" viewBox="0 0 40 40">
+    <g transform="translate(4 4)">
+      <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.85">
+        <line x1="16" y1="16" x2="16" y2="6.5"/>
+        <line x1="16" y1="16" x2="25.04" y2="13.06"/>
+        <line x1="16" y1="16" x2="21.58" y2="23.69"/>
+        <line x1="16" y1="16" x2="10.42" y2="23.69"/>
+        <line x1="16" y1="16" x2="6.96" y2="13.06"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="16" cy="6.5" r="2.2"/>
+        <circle cx="25.04" cy="13.06" r="2.2"/>
+        <circle cx="21.58" cy="23.69" r="2.2"/>
+        <circle cx="10.42" cy="23.69" r="2.2"/>
+        <circle cx="6.96" cy="13.06" r="2.2"/>
+      </g>
+      <rect x="12.5" y="12.5" width="7" height="7" rx="2.1" fill="currentColor"/>
+    </g>
+  </symbol>
+</svg>
+
+<main class="stage">
+
+<!-- ===================== 1 · TITLE ===================== -->
+<section class="slide on-photo" data-title="Title" data-beat="Beat 1 · Cold open">
+  <div class="bleed">
+    <img class="photo" src="assets/hero-iloilo.png" alt="Aerial view of a river delta city at dusk, its road network traced in light.">
+    <div class="scrim scrim-dark"></div>
+
+    <div class="title-top">
+      <span class="mark"><svg><use href="#pentad"/></svg><span class="wordmark">MATRIX</span></span>
+      <span class="partners">
+        <img src="assets/logo_aaih.png" alt="ASEAN AI Hackathon 2026">
+        <img src="assets/logo_p2a_asean.png" alt="Passage to ASEAN">
+      </span>
+    </div>
+
+    <div class="layer">
+      <h1 class="t-display" style="max-width:19ch">See what a decision will do before a city has to live with it.</h1>
+      <p class="t-meta" style="margin-top:calc(28 * var(--u));font-size:calc(14 * var(--u));color:#94A3B8">
+        Team ATLAN · Polytechnic University of the Philippines
+      </p>
+      <p class="t-meta" style="margin-top:calc(6 * var(--u));font-size:calc(14 * var(--u))">
+        ASEAN AI Hackathon 2026, Smart Cities track · Pilot city: Iloilo
+      </p>
+    </div>
+
+    <div class="footer">
+      <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+      <span data-counter>01 / 09</span>
+    </div>
+  </div>
+
+  <template data-notes>
+    <p class="cue-say">Do not read the slide. Hold one beat, then open with the question.</p>
+    <p><strong>Say:</strong> “What if we could see the consequences of a decision before a city pays the price for it?”</p>
+    <p>Then advance. Do not start with architecture, do not start with “we built a digital twin.”</p>
+  </template>
+</section>
+
+<!-- ===================== 2 · HOOK ===================== -->
+<section class="slide" data-title="The question" data-beat="Beat 1 · Cost of not knowing">
+  <div class="pad statement">
+    <h2 class="t-display">What if a city could see what a decision will do, before it has to live with the result?</h2>
+    <p class="t-sub" style="max-width:44ch">Today it cannot. Cities decide about roads, evacuation routes and transport without seeing what those decisions do to the people living there.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>02 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p class="cue-say">“Today, cities make decisions about roads, evacuation routes, transport and infrastructure without being able to clearly see what those decisions will do to the people living there.”</p>
+    <p>Pause. Let the room sit in it. This beat is empathy, not product.</p>
+  </template>
+</section>
+
+<!-- ===================== 3 · COST OF NOT KNOWING ===================== -->
+<section class="slide" data-title="The cost of not knowing" data-beat="Beat 1 · Cost of not knowing">
+  <div class="pad">
+    <h2 class="t-head" style="max-width:24ch">Two problems sit underneath almost every bad urban decision.</h2>
+
+    <div class="two-col">
+      <div class="roots">
+        <div class="root"><p>Cities decide without seeing what happens next.</p></div>
+        <div class="root"><p>The information they rely on is fragmented, inconsistent, or out of date.</p></div>
+      </div>
+
+      <ul class="cascade">
+        <li>A road is built.</li>
+        <li>Traffic shifts.</li>
+        <li>An evacuation route becomes harder to reach.</li>
+        <li>Flood risk moves to a barangay that was never in the plan.</li>
+        <li>The city learns the cost after the concrete is poured.</li>
+      </ul>
+    </div>
+
+    <p class="kicker-line">Cities should not have to wait for reality to tell them they made the wrong decision.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>03 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p><strong>Do not say</strong> “the Philippines has no data.” The honest framing is fragmented, inconsistent, or hard to operationalize.</p>
+    <p class="cue-say">Speak the cascade as one continuous image, not as five bullets. Then land: “Cities shouldn’t have to wait for reality to tell them they made the wrong decision.”</p>
+    <p>Target 45 to 55 seconds for beat 1 in total. Protected beat.</p>
+  </template>
+</section>
+
+<!-- ===================== 4 · WHAT IF ===================== -->
+<section class="slide" data-title="What if" data-beat="Beat 2 · Promise land">
+  <div class="pad question-split">
+    <h2 class="t-display" style="max-width:17ch">“What happens if we put this here?”</h2>
+
+    <div class="thesis">
+      <p class="body"><b>MATRIX</b> helps cities see the consequences of infrastructure decisions before those consequences become reality.</p>
+    </div>
+
+    <p class="t-body faint" style="max-width:56ch">Not another static study that ages the day it is filed. A way to explore possible futures, and to understand who pays if we are wrong.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>04 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p class="cue-say">“So what if a city could ask, before it builds: what happens if we put this here?”</p>
+    <p>Pause, then deliver the thesis sentence slowly. It is the single line you most want the judges to repeat back.</p>
+    <p>Target 30 to 35 seconds. Protected beat.</p>
+  </template>
+</section>
+
+<!-- ===================== 5 · HOW IT WORKS ===================== -->
+<section class="slide" data-title="How it works" data-beat="Beat 3 · Five steps">
+  <div class="pad">
+    <h2 class="t-head" style="max-width:26ch">Five steps, one simulated reality.</h2>
+
+    <div class="steps">
+      <div class="step" data-here>
+        <h3>Simulate</h3>
+        <p>Plain language, or a pin on the map.</p>
+      </div>
+      <div class="step">
+        <h3>Visualize</h3>
+        <p>Watch the city move once that future exists.</p>
+      </div>
+      <div class="step">
+        <h3>Compare</h3>
+        <p>Five dimensions score the same run.</p>
+      </div>
+      <div class="step">
+        <h3>Identify</h3>
+        <p>Risks, and where our confidence is honestly low.</p>
+      </div>
+      <div class="step">
+        <h3>Act</h3>
+        <p>A brief a planner can answer.</p>
+      </div>
+    </div>
+
+    <div class="dimstrip">
+      <p class="lede">One kernel, one trajectory dataset, five scores that cannot contradict each other:</p>
+      <ul>
+        <li class="d-behavioral"><i></i>Behavioral</li>
+        <li class="d-social"><i></i>Social</li>
+        <li class="d-economic"><i></i>Economic</li>
+        <li class="d-ecological"><i></i>Ecological</li>
+        <li class="d-societal"><i></i>Societal</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>05 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p>Keep this beat plain. No SUMO, no Redis, no Azure. Those live in the appendix and in Q&amp;A.</p>
+    <p class="cue-say">The one line worth landing: “five dimensions, one shared simulated reality, so the answers do not contradict each other.”</p>
+    <p><strong>Compressible beat.</strong> If time is short, say only “Simulate. Visualize. Act.” and move to the demo.</p>
+  </template>
+</section>
+
+<!-- ===================== 6 · DEMO ===================== -->
+<!-- Drop a still at assets/demo-still.png and deck.js promotes this to a
+     full-bleed frame. Until then it is a clean cue card for cutting to video. -->
+<section class="slide" data-demo-slide data-title="Demo" data-beat="Beat 4 · One decision">
+  <div class="pad cue">
+    <h2 class="t-display" style="max-width:14ch">Watch one decision.</h2>
+
+    <p class="beats"><b>Scenario</b><span>&rsaquo;</span><b>Simulation</b><span>&rsaquo;</span><b>Consequence</b><span>&rsaquo;</span><b>Decision</b></p>
+
+    <a class="url" href="https://matrix-atlan.vercel.app/">matrix-atlan.vercel.app</a>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>06 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p><strong>Hard protected beat.</strong> 20 to 30 seconds of video. Do not narrate the controls.</p>
+    <p>Scenario used: the Mandurriao school placement. See DEMO_SCRIPT.md for the live fallback path.</p>
+    <p class="cue-say">If Inspect lands on screen: “That number isn’t a guess. Equation, named datasets, computed confidence. The AI narrates. It does not invent the figure.”</p>
+  </template>
+</section>
+
+<!-- ===================== 7 · PROOF ===================== -->
+<section class="slide" data-dense data-title="Proof" data-beat="Beat 5 · This is not just an idea">
+  <div class="pad">
+    <h2 class="t-head">This is not just an idea.</h2>
+
+    <dl class="ledger">
+      <div class="row">
+        <dt>Runs today</dt>
+        <dd>Unified simulation kernel, <b>five impact modules</b>, streaming API and Deck.gl frontend, live for judges and planners.</dd>
+      </div>
+      <div class="row">
+        <dt>Grounded in Iloilo</dt>
+        <dd>Open-data foundation across <b>180 barangays</b> and <b>5,680 priced parcels</b>.</dd>
+      </div>
+      <div class="row">
+        <dt>Traceable</dt>
+        <dd>Every scored number opens in Inspect: <b>equation, named datasets, computed confidence</b>.</dd>
+      </div>
+      <div class="row">
+        <dt>Gated</dt>
+        <dd><b>254 passing automated tests</b> across kernel and API, plus two merge gates that block unprovenanced results.</dd>
+      </div>
+    </dl>
+
+    <div class="limits">
+      <h3>And what we will not claim.</h3>
+      <ul>
+        <li>The behavioral validation gate is built. Its headline number is <b>withheld</b> until demand is calibrated.</li>
+        <li>Flood back-testing is staged and <b>not yet run</b> against a real 2024 satellite extent.</li>
+        <li>No city planner has formally signed off yet. That partnership is our next step.</li>
+      </ul>
+    </div>
+
+    <p class="closing-note">False precision is the real risk. Honest confidence is the feature.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>07 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p>Every figure here maps to CLAIMS.md. 254 = 190 kernel plus 64 API passing tests.</p>
+    <p class="cue-say">“Our empirical validation gates are built. We deliberately withhold the behavioral headline until demand is calibrated, because publishing a confident number off uncalibrated demand would break our own glass-box rule.”</p>
+    <p><strong>Never say:</strong> validated by CPDO, a published RMSE, or an invented accuracy percentage.</p>
+    <p>Target 50 to 60 seconds.</p>
+  </template>
+</section>
+
+<!-- ===================== 8 · STAIRCASE ===================== -->
+<section class="slide" data-title="The staircase" data-beat="Beat 6 · Bigger vision">
+  <div class="pad">
+    <h2 class="t-head" style="max-width:24ch">We are not claiming the whole staircase. We are showing the first flight.</h2>
+
+    <div class="stair">
+      <div class="flight" style="--i:0" data-here>
+        <h3>Simulation</h3>
+        <p>Explore what a decision would do.</p>
+        <span class="here">We are here</span>
+      </div>
+      <div class="flight" style="--i:1">
+        <h3>Data</h3>
+        <p>Connect to cleaner, continuously updated urban data.</p>
+      </div>
+      <div class="flight" style="--i:2">
+        <h3>Digital twin</h3>
+        <p>A living model that learns from the city itself.</p>
+      </div>
+      <div class="flight" style="--i:3">
+        <h3>Decision intelligence</h3>
+        <p>A regional way for cities to learn before they act.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+    <span data-counter>08 / 09</span>
+  </div>
+
+  <template data-notes>
+    <p>The data gap is not an embarrassment. It is the reason the product has to climb.</p>
+    <p class="cue-say">“Today, MATRIX demonstrates what is possible through simulation. Tomorrow it can connect to continuously updated urban data. Eventually, the city itself becomes the feedback loop.”</p>
+    <p>Steps 2, 3 and 4 are <strong>vision, future tense only</strong>. Compressible beat, 30 to 40 seconds.</p>
+  </template>
+</section>
+
+<!-- ===================== 9 · CLOSE ===================== -->
+<section class="slide on-photo" data-title="The call" data-beat="Beat 7 · Human consequence close">
+  <div class="bleed">
+    <img class="photo" src="assets/iloilo-esplanade.png" alt="The Iloilo River Esplanade at sunset, city skyline across the water.">
+    <div class="scrim scrim-warm"></div>
+
+    <div class="layer">
+      <h2 class="t-display" style="max-width:15ch">Learn before they act.</h2>
+      <p class="t-sub" style="color:#D7DEEC;margin-top:calc(22 * var(--u));max-width:38ch">Every road, school and flood wall is a decision about someone’s life.</p>
+      <p class="t-meta" style="margin-top:calc(34 * var(--u));font-size:calc(14 * var(--u));color:#94A3B8">
+        Team ATLAN · matrix-atlan.vercel.app · Thank you
+      </p>
+    </div>
+
+    <div class="footer">
+      <span class="who">MATRIX<i class="tick"></i>Team ATLAN</span>
+      <span data-counter>09 / 09</span>
+    </div>
+  </div>
+
+  <template data-notes>
+    <p><strong>Hard protected beat.</strong> Slow down. This is the last thing they hear before scoring.</p>
+    <p class="cue-say">“We want Southeast Asian cities to stop learning from disasters, congestion and failed infrastructure after the fact. We want them to learn before they act. Because every infrastructure decision is ultimately a decision about someone’s life.”</p>
+    <p>Then the soft ask: advance with us, from a working Iloilo pilot to the decision-intelligence layer ASEAN cities deserve.</p>
+  </template>
+</section>
+
+<!-- ===================== A1 · ARCHITECTURE ===================== -->
+<section class="slide" data-appendix data-title="Architecture" data-beat="Appendix, Q&amp;A only">
+  <div class="pad">
+    <p class="appendix-tag">Appendix A1</p>
+    <h2 class="t-head">One kernel feeds five modules.</h2>
+
+    <div class="pipeline">
+      <div class="node">
+        <h3>Orchestrator</h3>
+        <p>Azure OpenAI gpt-5.4 turns a natural-language ask or a map pin into a scenario. It never originates a number.</p>
+      </div>
+      <span class="arrow">&rsaquo;</span>
+      <div class="node">
+        <h3>Simulation kernel</h3>
+        <p>SUMO via TraCI, a pre-warmed persona pool and a bias auditor, run as a delta against a nightly baseline.</p>
+      </div>
+      <span class="arrow">&rsaquo;</span>
+      <div class="node">
+        <h3>One trajectory dataset</h3>
+        <p>A single per-agent record of the simulated city. Every dimension scores this same reality.</p>
+      </div>
+      <span class="arrow">&rsaquo;</span>
+      <div class="node">
+        <h3>Synthesis and playback</h3>
+        <p>Citation-guarded narration, streamed over WebSocket into Deck.gl playback and the Inspect drawer.</p>
+      </div>
+    </div>
+
+    <div class="fanout">
+      <div class="cell d-behavioral">Behavioral<span>Travel time, mode shift</span></div>
+      <div class="cell d-social">Social<span>Access and equity</span></div>
+      <div class="cell d-economic">Economic<span>Land value, activity</span></div>
+      <div class="cell d-ecological">Ecological<span>Emissions, exposure</span></div>
+      <div class="cell d-societal">Societal<span>Services and resilience</span></div>
+    </div>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Appendix</span>
+    <span>A1</span>
+  </div>
+
+  <template data-notes>
+    <p>Pull this up only if a judge asks how it is built. The point of the diagram is the middle box: one trajectory dataset is why five dimensions cannot contradict each other.</p>
+  </template>
+</section>
+
+<!-- ===================== A2 · GLASS BOX ===================== -->
+<section class="slide" data-appendix data-title="Glass box" data-beat="Appendix, Q&amp;A only">
+  <div class="pad">
+    <p class="appendix-tag">Appendix A2</p>
+    <h2 class="t-head" style="max-width:26ch">No number ships without its provenance.</h2>
+
+    <div class="anatomy">
+      <div class="field">
+        <code>equation_id</code>
+        <p>The exact equation from the methods ledger that produced the value. Locked, versioned, reviewable.</p>
+      </div>
+      <div class="field">
+        <code>input_dataset_ids</code>
+        <p>Every named dataset that fed the calculation, with its vintage and licence.</p>
+      </div>
+      <div class="field">
+        <code>confidence</code>
+        <p>Computed from data coverage and quality, never a guessed label. Low confidence suppresses the point estimate.</p>
+      </div>
+    </div>
+
+    <p class="t-body" style="margin-top:calc(34 * var(--u));max-width:70ch">A merge gate enforces this in the build. If a result cannot resolve its equation, its datasets and a computed confidence in the Inspect drawer, it does not ship.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Appendix</span>
+    <span>A2</span>
+  </div>
+
+  <template data-notes>
+    <p>This is the answer to “how do we know the AI is not making it up.” The LLM narrates and cites. It does not originate a figure.</p>
+  </template>
+</section>
+
+<!-- ===================== A3 · VALIDATION STATUS ===================== -->
+<section class="slide" data-appendix data-title="Validation status" data-beat="Appendix, Q&amp;A only">
+  <div class="pad">
+    <p class="appendix-tag">Appendix A3</p>
+    <h2 class="t-head">Validation, stated honestly.</h2>
+
+    <table class="grid">
+      <thead>
+        <tr><th>Gate</th><th>What it tests</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>VAL-01</td>
+          <td>Behavioral travel times against the Calderon Iloilo corridor study. Threshold is a normalized RMSE of 0.30, per FHWA guidance.</td>
+          <td class="status">WITHHELD</td>
+        </tr>
+        <tr>
+          <td>VAL-02</td>
+          <td>Flood extent against a real 2024 Sentinel-1 observation, scored by intersection over union.</td>
+          <td class="status">NOT RUN</td>
+        </tr>
+        <tr>
+          <td>VAL-03</td>
+          <td>Mode share held within tolerance of the anchored city baseline.</td>
+          <td class="status ok">ENFORCED</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="t-body" style="margin-top:calc(28 * var(--u));max-width:74ch">The machinery for all three is implemented and tested. VAL-01 is withheld rather than published because demand volume is not yet calibrated, and a confident number off uncalibrated demand would break our own glass-box rule.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Appendix</span>
+    <span>A3</span>
+  </div>
+
+  <template data-notes>
+    <p>“Withheld” is the correct word, not “failed” and not “not validated.” The gate exists and runs. We are choosing not to publish an uncalibrated headline.</p>
+  </template>
+</section>
+
+<!-- ===================== A4 · LATENCY ===================== -->
+<section class="slide" data-appendix data-title="Latency" data-beat="Appendix, Q&amp;A only">
+  <div class="pad">
+    <p class="appendix-tag">Appendix A4</p>
+    <h2 class="t-head" style="max-width:24ch">Architected for a 90 second answer.</h2>
+
+    <dl class="stack-list" style="grid-template-columns:1fr">
+      <div><dt>Target</dt><dd>90 seconds end to end, from question to a narrated five-dimension result.</dd></div>
+      <div><dt>How</dt><dd>Pre-warmed persona pool, delta simulation against a nightly baseline, five modules in parallel, progressive streaming to the UI.</dd></div>
+      <div><dt>Repeat runs</dt><dd>Served from the trajectory cache, effectively instant.</dd></div>
+      <div><dt>Cold runs</dt><dd>Can exceed the target. We quote it as an engineered target, not a measured guarantee.</dd></div>
+    </dl>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Appendix</span>
+    <span>A4</span>
+  </div>
+
+  <template data-notes>
+    <p>Do not claim “always under 90 seconds.” If you have a live measured figure from the day, quote that figure instead.</p>
+  </template>
+</section>
+
+<!-- ===================== A5 · PATH ===================== -->
+<section class="slide" data-appendix data-title="Path to ASEAN" data-beat="Appendix, Q&amp;A only">
+  <div class="pad">
+    <p class="appendix-tag">Appendix A5</p>
+    <h2 class="t-head">Iloilo is the beachhead, not the ceiling.</h2>
+
+    <div class="path">
+      <div class="leg" data-here>
+        <h3>Iloilo</h3>
+        <p>Working pilot on an open-data foundation, with a planner feedback loop built into the product.</p>
+      </div>
+      <div class="leg">
+        <h3>Philippine cities</h3>
+        <p>Geographic scaling is an API-level change: swap the OSM bounding box and the local data layers.</p>
+      </div>
+      <div class="leg">
+        <h3>ASEAN</h3>
+        <p>Behavioral scaling is prompt-level: reweight the persona archetypes to the city’s own mode share.</p>
+      </div>
+    </div>
+
+    <p class="t-body" style="margin-top:calc(34 * var(--u));max-width:70ch">The engine is deliberately city-agnostic. Nothing in the kernel hard-codes Iloilo.</p>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Appendix</span>
+    <span>A5</span>
+  </div>
+
+  <template data-notes>
+    <p>This is a path, not a deployment claim. Never say MATRIX is already running across ASEAN.</p>
+  </template>
+</section>
+
+<!-- ===================== A6 · STACK ===================== -->
+<section class="slide" data-appendix data-title="Stack" data-beat="Appendix, Q&amp;A only">
+  <div class="pad">
+    <p class="appendix-tag">Appendix A6</p>
+    <h2 class="t-head">What it is made of.</h2>
+
+    <dl class="stack-list">
+      <div><dt>Simulation</dt><dd>Eclipse SUMO via the TraCI Python API</dd></div>
+      <div><dt>Language model</dt><dd>Azure OpenAI gpt-5.4, orchestration and synthesis</dd></div>
+      <div><dt>Backend</dt><dd>FastAPI with a progressive WebSocket stream</dd></div>
+      <div><dt>Retrieval</dt><dd>ChromaDB GraphRAG corpus, ingested at startup</dd></div>
+      <div><dt>Data</dt><dd>Postgres with PostGIS, Redis for pools and caches</dd></div>
+      <div><dt>Frontend</dt><dd>Next.js 14 with Deck.gl animated playback</dd></div>
+      <div><dt>Deploy</dt><dd>Vercel for web, Hugging Face Spaces for the API</dd></div>
+      <div><dt>Forecasting</dt><dd>XGBoost baseline forecaster</dd></div>
+    </dl>
+  </div>
+  <div class="footer">
+    <span class="who">MATRIX<i class="tick"></i>Appendix</span>
+    <span>A6</span>
+  </div>
+
+  <template data-notes>
+    <p>Only open this if asked directly about the stack. It is a credibility card, not part of the spoken arc.</p>
+  </template>
+</section>
+
+</main>
+
+<div class="progress" role="presentation"></div>
+
+<aside class="notes-panel" aria-label="Presenter notes">
+  <h2 data-notes-title></h2>
+  <p class="beat" data-notes-beat></p>
+  <div data-notes-body></div>
+</aside>
+
+<p class="hint">&larr; &rarr; navigate · S notes · F fullscreen</p>
+
+<script src="deck.js"></script>
+</body>
+</html>

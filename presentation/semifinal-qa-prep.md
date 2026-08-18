@@ -198,6 +198,16 @@ Each entry follows the same shape so you can rehearse out loud:
 
 ---
 
+### Q2.2b — "What is the model accuracy of your models?"
+
+**Short answer:** We report model accuracy per validation gate, not as one inflated headline number. For Behavioral (VAL-01), accuracy is normalized RMSE against Calderon 2014 with a pass threshold of 0.30; the gate is a published **FAIL** (live NRMSE on the validation panel) because demand is uncalibrated — corridor volumes are directional. For Flood (VAL-02), accuracy is length-weighted IoU with a 0.50 threshold, currently NOT_RUN because the observed 2024 extent fixture is still provisional. For persona realism (VAL-03), we enforce an accuracy-style tolerance of ±3% against Iloilo mode-share anchors and log any correction through the bias auditor.
+
+**Backing:** VAL-01/VAL-02/VAL-03 definitions and thresholds in [methods-matrix.md §6](../docs/methods-matrix.md); `validate_calderon()` and `validate_flood()` in [`validation.py`](../app/packages/kernel/matrix_kernel/validation.py); mode-share tolerance in `bias_auditor.py`.
+
+**Guardrail:** Never give a single "overall accuracy %" for MATRIX. Give per-gate metrics and their current status (FAIL / NOT_RUN / ENFORCED).
+
+---
+
 ### Q2.3 — "If you can't show RMSE, why should we trust your behavioral numbers?"
 
 **Short answer:** Because we don't hide the uncertainty — Behavioral is rated Medium confidence, ranges are shown instead of false-precision point estimates, and BEH-4 facility redistribution is explicitly Low/directional because its gravity constants are PROVISIONAL. We'd rather show an honest Medium with a working Inspect than a fake "94% accurate" with nothing behind it.

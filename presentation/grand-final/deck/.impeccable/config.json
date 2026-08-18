@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [
+      "cramped-padding"
+    ],
+    "ignoreValues": {
+      "overused-font": [
+        "Geist",
+        "Geist Mono"
+      ]
+    }
+  },
+  "notes": {
+    "cramped-padding": "False positive on this deck. Every flagged element carries 14 to 24px of real padding, authored as calc(N * var(--u)) where --u is a nested calc(min(...)) on the .stage ancestor. Static analysis cannot resolve that chain, so it reads the inset as zero. Verified against getComputedStyle in Chrome: .step 18px top, .root 24px, .leg 20px left, .ledger .row 14px, .flight 18px, .pipeline .node 16px. Re-verify with computed styles rather than lifting this ignore.",
+    "overused-font": "Geist is MATRIX's own brand face, shipped in the product at app/apps/web. Matching it is the point of the deck; a more distinctive substitute would make the slides look like a different product than the one on screen during the demo."
+  }
+}
