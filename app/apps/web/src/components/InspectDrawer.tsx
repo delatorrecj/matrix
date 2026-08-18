@@ -170,24 +170,21 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
       aria-labelledby="inspect-drawer-title"
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="glass-strong absolute inset-x-2 top-44 w-[calc(100%-1rem)] md:inset-x-auto md:right-6 md:top-48 md:w-[calc(100%-3rem)] z-30 flex flex-col rounded-xl outline-none overflow-hidden transition-[max-height] duration-300 ease-in-out"
+      className="glass-strong absolute inset-2 z-30 flex flex-col rounded-xl outline-none min-h-0"
       style={{
-        maxHeight: isExpanded ? 'calc(100vh - 12rem)' : 'var(--panel-peek-height, 270px)'
+        maxHeight: isExpanded ? "100%" : "var(--panel-peek-height, 270px)",
       }}
       data-testid="inspect-drawer"
     >
-      {/* Close button floats above the scrollable content so it's never pushed
-          out of view by a long value, a wrapped title, or the fidelity notice. */}
       <button
         onClick={onClose}
         aria-label="Close inspector"
-        className="absolute top-4 right-4 z-10 p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all"
+        className="absolute top-3 right-3 z-20 p-2.5 bg-surface border border-border shadow-sm hover:bg-surface-elevated rounded-full text-text-muted hover:text-foreground transition-all"
       >
         <X className="w-5 h-5" />
       </button>
 
-      {/* Header + peek content: scrolls as one region so nothing gets clipped. */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0 rounded-xl">
         <div className="p-6 pr-16 border-b border-border bg-surface-elevated">
           <div className="mb-2">
             <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono inline-block">

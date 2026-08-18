@@ -809,83 +809,84 @@ export default function ScenarioSimulation() {
             </div>
           </div>
 
-        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto overflow-x-hidden print:overflow-visible">
-          {promptReview && (
-            <ScenarioPromptReview
-              rawInput={promptReview.rawInput}
-              description={promptReview.description}
-              interventionType={promptReview.interventionType}
-              location={promptReview.location}
-              parameters={promptReview.parameters}
-            />
-          )}
-          <div className="print:hidden">
-            <RunProgress runState={runState} />
-            {mapPlaybackExpired && (
-              <p className="mt-1 text-xs text-text-muted">
-                Map playback expired. Re-run to restore trajectories.
-              </p>
+        <div className="relative flex-1 min-h-0">
+          <div className="p-4 h-full flex flex-col gap-4 overflow-y-auto overflow-x-hidden print:overflow-visible">
+            {promptReview && (
+              <ScenarioPromptReview
+                rawInput={promptReview.rawInput}
+                description={promptReview.description}
+                interventionType={promptReview.interventionType}
+                location={promptReview.location}
+                parameters={promptReview.parameters}
+              />
             )}
-            <RunStatusBanner runState={runState} onRetry={retryRun} />
-          </div>
+            <div className="print:hidden">
+              <RunProgress runState={runState} />
+              {mapPlaybackExpired && (
+                <p className="mt-1 text-xs text-text-muted">
+                  Map playback expired. Re-run to restore trajectories.
+                </p>
+              )}
+              <RunStatusBanner runState={runState} onRetry={retryRun} />
+            </div>
 
-          {panelView === "analytics" ? (
-            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-              <AnalyticsView
-                results={results}
-                synthesis={synthesis}
-                scenarioId={scenarioId}
-                isRunActive={isRunActive}
-                onInspect={(card) => openInspect(card.provData, card.dimension)}
-                onCiteClick={handleCiteClick}
-              />
+            {panelView === "analytics" ? (
+              <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
+                <AnalyticsView
+                  results={results}
+                  synthesis={synthesis}
+                  scenarioId={scenarioId}
+                  isRunActive={isRunActive}
+                  onInspect={(card) => openInspect(card.provData, card.dimension)}
+                  onCiteClick={handleCiteClick}
+                />
+              </div>
+            ) : isRunActive && results.length === 0 ? (
+              <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
+                <InitializingState variant="panel" />
+              </div>
+            ) : (
+              <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
+                <SummaryView
+                  results={results}
+                  narrative={synthesis?.narrative}
+                  isRunActive={isRunActive}
+                  onInspect={(card) => openInspect(card.provData, card.dimension)}
+                  onOpenAnalytics={() => setPanelView("analytics")}
+                />
+              </div>
+            )}
+          </div>
+          <InspectDrawer
+            isOpen={isDrawerOpen}
+            onClose={closeInspect}
+            metricId={inspectData?.equationId || null}
+            data={inspectData}
+          >
+            <div className="flex flex-col gap-4 mt-2">
+              <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
+                Category Breakdown
+              </h4>
+              {DIMENSIONS.map((dim) => (
+                <DimensionResultGroup
+                  key={dim}
+                  dim={dim}
+                  dimResults={results.filter((r) => r.dimension === dim)}
+                  expectedResults={EXPECTED_RESULTS[dim]}
+                  isRunActive={isRunActive}
+                  colorClass={getDimensionColor(dim)}
+                  variant="drawer"
+                  onInspect={(card) => openInspect(card.provData, dim)}
+                />
+              ))}
             </div>
-          ) : isRunActive && results.length === 0 ? (
-            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-              <InitializingState variant="panel" />
-            </div>
-          ) : (
-            <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-              <SummaryView
-                results={results}
-                narrative={synthesis?.narrative}
-                isRunActive={isRunActive}
-                onInspect={(card) => openInspect(card.provData, card.dimension)}
-                onOpenAnalytics={() => setPanelView("analytics")}
-              />
-            </div>
-          )}
+          </InspectDrawer>
         </div>
 
         {/* Map attribution — replaces MapLibre's default white control (ODbL/OpenMapTiles). */}
         <div className="px-4 py-2.5 border-t border-border shrink-0 print:hidden">
           <MapAttribution />
         </div>
-
-        <InspectDrawer
-          isOpen={isDrawerOpen}
-          onClose={closeInspect}
-          metricId={inspectData?.equationId || null}
-          data={inspectData}
-        >
-          <div className="flex flex-col gap-4 mt-2">
-            <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">
-              Category Breakdown
-            </h4>
-            {DIMENSIONS.map((dim) => (
-              <DimensionResultGroup
-                key={dim}
-                dim={dim}
-                dimResults={results.filter((r) => r.dimension === dim)}
-                expectedResults={EXPECTED_RESULTS[dim]}
-                isRunActive={isRunActive}
-                colorClass={getDimensionColor(dim)}
-                variant="drawer"
-                onInspect={(card) => openInspect(card.provData, dim)}
-              />
-            ))}
-          </div>
-        </InspectDrawer>
       </div>
       )}
 
