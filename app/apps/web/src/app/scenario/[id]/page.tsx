@@ -59,7 +59,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
 import { getLatestRun, getScenario, type StoredDimensionResult } from "@/lib/api";
-import { takePromptHandoff, type PromptHandoff } from "@/lib/promptHandoff";
+import { overlayPromptHandoff, takePromptHandoff, type PromptHandoff } from "@/lib/promptHandoff";
 import { useHasMounted } from "@/lib/useHasMounted";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
@@ -187,13 +187,7 @@ export default function ScenarioSimulation() {
     getScenario(scenarioId)
       .then((record) => {
         if (cancelled) return;
-        setPromptReview({
-          rawInput: record.raw_input ?? "",
-          description: record.description ?? "",
-          interventionType: record.intervention_type,
-          location: record.location,
-          parameters: record.parameters ?? {},
-        });
+        setPromptReview((prev) => overlayPromptHandoff(record, prev));
       })
       .catch(() => {
         // Keep the handoff card if GET 404s (in-memory/Postgres split).

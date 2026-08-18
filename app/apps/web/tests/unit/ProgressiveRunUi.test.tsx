@@ -331,6 +331,27 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     );
   });
 
+  it("keeps the handoff question when GET /scenario returns empty raw_input", async () => {
+    savePromptHandoff("scn-test", {
+      rawInput: "Close a lane on Diversion Road",
+      description: "close one lane on Diversion Rd",
+      interventionType: "lane_closure",
+      location: "Diversion Road",
+      parameters: { lanes_closed: 1 },
+    });
+    vi.mocked(getScenario).mockResolvedValue({
+      ...SCENARIO_RECORD,
+      raw_input: "",
+      description: "",
+    });
+
+    await renderScenario();
+
+    expect(await screen.findByTestId("scenario-prompt-review")).toHaveTextContent(
+      "Close a lane on Diversion Road",
+    );
+  });
+
   it("connects to the scenario's simulate stream via the WS URL builder", async () => {
     await renderScenario();
     expect(FakeWebSocket.instances).toHaveLength(1);

@@ -28,7 +28,7 @@ import asyncio
 import json
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
@@ -293,10 +293,24 @@ def _run_public_view(run: dict) -> dict:
 
 def _playback_from_cache(scenario_id: str) -> dict | None:
     """Redis trajectory only. Returns None on miss/error. Must not run SUMO."""
+    client = None
     try:
         import redis
         from matrix_kernel.trajectory import Trajectory
-        raw = redis.from_url(REDIS_URL).get(f"scenario:{scenario_id}:latest")
+
+        kwargs: dict = {
+            "socket_connect_timeout": 0.5,
+            "socket_timeout": 0.5,
+        }
+        try:
+            from redis.backoff import NoBackoff
+            from redis.retry import Retry
+
+            kwargs["retry"] = Retry(NoBackoff(), 0)
+        except Exception:
+            pass
+        client = redis.from_url(REDIS_URL, **kwargs)
+        raw = client.get(f"scenario:{scenario_id}:latest")
         if not raw:
             return None
         traj = Trajectory.from_json(raw)
@@ -312,6 +326,10 @@ def _playback_from_cache(scenario_id: str) -> dict | None:
         }
     except Exception:
         return None
+    finally:
+        if client is not None:
+            with suppress(Exception):
+                client.close()
 
 
 @app.get("/scenarios/{scenario_id}/latest-run")

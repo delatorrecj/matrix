@@ -47,3 +47,25 @@ export function takePromptHandoff(scenarioId: string): PromptHandoff | null {
     return null;
   }
 }
+
+/** Merge GET /scenario onto a handoff, keeping non-empty fields. Does not invent numbers. */
+export function overlayPromptHandoff(
+  record: {
+    raw_input?: string | null;
+    description?: string | null;
+    intervention_type?: string | null;
+    location?: string | null;
+    parameters?: Record<string, unknown> | null;
+  },
+  prev: PromptHandoff | null,
+): PromptHandoff {
+  const params = record.parameters;
+  const hasParams = !!params && Object.keys(params).length > 0;
+  return {
+    rawInput: record.raw_input || prev?.rawInput || "",
+    description: record.description || prev?.description || "",
+    interventionType: record.intervention_type || prev?.interventionType || null,
+    location: record.location || prev?.location || null,
+    parameters: hasParams ? params : (prev?.parameters ?? {}),
+  };
+}

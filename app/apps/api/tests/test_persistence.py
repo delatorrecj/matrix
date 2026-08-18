@@ -277,7 +277,14 @@ def test_scenario_from_record_rebuilds_new_facility_not_lane_closure():
 
 def _fake_redis_module(get_returns=None):
     """A stand-in `redis` module whose client.get(...) always returns `get_returns`."""
-    return SimpleNamespace(from_url=lambda url: SimpleNamespace(get=lambda key: get_returns))
+    class _Client:
+        def get(self, key):
+            return get_returns
+
+        def close(self):
+            pass
+
+    return SimpleNamespace(from_url=lambda *a, **k: _Client())
 
 
 def test_get_trajectory_simulates_persisted_scenario(monkeypatch):
@@ -496,9 +503,12 @@ def test_latest_run_includes_playback_from_redis(client, monkeypatch):
             assert key == "scenario:scn-latest:latest"
             return traj.to_json()
 
+        def close(self):
+            pass
+
     import sys
 
-    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=lambda url: _R()))
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=lambda *a, **k: _R()))
 
     def _boom(*_a, **_k):
         raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
@@ -558,6 +568,41 @@ def test_latest_run_playback_null_on_malformed_cache(client, monkeypatch):
     body = resp.json()
     _assert_latest_run_public_view(body, run_id, scenario_id="scn-bad")
     assert body["playback"] is None
+
+
+def test_latest_run_playback_null_on_redis_error_and_closes_client(client, monkeypatch):
+    """Bounded client: timeouts on from_url, close() in finally, any error → playback None."""
+    import sys
+
+    closed = {"n": 0}
+    captured = {}
+
+    class _R:
+        def get(self, key):
+            raise ConnectionError("redis hung")
+
+        def close(self):
+            closed["n"] += 1
+
+    def _from_url(*_a, **kwargs):
+        captured["kwargs"] = kwargs
+        return _R()
+
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=_from_url))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run("scn-timeout")
+    body = client.get("/scenarios/scn-timeout/latest-run").json()
+    _assert_latest_run_public_view(body, run_id, scenario_id="scn-timeout")
+    assert body["playback"] is None
+    assert closed["n"] == 1
+    assert captured["kwargs"]["socket_connect_timeout"] == 0.5
+    assert captured["kwargs"]["socket_timeout"] == 0.5
 
 
 # ─── audit log (PRD-F6) ─────────────────────────────────────────────────────────────────
