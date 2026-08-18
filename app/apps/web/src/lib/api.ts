@@ -117,14 +117,13 @@ export interface ScenarioRecord {
   /** Scenario.parameters (facility kind/capacity, lanes_closed, …). */
   parameters?: Record<string, unknown>;
   geometry: ScenarioGeometry | null;
-  /** Camera [lon, lat] from map-drop geometry or gazetteer; null if unknown. */
+  /** Gazetteer/map-drop [lon, lat]; the results map does not pan from this field. */
   location_of_interest?: [number, number] | null;
 }
 
 /**
- * `GET /scenario/{id}` — fetch a previously parsed scenario's fields, notably
- * `location`/`geometry`, so the results view can pan/zoom the map to the scenario's
- * location of interest. Throws `ApiUnreachableError` when the API is down, and a plain
+ * `GET /scenario/{id}` — fetch a previously parsed scenario's fields
+ * (`location`/`geometry`). Throws `ApiUnreachableError` when the API is down, and a plain
  * `Error` for any other non-2xx response (including a 404).
  */
 export async function getScenario(scenarioId: string): Promise<ScenarioRecord> {

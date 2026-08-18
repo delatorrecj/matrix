@@ -44,7 +44,35 @@
     "feature_type": "district",
     "osm_id": "node/molo-centroid",
     "sumo_edge": "E_molo_plaza",
+    "street_name": "Avanceña",
     "coordinates": [122.5446, 10.6969],
+    "provisional": true
+  },
+  "diversion road": {
+    "canonical_name": "Benigno S. Aquino Jr. Avenue",
+    "feature_type": "corridor",
+    "osm_id": "way/benigno-aquino-jr",
+    "sumo_edge": "",
+    "street_name": "Aquino Jr",
+    "coordinates": [122.555, 10.720],
+    "provisional": true
+  },
+  "diversion rd": {
+    "canonical_name": "Benigno S. Aquino Jr. Avenue",
+    "feature_type": "corridor",
+    "osm_id": "way/benigno-aquino-jr",
+    "sumo_edge": "",
+    "street_name": "Aquino Jr",
+    "coordinates": [122.555, 10.720],
+    "provisional": true
+  },
+  "diversion": {
+    "canonical_name": "Benigno S. Aquino Jr. Avenue",
+    "feature_type": "corridor",
+    "osm_id": "way/benigno-aquino-jr",
+    "sumo_edge": "",
+    "street_name": "Aquino Jr",
+    "coordinates": [122.555, 10.720],
     "provisional": true
   },
   "jaro": {

@@ -921,11 +921,11 @@ export default function ScenarioSimulation() {
                   title="Affected corridor"
                 >
                   <span
-                    className="absolute inset-0 rounded-full bg-[#DB2777]/40 ring-1 ring-white/95 shadow-[0_0_6px_rgba(219,39,119,0.55)]"
+                    className="absolute inset-0 rounded-full bg-dim-social/40 ring-1 ring-white/95 shadow-[0_0_6px_rgba(219,39,119,0.55)]"
                     aria-hidden="true"
                   />
                   <span
-                    className="absolute inset-[4px] rounded-full bg-[#DB2777] ring-1 ring-white"
+                    className="absolute inset-[4px] rounded-full bg-dim-social ring-1 ring-white"
                     aria-hidden="true"
                   />
                 </div>

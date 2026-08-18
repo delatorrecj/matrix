@@ -10,6 +10,7 @@
  *   --color-warning #B45309 → Medium confidence / moderate congestion
  *   --color-error   #B91C1C → Low confidence / heavy congestion / worsening
  *   --color-primary #1D4ED8 → flood water (matches the app's primary blue)
+ *   --color-dim-social #DB2777 → affected-corridor halo (not cobalt — agents/flood stay primary)
  *   --color-text-muted #71717A → neutral "no change" midpoint (delta mode)
  */
 
@@ -17,7 +18,7 @@ export type RGB = [number, number, number];
 export type RGBA = [number, number, number, number];
 
 export const TOKEN_RGB: Record<
-  "success" | "warning" | "error" | "primary" | "neutral",
+  "success" | "warning" | "error" | "primary" | "neutral" | "affected",
   RGB
 > = {
   /** --color-success #15803D */
@@ -30,6 +31,8 @@ export const TOKEN_RGB: Record<
   primary: [29, 78, 216],
   /** --color-text-muted #71717A */
   neutral: [113, 113, 122],
+  /** --color-dim-social #DB2777 — corridor overlay, distinct from agent/flood cobalt */
+  affected: [219, 39, 119],
 };
 
 /** Fully transparent — the honest rendering for "no data for this feature". */

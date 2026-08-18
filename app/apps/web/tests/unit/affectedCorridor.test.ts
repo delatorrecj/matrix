@@ -44,6 +44,7 @@ const EDGES: EdgesFeatureCollection = {
 describe("honestAffectedEdgeIds", () => {
   it("returns ids for keyword/gazetteer/geometry matches", () => {
     expect(isHonestEdgeResolution("keyword-match")).toBe(true);
+    expect(isHonestEdgeResolution("gazetteer-alias")).toBe(true);
     expect(honestAffectedEdgeIds("gazetteer-match (PROVISIONAL-id)", ["a", "b"])).toEqual([
       "a",
       "b",

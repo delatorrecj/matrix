@@ -82,9 +82,10 @@ def test_geometry_off_network_keyword_still_matches(monkeypatch):
 # --------------------------------------------------------------------------- #
 
 class _FakeGazetteerEntry:
-    def __init__(self, sumo_edge, provisional=True):
+    def __init__(self, sumo_edge, provisional=True, street_name=""):
         self.sumo_edge = sumo_edge
         self.provisional = provisional
+        self.street_name = street_name
 
 
 def test_gazetteer_match_requires_the_edge_to_exist_in_net(monkeypatch):
@@ -120,6 +121,29 @@ def test_gazetteer_match_with_nonexistent_edge_falls_to_keyword_match(monkeypatc
     edges, method = runner._resolve_edges(Scenario("s", "d", location="merkado"))
     assert edges == ["e9"]
     assert method == "keyword-match"
+
+
+def test_gazetteer_street_name_used_when_sumo_edge_missing(monkeypatch):
+    """Molo / Diversion Rd: placeholder sumo_edge, but a curated street_name hits the net."""
+    import matrix_kernel.gazetteer as gaz
+    monkeypatch.setattr(
+        gaz,
+        "resolve_colloquial_term",
+        lambda loc: _FakeGazetteerEntry("E_molo_plaza", street_name="Avanceña"),
+    )
+    monkeypatch.setattr(runner, "_edge_ids", lambda: frozenset())
+
+    def kw(loc: str) -> list[str]:
+        key = loc.lower()
+        if "avanceña" in key or "avance" in key:
+            return ["e-avancena"]
+        return []
+
+    monkeypatch.setattr(runner, "_keyword_edges", kw)
+    monkeypatch.setattr(runner, "_busiest_baseline_edges", lambda top_n=1: ["BUSIEST"])
+    edges, method = runner._resolve_edges(Scenario("s", "d", location="Molo"))
+    assert edges == ["e-avancena"]
+    assert method == "gazetteer-alias"
 
 
 # --------------------------------------------------------------------------- #
