@@ -3,30 +3,22 @@
 # Design notes (read before "fixing" this file):
 #
 # * Jobs run in parallel and are independent; a failure in one does not cancel the others.
-# * No Redis service container — deliberately. The kernel's three integration tests are
-#   written to SKIP when Redis is unreachable, but to RUN (and fail) against a reachable
-#   Redis that lacks the seeded baseline/demo keys (`tests/test_timing_probe.py` calls
-#   `load_baseline()`, which raises KeyError on an empty Redis). Seeding requires the
-#   gitignored ~42 MB SUMO network (`app/packages/kernel/data/iloilo.net.xml`), which a CI
-#   clone does not have. If a CI-seedable fixture ever lands, add
-#   `services: redis: image: redis:7` back to the kernel job.
-# * Three things are absent from a CI clone, and each has its own guard — don't add a
-#   test that assumes any of them without one, or it fails here while passing locally:
-#     - Redis            -> the test pings it and skips (tests/test_timing_probe.py).
-#     - the SUMO network -> module-level `if not NET.exists(): pytest.skip(...)`
-#       (tests/test_geometry_sumolib.py, tests/test_timing_probe.py). NOTE that
-#       `pytest.importorskip("sumo")` does NOT cover this: `uv sync` installs the
-#       eclipse-sumo wheel, so the import guard passes and the DATA is what's missing.
-#     - `data/raw/`      -> gitignored (data/.gitignore); the matrix_kernel.datasets
-#       loaders backed by it return None and the modules degrade to confidence L. Assert
-#       that contract by patching the loader seam, not by assuming the files are there
-#       (tests/test_economic.py, tests/test_societal.py).
+# * The kernel job builds a tiny Iloilo City Proper SUMO net from the committed OSM
+#   fixture (`app/packages/data/fixtures/iloilo_city_proper.osm`) via native netconvert,
+#   generates demand, and seeds Redis `baseline:iloilo:latest`. That un-skips
+#   test_geometry_sumolib / test_timing_probe (NET/ROU existence guards) and lets
+#   load_baseline() succeed. Cache key is the fixture + build scripts' hash.
+#   This is NOT the ~42 MB pilot net — PERF-01 here proves simulate() on the fixture,
+#   not the 90 s full-city budget.
+# * `data/raw/` is still gitignored. Loaders backed by it return None and modules
+#   degrade to confidence L — assert that contract by patching the loader seam
+#   (tests/test_economic.py, tests/test_societal.py).
 #   Deliberately no expected pass/skip count here — it went stale twice. Read the job log.
 # * Playwright e2e runs against a MOCKED backend (page.route / page.routeWebSocket in
 #   tests/e2e/_mock-backend.ts) — hermetic, so it needs only the Next.js server, no API/
-#   Redis/SUMO. A *full-stack* e2e (live API + seeded data) still does not run here: it
-#   waits on a SUMO-free seed fixture (the same one that would un-skip the kernel/api
-#   integration tests). Until then, e2e covers the frontend render/stream path only.
+#   Redis/SUMO. A *full-stack* e2e (live API + the 42 MB pilot net) still does not run
+#   here; e2e covers the frontend render/stream path only. The kernel job's City Proper
+#   fixture is a separate, SUMO-in-CI path.
 # * `uv sync --locked` is strict on purpose: PRs that change a pyproject.toml must also
 #   re-lock, or CI fails. Both lockfiles were verified fresh when this workflow landed.
 
@@ -50,6 +42,18 @@ jobs:
     name: kernel (pytest)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MATRIX_REDIS_URL: redis://127.0.0.1:6379/0
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     defaults:
       run:
         working-directory: app/packages/kernel
@@ -72,16 +76,29 @@ jobs:
       - name: Sync dependencies (locked, includes eclipse-sumo)
         run: uv sync --locked --extra dev
 
-      # Redis / SUMO-network / data-raw-bound tests skip themselves — see header.
+      - name: Cache SUMO fixture net + demand
+        id: sumo-fixture
+        uses: actions/cache@v4
+        with:
+          path: |
+            app/packages/kernel/data/iloilo.net.xml
+            app/packages/kernel/data/iloilo.rou.xml
+          key: sumo-ci-fixture-${{ hashFiles('app/packages/data/fixtures/iloilo_city_proper.osm', 'app/packages/data/build_network.py', 'app/packages/data/build_demand.py') }}
+
+      - name: Build SUMO fixture net + demand
+        if: steps.sumo-fixture.outputs.cache-hit != 'true'
+        run: |
+          uv run --no-sync python ../data/build_network.py --from-osm ../data/fixtures/iloilo_city_proper.osm --native --validate
+          uv run --no-sync python ../data/build_demand.py --end 900 --period 8 --fringe-factor 2 --seed 42 --no-smoke
+
+      - name: Seed Redis baseline
+        run: uv run --no-sync python -c "from matrix_kernel.baseline import run_nightly_baseline; print(run_nightly_baseline())"
+
       - name: Run kernel tests
         run: uv run --no-sync python -m pytest -q
 
-      # Startup-generated ledgers. Untracked on purpose (see app/.gitignore). VAL-01 is
-      # NOT_RUN here until a CI-seedable SUMO fixture exists; credibility is fixture-backed
-      # and should always write. Upload so the published FAIL/NOT_RUN is CI-reproducible.
+      # Ledgers from the live fixture+baseline (VAL-01 may FAIL — that is the published result).
       - name: Generate validation and credibility reports
-        env:
-          MATRIX_REDIS_URL: redis://localhost:59998/0
         run: |
           uv run --no-sync python -m matrix_kernel.build_validation_report
           uv run --no-sync python -c "from matrix_kernel.credibility import write_credibility_report; print(write_credibility_report())"
