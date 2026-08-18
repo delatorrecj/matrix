@@ -1,25 +1,10 @@
 /**
- * fetchStaticLayer + confidenceCellsFromGeoJSON — graceful no-op contract.
+ * fetchStaticLayer — graceful no-op contract.
  * fetch is mocked; the network is never touched.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('@deck.gl/layers', () => {
-  class MockLayer {
-    props: Record<string, any>;
-    constructor(props: Record<string, any>) {
-      this.props = props;
-    }
-  }
-  return {
-    GeoJsonLayer: class GeoJsonLayer extends MockLayer {},
-    PolygonLayer: class PolygonLayer extends MockLayer {},
-    GridCellLayer: class GridCellLayer extends MockLayer {},
-  };
-});
-
 import { fetchStaticLayer, isFeatureCollection } from '@/components/map/fetchStaticLayer';
-import { confidenceCellsFromGeoJSON } from '@/components/map/confidenceLayer';
 import type { FeatureCollection } from '@/components/map/types';
 
 const VALID_FC: FeatureCollection = {
@@ -106,55 +91,5 @@ describe('isFeatureCollection', () => {
     expect(isFeatureCollection('FeatureCollection')).toBe(false);
     expect(isFeatureCollection({ type: 'FeatureCollection' })).toBe(false);
     expect(isFeatureCollection({ type: 'FeatureCollection', features: [{ type: 'nope' }] })).toBe(false);
-  });
-});
-
-describe('confidenceCellsFromGeoJSON', () => {
-  it('converts Polygon features to polygon cells and Point features to position cells', () => {
-    const cells = confidenceCellsFromGeoJSON({
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          geometry: {
-            type: 'Polygon',
-            coordinates: [[[122.55, 10.7], [122.56, 10.7], [122.56, 10.71], [122.55, 10.7]]],
-          },
-          properties: { confidence: 'M', basis: 'documented basis' },
-        },
-        {
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [122.56, 10.71] },
-          properties: { confidence: 'low' },
-        },
-      ],
-    });
-    expect(cells).toEqual([
-      {
-        polygon: [[122.55, 10.7], [122.56, 10.7], [122.56, 10.71], [122.55, 10.7]],
-        confidence: 'M',
-        basis: 'documented basis',
-      },
-      { position: [122.56, 10.71], confidence: 'L', basis: undefined },
-    ]);
-  });
-
-  it('skips features without a recognizable tier or usable geometry', () => {
-    const cells = confidenceCellsFromGeoJSON({
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [122.56, 10.71] },
-          properties: {}, // no tier
-        },
-        {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: [[122.56, 10.71], [122.57, 10.72]] },
-          properties: { confidence: 'H' }, // unsupported geometry for a cell
-        },
-      ],
-    });
-    expect(cells).toEqual([]);
   });
 });

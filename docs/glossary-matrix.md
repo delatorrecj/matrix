@@ -32,7 +32,7 @@ One kernel run, five parallel scorers — all in `packages/kernel/matrix_kernel/
 
 | Module | Prefix | Computes | Confidence tier (typical) |
 |---|---|---|---|
-| **Behavioral** | `BEH-#` | Trip-count deltas per corridor (BEH-1), mode-share shift (BEH-2), peak volume/capacity saturation (BEH-3), gravity-model facility-demand redistribution (BEH-4) | L / directional for BEH-1/3 while VAL-01 is FAIL (uncalibrated demand); M for BEH-2; L for BEH-4 |
+| **Behavioral** | `BEH-#` | Trip-count deltas per corridor (BEH-1), mode-share shift (BEH-2), peak volume/capacity saturation (BEH-3), gravity-model facility-demand redistribution (BEH-4) | L / directional for BEH-1/3 while VAL-01 is FAIL (not city-calibrated); M for BEH-2; L for BEH-4 |
 | **Ecological** | `ECO-#` | Transport CO₂e delta (ECO-1), air-quality/PM2.5 delta (ECO-2), green-cover loss (ECO-3), flood-exposure population delta (ECO-4) | H (ECO-1/3); M (ECO-2/4, method-capped) |
 | **Social** | `SOC-#` | Equity-weighted access index (SOC-1), displacement/vendor-risk count (SOC-2), win/lose distributional split by income decile (SOC-3, PRD-F17) | M |
 | **Economic** | `ECON-#` | Land-value delta within 1 km (ECON-1), footfall delta per zone (ECON-2), employment delta (ECON-3) | M |
@@ -65,8 +65,8 @@ ACCEPTED → [QUEUED] → PLAYBACK_FRAME* → EDGE_COUNTS → DIMENSION_RESULT �
 4. **Results/run view** (`/scenario/[id]`) — opens the WebSocket and drives UI through the event sequence above:
    - `RunStatusBanner` — current run state, including errors.
    - `InitializingState` — shown before the first `DIMENSION_RESULT`.
-   - `PlaybackBar` + Deck.gl `TripsLayer` — animates trips from `PLAYBACK_FRAME`.
-   - Map layers — congestion (`EDGE_COUNTS`), flood extent, confidence cells.
+   - Deck.gl `TripsLayer` — auto-loops trips from `PLAYBACK_FRAME` (no playback chrome).
+   - Map layers — congestion (`EDGE_COUNTS`), flood extent.
    - `IconNavRail` toggles the results panel between **`SummaryView`** (default, plain-language BLUF cards) and **`AnalyticsView`** (interpreted numeric detail per dimension).
    - Clicking any metric opens **`InspectDrawer`** — the glass-box provenance view (equation, inputs, confidence, assumptions).
    - **`ScenarioBrief`** — print-scoped, one-page exportable version of the synthesis brief.

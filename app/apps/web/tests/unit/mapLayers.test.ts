@@ -20,10 +20,9 @@ vi.mock('@deck.gl/layers', () => {
   };
 });
 
-import { GeoJsonLayer, GridCellLayer, PolygonLayer } from '@deck.gl/layers';
+import { GeoJsonLayer } from '@deck.gl/layers';
 import {
   TOKEN_RGB,
-  CONFIDENCE_RGB,
   NO_DATA_RGBA,
   sequentialCongestionRGB,
   divergingCongestionRGB,
@@ -31,16 +30,9 @@ import {
 } from '@/components/map/colors';
 import { congestionLayer, CONGESTION_LAYER_ID } from '@/components/map/congestionLayer';
 import { affectedEdgesLayer, AFFECTED_EDGES_LAYER_ID, AFFECTED_HALO_ALPHA } from '@/components/map/affectedEdgesLayer';
-import {
-  confidenceLayer,
-  normalizeConfidenceTier,
-  CONFIDENCE_POLYGON_LAYER_ID,
-  CONFIDENCE_GRID_LAYER_ID,
-} from '@/components/map/confidenceLayer';
 import { floodLayer, FLOOD_LAYER_ID } from '@/components/map/floodLayer';
 import { useMapLayers } from '@/components/map/useMapLayers';
 import type {
-  ConfidenceCell,
   EdgesFeatureCollection,
   FeatureCollection,
   MapLayerData,
@@ -78,12 +70,6 @@ const FLOOD: FeatureCollection = {
   ],
 };
 
-const POLYGON_CELL: ConfidenceCell = {
-  polygon: [[122.55, 10.7], [122.56, 10.7], [122.56, 10.71]],
-  confidence: 'H',
-};
-const POINT_CELL: ConfidenceCell = { position: [122.56, 10.71], confidence: 'L' };
-
 /* ------------------------------------------------------------------ colors */
 
 describe('color ramps (design-token mirrors)', () => {
@@ -104,12 +90,6 @@ describe('color ramps (design-token mirrors)', () => {
     expect(divergingCongestionRGB(0)).toEqual(TOKEN_RGB.neutral);
     expect(divergingCongestionRGB(0.5)).toEqual(TOKEN_RGB.warning);
     expect(divergingCongestionRGB(1)).toEqual(TOKEN_RGB.error);
-  });
-
-  it('confidence tiers map H→success, M→warning, L→error', () => {
-    expect(CONFIDENCE_RGB.H).toEqual(TOKEN_RGB.success);
-    expect(CONFIDENCE_RGB.M).toEqual(TOKEN_RGB.warning);
-    expect(CONFIDENCE_RGB.L).toEqual(TOKEN_RGB.error);
   });
 
   it('withAlpha clamps and rounds the alpha channel', () => {
@@ -208,62 +188,6 @@ describe('affectedEdgesLayer', () => {
   });
 });
 
-/* -------------------------------------------------------- confidence layer */
-
-describe('confidenceLayer', () => {
-  it('renders polygon cells with a translucent token color via PolygonLayer', () => {
-    const layers = confidenceLayer([POLYGON_CELL]);
-    expect(layers).toHaveLength(1);
-    const layer = layers[0] as any;
-    expect(layer).toBeInstanceOf(PolygonLayer);
-    expect(layer.props.id).toBe(CONFIDENCE_POLYGON_LAYER_ID);
-    expect(layer.props.extruded).toBe(false);
-    expect(layer.props.getPolygon(layer.props.data[0])).toEqual(POLYGON_CELL.polygon);
-    expect(layer.props.getFillColor(layer.props.data[0])).toEqual(withAlpha(TOKEN_RGB.success, 90));
-  });
-
-  it('renders position cells via GridCellLayer with the default 250 m cell', () => {
-    const layers = confidenceLayer([POINT_CELL]);
-    expect(layers).toHaveLength(1);
-    const layer = layers[0] as any;
-    expect(layer).toBeInstanceOf(GridCellLayer);
-    expect(layer.props.id).toBe(CONFIDENCE_GRID_LAYER_ID);
-    expect(layer.props.cellSize).toBe(250);
-    expect(layer.props.extruded).toBe(false);
-    expect(layer.props.getPosition(layer.props.data[0])).toEqual(POINT_CELL.position);
-    expect(layer.props.getFillColor(layer.props.data[0])).toEqual(withAlpha(TOKEN_RGB.error, 90));
-  });
-
-  it('splits a mixed cell array into both sub-layers and honors cellSizeM', () => {
-    const layers = confidenceLayer([POLYGON_CELL, POINT_CELL], { cellSizeM: 500 });
-    expect(layers).toHaveLength(2);
-    expect((layers[0] as any).props.id).toBe(CONFIDENCE_POLYGON_LAYER_ID);
-    expect((layers[1] as any).props.id).toBe(CONFIDENCE_GRID_LAYER_ID);
-    expect((layers[1] as any).props.cellSize).toBe(500);
-  });
-
-  it('skips cells with an unrecognizable tier or no usable geometry (never guesses)', () => {
-    const layers = confidenceLayer([
-      { polygon: POLYGON_CELL.polygon, confidence: 'X' as any },
-      { confidence: 'H' }, // no polygon, no position
-      { position: [999, 999], confidence: 'M' }, // out-of-range lon/lat
-    ]);
-    expect(layers).toHaveLength(0);
-  });
-
-  it('accepts long-form tiers (High/Medium/Low) via normalization', () => {
-    expect(normalizeConfidenceTier('High')).toBe('H');
-    expect(normalizeConfidenceTier('medium')).toBe('M');
-    expect(normalizeConfidenceTier(' low ')).toBe('L');
-    expect(normalizeConfidenceTier('certain')).toBeNull();
-    expect(normalizeConfidenceTier(3)).toBeNull();
-    const layers = confidenceLayer([{ ...POINT_CELL, confidence: 'Low' as any }]);
-    expect((layers[0] as any).props.getFillColor((layers[0] as any).props.data[0])).toEqual(
-      withAlpha(TOKEN_RGB.error, 90)
-    );
-  });
-});
-
 /* ------------------------------------------------------------- flood layer */
 
 describe('floodLayer', () => {
@@ -299,13 +223,11 @@ describe('useMapLayers', () => {
     buildings: true,
     agents: true,
     congestion: true,
-    confidence: true,
     flood: true,
   };
   const ALL_DATA: MapLayerData = {
     edgesGeoJSON: EDGES,
     edgeCounts: { e1: 1, e2: 2, e3: 3 },
-    confidenceCells: [POLYGON_CELL, POINT_CELL],
     floodGeoJSON: FLOOD,
   };
 
@@ -313,36 +235,30 @@ describe('useMapLayers', () => {
     return renderHook(() => useMapLayers(toggles, data)).result.current;
   }
 
-  it('assembles flood → congestion → confidence (bottom to top) when all on', () => {
+  it('assembles flood → congestion (bottom to top) when all on', () => {
     const layers = run(ALL_ON, ALL_DATA);
     expect(layers.map((l: any) => l.props.id)).toEqual([
       FLOOD_LAYER_ID,
       CONGESTION_LAYER_ID,
-      CONFIDENCE_POLYGON_LAYER_ID,
-      CONFIDENCE_GRID_LAYER_ID,
     ]);
   });
 
   it('omits layers whose toggle is off', () => {
     const layers = run({ ...ALL_ON, congestion: false, flood: false }, ALL_DATA);
-    expect(layers.map((l: any) => l.props.id)).toEqual([
-      CONFIDENCE_POLYGON_LAYER_ID,
-      CONFIDENCE_GRID_LAYER_ID,
-    ]);
+    expect(layers).toEqual([]);
   });
 
   it('omits toggled-on layers whose data is absent — no crash, no placeholder', () => {
     expect(run(ALL_ON, {})).toEqual([]);
     expect(run(ALL_ON, { edgesGeoJSON: EDGES })).toEqual([]); // counts missing too
-    expect(run(ALL_ON, { confidenceCells: [] })).toEqual([]);
     expect(
-      run(ALL_ON, { edgesGeoJSON: null, edgeCounts: null, confidenceCells: null, floodGeoJSON: null })
+      run(ALL_ON, { edgesGeoJSON: null, edgeCounts: null, floodGeoJSON: null })
     ).toEqual([]);
   });
 
   it('ignores page-owned (buildings/agents) and unknown toggle ids', () => {
     const layers = run(
-      { buildings: true, agents: true, futureLayer: true, congestion: false, confidence: false, flood: false },
+      { buildings: true, agents: true, futureLayer: true, congestion: false, flood: false },
       ALL_DATA
     );
     expect(layers).toEqual([]);

@@ -11,27 +11,11 @@
  * flood.geojson remains a derived CCHAIN subset (< 100 KB); the larger SUMO
  * exports are lazily loaded on first toggle and are not size-constrained here.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-// confidenceLayer imports '@deck.gl/layers' (brittle in jsdom) — stub it out.
-vi.mock('@deck.gl/layers', () => {
-  class MockLayer {
-    props: Record<string, any>;
-    constructor(props: Record<string, any>) {
-      this.props = props;
-    }
-  }
-  return {
-    GeoJsonLayer: class GeoJsonLayer extends MockLayer {},
-    PolygonLayer: class PolygonLayer extends MockLayer {},
-    GridCellLayer: class GridCellLayer extends MockLayer {},
-  };
-});
-
 import { isFeatureCollection } from '@/components/map/fetchStaticLayer';
-import { confidenceCellsFromGeoJSON } from '@/components/map/confidenceLayer';
 
 const LAYERS_DIR = path.resolve(__dirname, '../../public/layers');
 
@@ -94,15 +78,11 @@ describe('public/layers samples', () => {
     }
   });
 
-  // confidence.geojson: REAL grid export (CR-007 PR 7). Previously PROVISIONAL placeholder.
-  it('confidence.geojson is REAL and converts cleanly to cells', () => {
+  // confidence.geojson: REAL grid export (CR-007 PR 7). Not fetched by the results map.
+  it('confidence.geojson is REAL with a documented tier rationale', () => {
     const { fc } = loadLayer('confidence');
     expect(fc._provenance.status).toBe('REAL');
     expect(fc._provenance.tier_rationale).toBeTruthy();
-    const cells = confidenceCellsFromGeoJSON(fc);
-    expect(cells.length).toBeGreaterThan(0);
-    for (const cell of cells) {
-      expect(['H', 'M', 'L']).toContain(cell.confidence);
-    }
+    expect(fc.features.length).toBeGreaterThan(0);
   });
 });

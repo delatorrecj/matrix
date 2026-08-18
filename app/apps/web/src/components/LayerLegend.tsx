@@ -11,16 +11,20 @@ interface LayerLegendProps {
   onToggleLayer: (id: string) => void;
 }
 
+const HIDDEN_LAYER_IDS = new Set(["confidence"]);
+
 export function LayerLegend({ layers, onToggleLayer }: LayerLegendProps) {
+  const visibleLayers = layers.filter((layer) => !HIDDEN_LAYER_IDS.has(layer.id));
+
   return (
-    <div className="glass rounded-xl p-3 w-64 pointer-events-auto">
+    <div className="glass rounded-xl p-3 w-64 pointer-events-auto" data-testid="map-layer-legend">
       <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
         <Layers className="w-3.5 h-3.5" />
         Map Layers
       </h3>
       
       <div className="flex flex-col gap-1.5">
-        {layers.map((layer) => {
+        {visibleLayers.map((layer) => {
           const Icon = layer.icon;
           return (
             <button

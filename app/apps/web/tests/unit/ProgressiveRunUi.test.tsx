@@ -401,6 +401,9 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
 
     // CR-010: active runs show InitializingState, not per-dimension skeletons.
     expect(screen.getByTestId("initializing-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("initializing-pill")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confidence" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
     // CR-013 (44631f3): zero results reads as "Running traffic simulation…", not a
     // "0/5 · 0/17" placeholder.
@@ -564,22 +567,31 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(assignMock).toHaveBeenCalledWith("/app");
   });
 
-  it("hides the confidence map toggle and the playback scrubber", async () => {
+  it("hides the confidence map toggle and the map initializing overlay while the run is active", async () => {
     await renderScenario();
     const ws = lastSocket();
     act(() => {
       ws.onopen?.();
       ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
-      ws.emit(RESULT_BEH_1);
-      ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 });
     });
 
-    expect(screen.getByText("Map Layers")).toBeInTheDocument();
+    expect(screen.getByTestId("initializing-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("initializing-pill")).not.toBeInTheDocument();
+    expect(screen.getByTestId("map-layer-legend")).toBeInTheDocument();
     expect(screen.getByText("Agent Trajectories")).toBeInTheDocument();
     expect(screen.getByText("Congestion")).toBeInTheDocument();
     expect(screen.getByText("Flood Zones")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confidence" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/playback/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+
+    act(() => {
+      ws.emit(RESULT_BEH_1);
+      ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 });
+    });
+
+    expect(screen.queryByTestId("initializing-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confidence" })).not.toBeInTheDocument();
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
   });
 
