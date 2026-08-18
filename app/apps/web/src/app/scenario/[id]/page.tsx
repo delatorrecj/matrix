@@ -32,7 +32,7 @@ import {
   isTerminal,
   reduceRunEvent,
 } from "@/lib/simulationRun";
-import { accumulateTripFrame } from "@/lib/playbackTrips";
+import { accumulateTripFrame, framesToTrips } from "@/lib/playbackTrips";
 import { LayerLegend } from "@/components/LayerLegend";
 import {
   useMapLayers,
@@ -275,6 +275,7 @@ export default function ScenarioSimulation() {
   /** After bootstrap: open WS only when there is no completed run to hydrate (or Re-run). */
   const [shouldSimulate, setShouldSimulate] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [mapPlaybackExpired, setMapPlaybackExpired] = useState(false);
 
   const [results, setResults] = useState<ResultCardData[]>([]);
   const [tripsData, setTripsData] = useState<{ id: string, path: [number, number][], timestamps: number[] }[]>([]);
@@ -416,6 +417,7 @@ export default function ScenarioSimulation() {
     let cancelled = false;
     setBootstrapped(false);
     setShouldSimulate(false);
+    setMapPlaybackExpired(false);
 
     void (async () => {
       // Re-run / retry always simulates.
@@ -432,14 +434,26 @@ export default function ScenarioSimulation() {
         if (run && run.status === "done" && Array.isArray(run.results) && run.results.length > 0) {
           const cards = run.results.map(storedResultToCard);
           setResults(cards);
-          setTripsData([]);
-          setEdgeCounts({});
-          setAffectedEdges(
-            Array.isArray(run.affected_edges)
-              ? run.affected_edges.filter((id): id is string => typeof id === "string")
-              : [],
-          );
-          setEdgeResolution(typeof run.edge_resolution === "string" ? run.edge_resolution : null);
+          const playback = run.playback;
+          if (playback && typeof playback.edge_counts === "object") {
+            setEdgeCounts(playback.edge_counts);
+            const { trips, maxTime } = framesToTrips(Array.isArray(playback.frames) ? playback.frames : []);
+            setTripsData(trips);
+            setMaxTime((prev) => Math.max(prev, maxTime));
+            setMapPlaybackExpired(false);
+          } else {
+            setTripsData([]);
+            setEdgeCounts({});
+            setMapPlaybackExpired(true);
+          }
+          const resolution =
+            (playback && typeof playback.edge_resolution === "string" && playback.edge_resolution) ||
+            (typeof run.edge_resolution === "string" ? run.edge_resolution : null);
+          const edges =
+            (playback && Array.isArray(playback.affected_edges) && playback.affected_edges) ||
+            (Array.isArray(run.affected_edges) ? run.affected_edges : []);
+          setEdgeResolution(resolution);
+          setAffectedEdges(edges.filter((id): id is string => typeof id === "string"));
           setSynthesis(null);
           const timings =
             run.timings && typeof run.timings === "object"
@@ -807,6 +821,11 @@ export default function ScenarioSimulation() {
           )}
           <div className="print:hidden">
             <RunProgress runState={runState} />
+            {mapPlaybackExpired && (
+              <p className="mt-1 text-xs text-text-muted">
+                Map playback expired. Re-run to restore trajectories.
+              </p>
+            )}
             <RunStatusBanner runState={runState} onRetry={retryRun} />
           </div>
 

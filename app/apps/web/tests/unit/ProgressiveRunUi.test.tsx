@@ -4,7 +4,8 @@ import RunStatusBanner from "@/components/RunStatusBanner";
 import RunProgress from "@/components/RunProgress";
 import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
 import ScenarioSimulation from "@/app/scenario/[id]/page";
-import { getScenario } from "@/lib/api";
+import { getLatestRun, getScenario } from "@/lib/api";
+import { TripsLayer } from "@deck.gl/geo-layers";
 import { savePromptHandoff } from "@/lib/promptHandoff";
 import {
   RunEvent,
@@ -284,6 +285,9 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     sessionStorage.clear();
     vi.mocked(getScenario).mockReset();
     vi.mocked(getScenario).mockResolvedValue(SCENARIO_RECORD);
+    vi.mocked(getLatestRun).mockReset();
+    vi.mocked(getLatestRun).mockResolvedValue(null);
+    vi.mocked(TripsLayer).mockClear();
   });
 
   afterEach(() => {
@@ -564,5 +568,86 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.getByTestId("stage-timings")).toHaveTextContent("SUMO");
     expect(screen.queryByTestId("disconnect-banner")).not.toBeInTheDocument();
     expect(screen.queryByTestId("cancel-run")).not.toBeInTheDocument();
+  });
+
+  it("hydrates trips from latest-run playback without opening a WebSocket", async () => {
+    vi.mocked(getLatestRun).mockResolvedValueOnce({
+      run_id: "run-1",
+      scenario_id: "scn-test",
+      status: "done",
+      results: [
+        {
+          dimension: "behavioral",
+          metric: "Mode shift",
+          equation_id: "BEH-1",
+          value: 4.2,
+          range: [3.1, 5.3],
+          unit: "%",
+          confidence: "M",
+          input_dataset_ids: ["lptrp-2023"],
+          references: [],
+          assumptions: [],
+        },
+      ],
+      affected_edges: ["edge-1"],
+      edge_resolution: "keyword-match",
+      playback: {
+        edge_counts: { "edge-1": 12 },
+        frames: [{ tick: 1, agents: [{ id: "a", lon: 122.5, lat: 10.7 }] }],
+        affected_edges: ["edge-1"],
+        edge_resolution: "keyword-match",
+      },
+    });
+
+    await renderScenario();
+
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(screen.queryByTestId("ws-status")).not.toHaveTextContent("Connecting…");
+    expect(screen.queryByTestId("ws-status")).not.toHaveTextContent("Running…");
+    expect(screen.getByText("Mode shift")).toBeInTheDocument();
+    const lastProps = vi.mocked(TripsLayer).mock.calls.at(-1)?.[0] as
+      | { data?: Array<{ id: string; path: [number, number][]; timestamps: number[] }> }
+      | undefined;
+    expect(lastProps?.data).toEqual([
+      { id: "a", path: [[122.5, 10.7]], timestamps: [1] },
+    ]);
+    expect(screen.queryByText("Map playback expired. Re-run to restore trajectories.")).not.toBeInTheDocument();
+  });
+
+  it("shows a muted expired notice when latest-run playback is null", async () => {
+    vi.mocked(getLatestRun).mockResolvedValueOnce({
+      run_id: "run-1",
+      scenario_id: "scn-test",
+      status: "done",
+      results: [
+        {
+          dimension: "behavioral",
+          metric: "Mode shift",
+          equation_id: "BEH-1",
+          value: 4.2,
+          range: [3.1, 5.3],
+          unit: "%",
+          confidence: "M",
+          input_dataset_ids: ["lptrp-2023"],
+          references: [],
+          assumptions: [],
+        },
+      ],
+      affected_edges: ["edge-1"],
+      edge_resolution: "keyword-match",
+      playback: null,
+    });
+
+    await renderScenario();
+
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(screen.getByText("Mode shift")).toBeInTheDocument();
+    expect(
+      screen.getByText("Map playback expired. Re-run to restore trajectories."),
+    ).toBeInTheDocument();
+    const lastProps = vi.mocked(TripsLayer).mock.calls.at(-1)?.[0] as
+      | { data?: Array<{ id: string }> }
+      | undefined;
+    expect(lastProps?.data).toEqual([]);
   });
 });

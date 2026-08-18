@@ -161,6 +161,12 @@ export interface LatestRunRecord {
   affected_edges?: string[] | null;
   edge_resolution?: string | null;
   results: StoredDimensionResult[];
+  playback?: {
+    edge_counts: Record<string, number>;
+    frames: Array<{ tick: number; agents: Array<{ id: string; lon: number; lat: number }> }>;
+    affected_edges?: string[] | null;
+    edge_resolution?: string | null;
+  } | null;
 }
 
 /**
