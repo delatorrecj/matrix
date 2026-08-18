@@ -138,7 +138,28 @@ def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
 
 def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:
     """Edge ids a scenario affects (back-compat wrapper over _resolve_edges)."""
-    return _resolve_edges(scenario, top_n)[0]
+    return resolve_intervention_site(scenario, top_n)[0]
+
+
+def resolve_intervention_site(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
+    """Where the intervention applies: demand-only facilities touch no corridor edges."""
+    if scenario.intervention_type == "new_facility":
+        return [], "facility-demand"
+    return _resolve_edges(scenario, top_n)
+
+
+def facility_demand_meta(scenario: Scenario) -> dict | None:
+    """BEH-4 summary for Trajectory.meta, or None when the scenario is not a facility."""
+    if scenario.intervention_type != "new_facility":
+        return None
+    from matrix_kernel.demand_delta import demand_delta_summary, prepare_facility_demand
+
+    delta = prepare_facility_demand(
+        scenario.geometry,
+        scenario.effective_location,
+        scenario.effective_parameters(),
+    )
+    return demand_delta_summary(delta)
 
 
 def _location_of_interest(affected: list[str], edge_resolution: str) -> list[float] | None:
@@ -147,8 +168,13 @@ def _location_of_interest(affected: list[str], edge_resolution: str) -> list[flo
     across all affected edges: a street name can match segments in unrelated
     neighborhoods, and averaging those would land the marker in a meaningless spot
     between them. Only a real resolution (geometry/gazetteer/keyword) earns a marker --
-    showing one for busiest-baseline-fallback would be a glass-box lie (PRD-F14)."""
-    if not affected or edge_resolution.startswith("busiest-baseline-fallback"):
+    showing one for busiest-baseline-fallback would be a glass-box lie (PRD-F14).
+    new_facility (facility-demand) has no closed corridor, so no marker."""
+    if (
+        not affected
+        or edge_resolution.startswith("busiest-baseline-fallback")
+        or edge_resolution == "facility-demand"
+    ):
         return None
     from matrix_kernel.geometry import edge_midpoint_lonlat
 
@@ -163,8 +189,9 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
         raise FileNotFoundError("network/demand missing -- run build_network.py + build_demand.py")
     import traci
 
-    affected, edge_resolution = _resolve_edges(scenario)
+    affected, edge_resolution = resolve_intervention_site(scenario)
     location_of_interest = _location_of_interest(affected, edge_resolution)
+    demand_meta = facility_demand_meta(scenario)
 
     with tempfile.TemporaryDirectory() as td:
         add = Path(td) / "ed.add.xml"
@@ -226,6 +253,8 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "lanes_closed": applied["lanes_closed_legacy"],
             "sim_end_s": end,
             "edges_with_traffic": len(edge_counts),
+            # BEH-4 summary only; per-trip samples stay off the WebSocket (PRD-F14 + 90s budget).
+            "demand_delta": demand_meta,
         },
     )
 

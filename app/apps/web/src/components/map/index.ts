@@ -8,8 +8,13 @@ export {
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
+  resultsCameraFly,
+  corridorAnchorLonLat,
+  shouldFlyToCorridor,
   zoomForBbox,
+  zoomWithoutPullingOut,
 } from "./affectedCorridor";
+export type { ResultsCameraFly } from "./affectedCorridor";
 export {
   confidenceLayer,
   confidenceCellsFromGeoJSON,

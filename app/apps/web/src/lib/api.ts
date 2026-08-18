@@ -17,6 +17,10 @@ export interface ScenarioResponse {
   description: string;
   corridor: string;
   lanes_closed: number;
+  raw_input?: string;
+  intervention_type?: string | null;
+  location?: string | null;
+  parameters?: Record<string, unknown>;
 }
 
 /** The orchestrator could not parse the query (HTTP 400, `is_ambiguous: true`). */
@@ -106,8 +110,12 @@ export async function createScenario(
 export interface ScenarioRecord {
   scenario_id: string;
   description: string;
+  /** Planner's original NL query from POST /scenario. */
+  raw_input?: string;
   intervention_type: string | null;
   location: string | null;
+  /** Scenario.parameters (facility kind/capacity, lanes_closed, …). */
+  parameters?: Record<string, unknown>;
   geometry: ScenarioGeometry | null;
   /** Camera [lon, lat] from map-drop geometry or gazetteer; null if unknown. */
   location_of_interest?: [number, number] | null;
@@ -153,6 +161,12 @@ export interface LatestRunRecord {
   affected_edges?: string[] | null;
   edge_resolution?: string | null;
   results: StoredDimensionResult[];
+  playback?: {
+    edge_counts: Record<string, number>;
+    frames: Array<{ tick: number; agents: Array<{ id: string; lon: number; lat: number }> }>;
+    affected_edges?: string[] | null;
+    edge_resolution?: string | null;
+  } | null;
 }
 
 /**

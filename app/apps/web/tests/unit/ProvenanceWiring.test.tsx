@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "scn-test" }),
   useRouter: () => ({
     push: vi.fn(),
+    replace: vi.fn(),
   }),
 }));
 vi.mock("react-map-gl/maplibre", () => ({
@@ -44,8 +45,10 @@ vi.mock("@/lib/api", async (importOriginal) => {
     getScenario: vi.fn().mockResolvedValue({
       scenario_id: "scn-test",
       description: "",
+      raw_input: "",
       intervention_type: null,
       location: null,
+      parameters: {},
       geometry: null,
     }),
     getLatestRun: vi.fn().mockResolvedValue(null),

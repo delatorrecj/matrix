@@ -1,6 +1,6 @@
 """Behavioral impact module (U8). Mode-share: Medium. Corridor volumes: Low / directional.
 
-Scores the ONE scenario trajectory (vs the cached baseline) into three glass-box results --
+Scores the ONE scenario trajectory (vs the cached baseline) into glass-box results --
 exactly the equations in docs/methods-matrix.md §3.1:
 
   BEH-1  Δ trips on the affected corridor (scenario − baseline)  OSM-ILO, OVERTURE, PERSONA-POOL
@@ -8,6 +8,9 @@ exactly the equations in docs/methods-matrix.md §3.1:
   BEH-2  Mode-share shift (±3% anchor)                           PERSONA-POOL, Calderon2014, CCHAIN -> M
   BEH-3  Peak saturation V/C on the corridor                     SUMO-NET, OSM-ILO
          -> L while VAL-01 FAIL (same volume-calibration cap as BEH-1)
+  BEH-4  Facility demand redistribution — only when Trajectory.meta carries a demand_delta
+         summary (new_facility). Value is the BEH-4 n_total already computed; the module
+         does not invent a second number.
 
 Network-physics inputs are High; live Calderon back-test FAIL caps *magnitudes* at directional
 (methods §2: worst factor includes validation). Confidence is COMPUTED; the range is EARNED
@@ -121,4 +124,26 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
             _VAL01_VOLUME_CAP_NOTE,
         ],
     ))
+
+    demand = trajectory.meta.get("demand_delta")
+    if isinstance(demand, dict) and demand.get("equation_id") == "BEH-4":
+        datasets = list(demand.get("input_dataset_ids") or [])
+        if not datasets:
+            raise ValueError("BEH-4: demand_delta missing input_dataset_ids (glass-box, PRD-F14)")
+        conf = demand.get("confidence")
+        if conf not in ("H", "M", "L"):
+            raise ValueError("BEH-4: demand_delta missing computed confidence (glass-box, PRD-F14)")
+        value = float(demand["demand_trips_total"])
+        results.append(DimensionResult(
+            dimension="behavioral",
+            metric="facility demand redistribution (AM-peak window)",
+            equation_id="BEH-4",
+            value=value,
+            range=(value, value),
+            unit=str(demand.get("unit") or "trips/window"),
+            confidence=conf,
+            input_dataset_ids=datasets,
+            references=list(demand.get("references") or []),
+            assumptions=list(demand.get("assumptions") or []),
+        ))
     return results

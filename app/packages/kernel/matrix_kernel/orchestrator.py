@@ -27,16 +27,25 @@ from matrix_kernel.scenario import Scenario
 class ScenarioSchema(BaseModel):
     """Pydantic schema for the LLM to output."""
     description: str = Field(description="A brief description of the scenario.")
-    intervention_type: Literal["lane_closure", "full_closure", "speed_change", "capacity_change"] = Field(
+    intervention_type: Literal[
+        "lane_closure", "full_closure", "speed_change", "capacity_change", "new_facility",
+    ] = Field(
         description="The intervention class. lane_closure: some lanes closed, road stays open. "
                     "full_closure: the whole road impassable (flood, event, total reconstruction). "
                     "speed_change: a new speed limit. capacity_change: capacity added/removed "
-                    "without closing the road (widening, road diet).",
+                    "without closing the road (widening, road diet). new_facility: a school, "
+                    "market, or terminal that changes travel demand (BEH-4), not road geometry.",
         default="lane_closure")
     location: str = Field(description="The street, corridor, barangay, or landmark affected (e.g., 'Diversion Rd', 'Molo'). Extract from the user query. Leave empty string if not mentioned.", default="")
     lanes_closed: int = Field(description="lane_closure only: number of lanes to close. Default is 1 if unspecified but implicitly a closure.", default=1)
     max_speed_kph: Optional[float] = Field(description="speed_change only: the new speed limit in km/h. Leave null if the user did not state or clearly imply one.", default=None)
     capacity_factor: Optional[float] = Field(description="capacity_change only: multiplicative capacity factor (e.g., 1.5 for +50% from widening, 0.7 for a road diet). Leave null if the user did not state or clearly imply one.", default=None)
+    facility_kind: Optional[Literal["school", "market", "terminal"]] = Field(
+        description="new_facility only: school, market, or terminal. Leave null if not stated.",
+        default=None)
+    capacity: Optional[int] = Field(
+        description="new_facility only: seats, stalls, or bays the user stated. Leave null if unspecified — never invent a size.",
+        default=None)
     is_ambiguous: bool = Field(description="Set to true if the query is too ambiguous to simulate (missing location or action).")
     clarification_prompt: str = Field(description="If is_ambiguous is true, provide a helpful prompt asking the user for the missing information.", default="")
 
@@ -71,12 +80,13 @@ def parse_scenario(
         "- speed_change: a new speed limit (traffic calming, school zone). Fill max_speed_kph.\n"
         "- capacity_change: capacity added or removed without closing the road (road widening, an "
         "added lane, a road diet). Fill capacity_factor (>1 adds capacity, <1 removes it).\n"
-        "For new-facility proposals (a school, mall, terminal), model the construction-phase road "
-        "impact as a lane_closure at the named location and say so in the description.\n"
+        "- new_facility: a school, market, or terminal that changes travel demand (BEH-4), not "
+        "road geometry. Fill facility_kind and capacity only when the user stated them. Do not "
+        "model this as a construction lane_closure.\n"
         "Only fill numeric parameters the user stated or clearly implied; otherwise leave them "
         "null/default -- never invent numbers.\n"
         "If the query lacks a location or an action (e.g., 'what if we build a school?' - where?), "
-        "flag it as ambiguous and ask for clarification."
+        "or a new_facility lacks a stated size, flag it as ambiguous and ask for clarification."
     )
 
     # Annotate colloquial terms with explicit GIS/OSM node hits (CR-008 Item 7)
@@ -124,6 +134,11 @@ def parse_scenario(
         parameters["max_speed_kph"] = result.max_speed_kph
     elif result.intervention_type == "capacity_change" and result.capacity_factor is not None:
         parameters["capacity_factor"] = result.capacity_factor
+    elif result.intervention_type == "new_facility":
+        if result.facility_kind is not None:
+            parameters["facility_kind"] = result.facility_kind
+        if result.capacity is not None:
+            parameters["capacity"] = result.capacity
 
     # `geometry` only ever carries a map-drop GeoJSON supplied structurally by the API
     # (PRD-F14: the LLM never originates it). For an NL-only query, the ground-truth

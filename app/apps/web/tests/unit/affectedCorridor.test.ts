@@ -2,10 +2,14 @@ import { describe, it, expect } from "vitest";
 import {
   AFFECTED_BUFFER_M,
   affectedBounds,
+  corridorAnchorLonLat,
   expandBboxByMeters,
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
+  resultsCameraFly,
+  shouldFlyToCorridor,
+  zoomWithoutPullingOut,
 } from "@/components/map/affectedCorridor";
 import type { EdgesFeatureCollection } from "@/components/map/types";
 
@@ -54,6 +58,11 @@ describe("honestAffectedEdgeIds", () => {
       ]),
     ).toEqual([]);
   });
+
+  it("returns nothing for facility-demand even if edge ids leak", () => {
+    expect(isHonestEdgeResolution("facility-demand")).toBe(false);
+    expect(honestAffectedEdgeIds("facility-demand", ["e1"])).toEqual([]);
+  });
 });
 
 describe("filterAffectedFeatures", () => {
@@ -65,6 +74,46 @@ describe("filterAffectedFeatures", () => {
 
   it("returns null when none match", () => {
     expect(filterAffectedFeatures(EDGES, ["nope"])).toBeNull();
+  });
+});
+
+describe("resultsCameraFly", () => {
+  it("stays on the city default when there is no honest corridor", () => {
+    expect(resultsCameraFly(null)).toEqual({ kind: "stay" });
+    expect(resultsCameraFly(filterAffectedFeatures(EDGES, []))).toEqual({ kind: "stay" });
+  });
+
+  it("flies to the corridor box, not a district centroid", () => {
+    const fly = resultsCameraFly(filterAffectedFeatures(EDGES, ["e1"]));
+    const bbox = affectedBounds(filterAffectedFeatures(EDGES, ["e1"]))!;
+    expect(fly).toEqual({ kind: "corridor", bbox });
+  });
+});
+
+describe("corridorAnchorLonLat", () => {
+  it("is the midpoint of the honest corridor, not a district centroid", () => {
+    expect(corridorAnchorLonLat(null)).toBeNull();
+    expect(corridorAnchorLonLat(filterAffectedFeatures(EDGES, []))).toBeNull();
+    expect(corridorAnchorLonLat(filterAffectedFeatures(EDGES, ["e1"]))).toEqual([
+      122.545, 10.695,
+    ]);
+  });
+});
+
+describe("shouldFlyToCorridor", () => {
+  it("flies only during a live simulation, not when hydrating a completed run", () => {
+    expect(shouldFlyToCorridor(true)).toBe(true);
+    expect(shouldFlyToCorridor(false)).toBe(false);
+  });
+});
+
+describe("zoomWithoutPullingOut", () => {
+  it("keeps the current zoom when the fitted box would zoom out", () => {
+    expect(zoomWithoutPullingOut(13, 11)).toBe(13);
+  });
+
+  it("allows zooming in to a tighter corridor", () => {
+    expect(zoomWithoutPullingOut(13, 15)).toBe(15);
   });
 });
 

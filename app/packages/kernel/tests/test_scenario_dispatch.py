@@ -174,3 +174,25 @@ def test_every_declared_type_has_a_handler_and_provenance_keys():
                     "traci_calls", "assumptions", "lanes_closed_legacy"):
             assert key in applied, f"{itype} missing {key}"
         assert applied["intervention_type"] == itype
+
+
+def test_new_facility_is_a_valid_type_and_does_not_close_lanes():
+    """A school/market/terminal changes demand (BEH-4), not road geometry."""
+    fake = FakeTraci({"A": 2})
+    sc = Scenario(
+        "s1",
+        "3000-seat school in Molo",
+        intervention_type="new_facility",
+        location="Molo",
+        parameters={"facility_kind": "school", "capacity": 3000},
+    )
+    applied = apply_intervention(fake, sc, ["A"])
+
+    assert fake.lane.disallowed == {}
+    assert fake.edge.max_speed == {}
+    assert applied["intervention_type"] == "new_facility"
+    assert applied["edges"] == []
+    assert applied["edge_lanes"] == {}
+    assert applied["lanes_closed_legacy"] == 0
+    assert applied["parameters"] == {"facility_kind": "school", "capacity": 3000}
+    assert any("demand" in a.lower() and "BEH-4" in a for a in applied["assumptions"])

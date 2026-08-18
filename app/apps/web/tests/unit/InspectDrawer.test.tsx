@@ -65,6 +65,16 @@ describe("InspectDrawer", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("does not clip the close button behind overflow-hidden on the dialog root", () => {
+    renderDrawer();
+    const dialog = screen.getByTestId("inspect-drawer");
+    const close = screen.getByRole("button", { name: /Close inspector/i });
+    expect(close).toBeVisible();
+    expect(dialog.className.split(/\s+/)).not.toContain("overflow-hidden");
+    expect(dialog.className.split(/\s+/)).not.toContain("top-44");
+    expect(dialog.className.split(/\s+/)).not.toContain("top-48");
+  });
+
 
 
   it("traps Tab focus inside the dialog (wraps last → first and first → last)", () => {

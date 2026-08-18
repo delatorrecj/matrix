@@ -4,6 +4,9 @@ import RunStatusBanner from "@/components/RunStatusBanner";
 import RunProgress from "@/components/RunProgress";
 import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
 import ScenarioSimulation from "@/app/scenario/[id]/page";
+import { getLatestRun, getScenario } from "@/lib/api";
+import { TripsLayer } from "@deck.gl/geo-layers";
+import { savePromptHandoff } from "@/lib/promptHandoff";
 import {
   RunEvent,
   initialRunState,
@@ -12,10 +15,26 @@ import {
 
 // --- Heavy map/WebGL modules are not jsdom-compatible: stub them out
 //     (same pattern as HomeCockpit.test.tsx). ---
+const { pushMock, replaceMock, assignMock, SCENARIO_RECORD } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  replaceMock: vi.fn(),
+  assignMock: vi.fn(),
+  SCENARIO_RECORD: {
+    scenario_id: "scn-test",
+    description: "close one lane on Diversion Rd",
+    raw_input: "Close a lane on Diversion Road",
+    intervention_type: "lane_closure",
+    location: "Diversion Road",
+    parameters: { lanes_closed: 1 },
+    geometry: null,
+  },
+}));
+
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "scn-test" }),
   useRouter: () => ({
-    push: vi.fn(),
+    push: pushMock,
+    replace: replaceMock,
   }),
 }));
 vi.mock("react-map-gl/maplibre", () => ({
@@ -39,13 +58,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...actual,
-    getScenario: vi.fn().mockResolvedValue({
-      scenario_id: "scn-test",
-      description: "",
-      intervention_type: null,
-      location: null,
-      geometry: null,
-    }),
+    getScenario: vi.fn().mockResolvedValue(SCENARIO_RECORD),
     getLatestRun: vi.fn().mockResolvedValue(null),
   };
 });
@@ -260,10 +273,21 @@ const RESULT_BEH_1 = {
 describe("ScenarioSimulation page (progressive run UX)", () => {
   beforeEach(() => {
     FakeWebSocket.instances = [];
+    pushMock.mockReset();
+    replaceMock.mockReset();
+    assignMock.mockReset();
     vi.stubGlobal("WebSocket", FakeWebSocket);
     // Keep the playback rAF loop inert in jsdom.
     vi.stubGlobal("requestAnimationFrame", () => 0);
     vi.stubGlobal("cancelAnimationFrame", () => {});
+    // jsdom's Location.assign is non-configurable; stub the whole location for hard-nav.
+    vi.stubGlobal("location", { assign: assignMock, pathname: "/scenario/scn-test" });
+    sessionStorage.clear();
+    vi.mocked(getScenario).mockReset();
+    vi.mocked(getScenario).mockResolvedValue(SCENARIO_RECORD);
+    vi.mocked(getLatestRun).mockReset();
+    vi.mocked(getLatestRun).mockResolvedValue(null);
+    vi.mocked(TripsLayer).mockClear();
   });
 
   afterEach(() => {
@@ -282,6 +306,51 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     render(<ScenarioSimulation />);
     await act(async () => {});
   }
+
+  it("shows the prompt card from GET /scenario", async () => {
+    await renderScenario();
+    expect(await screen.findByTestId("scenario-prompt-review")).toHaveTextContent(
+      "Close a lane on Diversion Road",
+    );
+  });
+
+  it("shows the prompt card from session handoff when GET /scenario fails", async () => {
+    savePromptHandoff("scn-test", {
+      rawInput: "Close a lane on Diversion Road",
+      description: "close one lane on Diversion Rd",
+      interventionType: "lane_closure",
+      location: "Diversion Road",
+      parameters: { lanes_closed: 1 },
+    });
+    vi.mocked(getScenario).mockRejectedValue(new Error("not found"));
+
+    await renderScenario();
+
+    expect(await screen.findByTestId("scenario-prompt-review")).toHaveTextContent(
+      "Close a lane on Diversion Road",
+    );
+  });
+
+  it("keeps the handoff question when GET /scenario returns empty raw_input", async () => {
+    savePromptHandoff("scn-test", {
+      rawInput: "Close a lane on Diversion Road",
+      description: "close one lane on Diversion Rd",
+      interventionType: "lane_closure",
+      location: "Diversion Road",
+      parameters: { lanes_closed: 1 },
+    });
+    vi.mocked(getScenario).mockResolvedValue({
+      ...SCENARIO_RECORD,
+      raw_input: "",
+      description: "",
+    });
+
+    await renderScenario();
+
+    expect(await screen.findByTestId("scenario-prompt-review")).toHaveTextContent(
+      "Close a lane on Diversion Road",
+    );
+  });
 
   it("connects to the scenario's simulate stream via the WS URL builder", async () => {
     await renderScenario();
@@ -392,6 +461,59 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     // Terminal: the cancel control goes away, and skeletons stop "awaiting".
     expect(screen.queryByTestId("cancel-run")).not.toBeInTheDocument();
     expect(screen.getByTestId("skeleton-social")).toHaveTextContent("No results received");
+    // Cancel stays on the scenario page — it is not an exit.
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(assignMock).not.toHaveBeenCalled();
+  });
+
+  it("Home mid-run cancels the socket and exits to /app", async () => {
+    await renderScenario();
+    const ws = lastSocket();
+    act(() => {
+      ws.onopen?.();
+      ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+
+    expect(ws.closed).toBe(true);
+    expect(screen.getByTestId("cancelled-notice")).toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith("/app");
+    expect(assignMock).toHaveBeenCalledWith("/app");
+  });
+
+  it("logo Home mid-run also exits to /app", async () => {
+    await renderScenario();
+    const ws = lastSocket();
+    act(() => {
+      ws.onopen?.();
+      ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "MATRIX home" }));
+
+    expect(ws.closed).toBe(true);
+    expect(screen.getByTestId("cancelled-notice")).toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith("/app");
+    expect(assignMock).toHaveBeenCalledWith("/app");
+  });
+
+  it("Home after DONE still exits to /app without requiring Cancel", async () => {
+    await renderScenario();
+    const ws = lastSocket();
+    act(() => {
+      ws.onopen?.();
+      ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
+      ws.emit(RESULT_BEH_1);
+      ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 });
+    });
+
+    expect(screen.queryByTestId("cancel-run")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+
+    expect(replaceMock).toHaveBeenCalledWith("/app");
+    expect(assignMock).toHaveBeenCalledWith("/app");
   });
 
   it("renders the ERROR banner and retry opens a fresh socket", async () => {
@@ -467,5 +589,86 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.getByTestId("stage-timings")).toHaveTextContent("SUMO");
     expect(screen.queryByTestId("disconnect-banner")).not.toBeInTheDocument();
     expect(screen.queryByTestId("cancel-run")).not.toBeInTheDocument();
+  });
+
+  it("hydrates trips from latest-run playback without opening a WebSocket", async () => {
+    vi.mocked(getLatestRun).mockResolvedValueOnce({
+      run_id: "run-1",
+      scenario_id: "scn-test",
+      status: "done",
+      results: [
+        {
+          dimension: "behavioral",
+          metric: "Mode shift",
+          equation_id: "BEH-1",
+          value: 4.2,
+          range: [3.1, 5.3],
+          unit: "%",
+          confidence: "M",
+          input_dataset_ids: ["lptrp-2023"],
+          references: [],
+          assumptions: [],
+        },
+      ],
+      affected_edges: ["edge-1"],
+      edge_resolution: "keyword-match",
+      playback: {
+        edge_counts: { "edge-1": 12 },
+        frames: [{ tick: 1, agents: [{ id: "a", lon: 122.5, lat: 10.7 }] }],
+        affected_edges: ["edge-1"],
+        edge_resolution: "keyword-match",
+      },
+    });
+
+    await renderScenario();
+
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(screen.queryByTestId("ws-status")).not.toHaveTextContent("Connecting…");
+    expect(screen.queryByTestId("ws-status")).not.toHaveTextContent("Running…");
+    expect(screen.getByText("Mode shift")).toBeInTheDocument();
+    const lastProps = vi.mocked(TripsLayer).mock.calls.at(-1)?.[0] as
+      | { data?: Array<{ id: string; path: [number, number][]; timestamps: number[] }> }
+      | undefined;
+    expect(lastProps?.data).toEqual([
+      { id: "a", path: [[122.5, 10.7]], timestamps: [1] },
+    ]);
+    expect(screen.queryByText("Map playback expired. Re-run to restore trajectories.")).not.toBeInTheDocument();
+  });
+
+  it("shows a muted expired notice when latest-run playback is null", async () => {
+    vi.mocked(getLatestRun).mockResolvedValueOnce({
+      run_id: "run-1",
+      scenario_id: "scn-test",
+      status: "done",
+      results: [
+        {
+          dimension: "behavioral",
+          metric: "Mode shift",
+          equation_id: "BEH-1",
+          value: 4.2,
+          range: [3.1, 5.3],
+          unit: "%",
+          confidence: "M",
+          input_dataset_ids: ["lptrp-2023"],
+          references: [],
+          assumptions: [],
+        },
+      ],
+      affected_edges: ["edge-1"],
+      edge_resolution: "keyword-match",
+      playback: null,
+    });
+
+    await renderScenario();
+
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(screen.getByText("Mode shift")).toBeInTheDocument();
+    expect(
+      screen.getByText("Map playback expired. Re-run to restore trajectories."),
+    ).toBeInTheDocument();
+    const lastProps = vi.mocked(TripsLayer).mock.calls.at(-1)?.[0] as
+      | { data?: Array<{ id: string }> }
+      | undefined;
+    expect(lastProps?.data).toEqual([]);
   });
 });
