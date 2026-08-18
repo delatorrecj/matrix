@@ -1,10 +1,10 @@
 /**
  * Honest "where we edited the net" helpers for the results map.
  *
- * Overlay + camera fly only when edge_resolution is a real match
- * (geometry / gazetteer / keyword / gazetteer-alias). Fallback and
- * facility-demand draw nothing and leave the city default view (no
- * location marker, no GET /scenario gazetteer pan).
+ * Overlay + camera fly the honest corridor when edge_resolution is a real match
+ * (geometry / gazetteer / keyword / gazetteer-alias). Fallback and facility-demand
+ * skip the halo. Camera + pin still use GET /scenario (or EDGE_COUNTS) LoI so a
+ * school-in-Molo run is not a blank city overview.
  */
 
 import type { EdgesFeatureCollection, Feature, LonLat } from "./types";
@@ -86,15 +86,18 @@ export function affectedBounds(
 
 export type ResultsCameraFly =
   | { kind: "stay" }
-  | { kind: "corridor"; bbox: [number, number, number, number] };
+  | { kind: "corridor"; bbox: [number, number, number, number] }
+  | { kind: "point"; lonlat: LonLat };
 
-/** Camera follows the corridor box only. No district-centroid / LoI point fly. */
+/** Camera follows the corridor box when we edited the net; else the scenario LoI. */
 export function resultsCameraFly(
   collection: EdgesFeatureCollection | null,
+  locationOfInterest?: LonLat | null,
 ): ResultsCameraFly {
   const bbox = affectedBounds(collection);
-  if (!bbox) return { kind: "stay" };
-  return { kind: "corridor", bbox };
+  if (bbox) return { kind: "corridor", bbox };
+  if (locationOfInterest) return { kind: "point", lonlat: locationOfInterest };
+  return { kind: "stay" };
 }
 
 /** Unpadded corridor midpoint for the location marker. Null when there is no overlay. */
@@ -104,6 +107,33 @@ export function corridorAnchorLonLat(
   const bbox = affectedBounds(collection, 0);
   if (!bbox) return null;
   return [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
+}
+
+/** Pin: honest corridor midpoint, else GET /scenario / EDGE_COUNTS LoI. */
+export function resultsMapPin(
+  corridorAnchor: LonLat | null,
+  locationOfInterest: LonLat | null,
+): LonLat | null {
+  return corridorAnchor ?? locationOfInterest;
+}
+
+export function parseLonLat(value: unknown): LonLat | null {
+  if (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "number" &&
+    Number.isFinite(value[0]) &&
+    typeof value[1] === "number" &&
+    Number.isFinite(value[1])
+  ) {
+    return [value[0], value[1]];
+  }
+  return null;
+}
+
+/** Live run always; hydrate only while the camera is still the city default. */
+export function shouldAutoFly(liveSimulation: boolean, atCityDefault: boolean): boolean {
+  return liveSimulation || atCityDefault;
 }
 
 /** Hydrated completed runs must not auto-fly — that is the refresh zoom-out. */

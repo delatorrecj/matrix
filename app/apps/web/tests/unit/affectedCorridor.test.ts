@@ -8,7 +8,8 @@ import {
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
   resultsCameraFly,
-  shouldFlyToCorridor,
+  resultsMapPin,
+  shouldAutoFly,
   zoomWithoutPullingOut,
 } from "@/components/map/affectedCorridor";
 import type { EdgesFeatureCollection } from "@/components/map/types";
@@ -79,15 +80,36 @@ describe("filterAffectedFeatures", () => {
 });
 
 describe("resultsCameraFly", () => {
-  it("stays on the city default when there is no honest corridor", () => {
+  it("stays on the city default when there is no honest corridor and no LoI", () => {
     expect(resultsCameraFly(null)).toEqual({ kind: "stay" });
     expect(resultsCameraFly(filterAffectedFeatures(EDGES, []))).toEqual({ kind: "stay" });
   });
 
-  it("flies to the corridor box, not a district centroid", () => {
-    const fly = resultsCameraFly(filterAffectedFeatures(EDGES, ["e1"]));
-    const bbox = affectedBounds(filterAffectedFeatures(EDGES, ["e1"]))!;
+  it("flies to GET /scenario LoI when there is no honest corridor", () => {
+    expect(resultsCameraFly(null, [122.5446, 10.6969])).toEqual({
+      kind: "point",
+      lonlat: [122.5446, 10.6969],
+    });
+  });
+
+  it("prefers the corridor box over LoI when both exist", () => {
+    const collection = filterAffectedFeatures(EDGES, ["e1"]);
+    const fly = resultsCameraFly(collection, [122.5446, 10.6969]);
+    const bbox = affectedBounds(collection)!;
     expect(fly).toEqual({ kind: "corridor", bbox });
+  });
+});
+
+describe("resultsMapPin", () => {
+  it("falls back to LoI when there is no corridor overlay", () => {
+    expect(resultsMapPin(null, [122.5446, 10.6969])).toEqual([122.5446, 10.6969]);
+    expect(resultsMapPin(null, null)).toBeNull();
+  });
+
+  it("uses the corridor midpoint when the overlay exists", () => {
+    expect(resultsMapPin([122.545, 10.695], [122.5446, 10.6969])).toEqual([
+      122.545, 10.695,
+    ]);
   });
 });
 
@@ -101,10 +123,17 @@ describe("corridorAnchorLonLat", () => {
   });
 });
 
-describe("shouldFlyToCorridor", () => {
-  it("flies only during a live simulation, not when hydrating a completed run", () => {
-    expect(shouldFlyToCorridor(true)).toBe(true);
-    expect(shouldFlyToCorridor(false)).toBe(false);
+describe("shouldAutoFly", () => {
+  it("flies during a live simulation", () => {
+    expect(shouldAutoFly(true, false)).toBe(true);
+  });
+
+  it("flies a hydrated run that is still on the city default", () => {
+    expect(shouldAutoFly(false, true)).toBe(true);
+  });
+
+  it("does not override a saved pan on hydrate", () => {
+    expect(shouldAutoFly(false, false)).toBe(false);
   });
 });
 

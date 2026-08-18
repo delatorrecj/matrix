@@ -5,9 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Map, Marker } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import DeckGL from "@deck.gl/react";
 import { TripsLayer } from "@deck.gl/geo-layers";
-import { FlyToInterpolator } from "@deck.gl/core";
 import type { Layer } from "@deck.gl/core";
 import InspectDrawer, { ProvenanceData } from "@/components/InspectDrawer";
 import { type SynthesisCitation } from "@/components/SynthesisNarrative";
@@ -43,7 +41,9 @@ import {
   honestAffectedEdgeIds,
   resultsCameraFly,
   corridorAnchorLonLat,
-  shouldFlyToCorridor,
+  resultsMapPin,
+  parseLonLat,
+  shouldAutoFly,
   zoomForBbox,
   zoomWithoutPullingOut,
 } from "@/components/map";
@@ -54,7 +54,7 @@ import type {
   FeatureCollection,
   MapLayerToggles,
 } from "@/components/map";
-import { Route, Activity, Gauge, Waves, X, LayoutList, Play, Pause, ChevronLeft } from "lucide-react";
+import { Route, Activity, Waves, X, LayoutList, ChevronLeft } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MAP_STYLE_DARK, MAP_STYLE_LIGHT, registerMissingImageFallback, syncBuilding3dLayer } from "@/lib/mapStyles";
 import { buildProvenanceData, mapPaddingRight, statusChipLabel } from "@/lib/provenance";
@@ -63,7 +63,8 @@ import { overlayPromptHandoff, takePromptHandoff, type PromptHandoff } from "@/l
 import { useHasMounted } from "@/lib/useHasMounted";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
-import { loadMapView, saveMapView } from "@/components/map/mapViewMemory";
+import { DeckGLOverlay } from "@/components/map/DeckGLOverlay";
+import { isCityDefaultView, loadMapView, saveMapView } from "@/components/map/mapViewMemory";
 import type { MapRef } from "react-map-gl/maplibre";
 import type { DimensionId, RunTimings } from "@/lib/simulationRun";
 
@@ -177,17 +178,21 @@ export default function ScenarioSimulation() {
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const mapMounted = useHasMounted();
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [promptReview, setPromptReview] = useState<PromptHandoff | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const handoff = takePromptHandoff(scenarioId);
     if (handoff) setPromptReview(handoff);
+    setLocationOfInterest(null);
 
     getScenario(scenarioId)
       .then((record) => {
         if (cancelled) return;
         setPromptReview((prev) => overlayPromptHandoff(record, prev));
+        const loi = parseLonLat(record.location_of_interest);
+        if (loi) setLocationOfInterest(loi);
       })
       .catch(() => {
         // Keep the handoff card if GET 404s (in-memory/Postgres split).
@@ -281,6 +286,7 @@ export default function ScenarioSimulation() {
   const [edgeCounts, setEdgeCounts] = useState<EdgeCounts>({});
   const [affectedEdges, setAffectedEdges] = useState<string[]>([]);
   const [edgeResolution, setEdgeResolution] = useState<string | null>(null);
+  const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
   const [activeLayers, setActiveLayers] = useState<MapLayerToggles>({
     agents: true, congestion: true, confidence: false, flood: false,
   });
@@ -320,22 +326,34 @@ export default function ScenarioSimulation() {
     () => corridorAnchorLonLat(affectedCollection),
     [affectedCollection],
   );
+  const mapPin = useMemo(
+    () => resultsMapPin(corridorAnchor, locationOfInterest),
+    [corridorAnchor, locationOfInterest],
+  );
 
-  // Live run only: pan to the corridor. Never zoom out (refresh hydrate skips this).
+  // Live run, or a hydrate still sitting on the city default: corridor box, else LoI.
   useEffect(() => {
-    if (!mapLoaded || !shouldFlyToCorridor(shouldSimulate)) return;
-    const fly = resultsCameraFly(affectedCollection);
+    if (!mapLoaded || !viewReady) return;
+    if (!shouldAutoFly(shouldSimulate, isCityDefaultView(viewState))) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const fly = resultsCameraFly(affectedCollection, locationOfInterest);
     if (fly.kind === "stay") return;
-    const [minLng, minLat, maxLng, maxLat] = fly.bbox;
-    setViewState((prev) => ({
-      ...prev,
-      longitude: (minLng + maxLng) / 2,
-      latitude: (minLat + maxLat) / 2,
-      zoom: zoomWithoutPullingOut(prev.zoom, zoomForBbox(fly.bbox)),
-      transitionDuration: 1800,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.2 }),
-    }));
-  }, [affectedCollection, mapLoaded, shouldSimulate]);
+    if (fly.kind === "corridor") {
+      const [minLng, minLat, maxLng, maxLat] = fly.bbox;
+      map.flyTo({
+        center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
+        zoom: zoomWithoutPullingOut(map.getZoom(), zoomForBbox(fly.bbox)),
+        duration: 1800,
+      });
+      return;
+    }
+    map.flyTo({
+      center: fly.lonlat,
+      zoom: zoomWithoutPullingOut(map.getZoom(), 14),
+      duration: 1800,
+    });
+  }, [affectedCollection, locationOfInterest, mapLoaded, shouldSimulate, viewReady]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const leavingRef = useRef(false);
@@ -517,6 +535,8 @@ export default function ScenarioSimulation() {
         if (Array.isArray(msg.affected_edges)) {
           setAffectedEdges(msg.affected_edges.filter((id): id is string => typeof id === "string"));
         }
+        const loi = parseLonLat(msg.location_of_interest);
+        if (loi) setLocationOfInterest((prev) => prev ?? loi);
       } else if (msg.type === "DIMENSION_RESULT") {
         // Build provenance data payload format expected by InspectDrawer.
         // The raw value/range stay untouched here (Inspect = glass box, full
@@ -630,9 +650,7 @@ export default function ScenarioSimulation() {
     setRunAttempt((a) => a + 1);
   }, []);
 
-  // DSD §5/§9 (Impeccable register — motion row): respect prefers-reduced-motion.
-  // The agent playback is the one substantive motion, but it must not auto-loop
-  // for users who asked for reduced motion — start paused; they can still press play.
+  // DSD §5/§9: respect prefers-reduced-motion — do not auto-loop agent trips.
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       setIsPlaying(false);
@@ -675,13 +693,11 @@ export default function ScenarioSimulation() {
   };
 
   const handleCenterHere = (lngLat: { lng: number; lat: number }) => {
-    setViewState((prev) => ({
-      ...prev,
-      longitude: lngLat.lng,
-      latitude: lngLat.lat,
-      zoom: Math.max(prev.zoom, 15),
-      transitionDuration: 600,
-    }));
+    mapRef.current?.flyTo({
+      center: [lngLat.lng, lngLat.lat],
+      zoom: Math.max(viewState.zoom, 15),
+      duration: 600,
+    });
   };
 
   return (
@@ -692,7 +708,7 @@ export default function ScenarioSimulation() {
           activeId={panelView === "analytics" ? "analytics" : "trajectories"}
           onNavigate={(id) => {
             if (id === "home") {
-              exitToCockpit();
+              setExitConfirmOpen(true);
             } else if (id === "trajectories") {
               closeInspect();
               setPanelView("summary");
@@ -892,33 +908,32 @@ export default function ScenarioSimulation() {
           onContextMenu={handleContextMenu}
         >
         {mapMounted ? (
-        <DeckGL
-          viewState={{
-            ...viewState,
-            padding: { right: mapRightPadding, left: 64, top: 0, bottom: 0 }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any}
-          controller={true}
-          onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
-          layers={layers}
+        <Map
+          id="basemap-stage"
+          ref={mapRef}
+          longitude={viewState.longitude}
+          latitude={viewState.latitude}
+          zoom={viewState.zoom}
+          pitch={viewState.pitch}
+          bearing={viewState.bearing}
+          padding={{ right: mapRightPadding, left: 64, top: 0, bottom: 0 }}
+          onMove={(e) => setViewState(handleViewStateChange({ viewState: e.viewState }))}
+          mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
+          mapLib={maplibregl}
+          attributionControl={false}
+          onLoad={() => setMapLoaded(true)}
+          style={{ width: "100%", height: "100%" }}
         >
-          <Map
-            ref={mapRef}
-            mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
-            mapLib={maplibregl}
-            attributionControl={false}
-            reuseMaps
-            onLoad={() => setMapLoaded(true)}
-          >
-            {corridorAnchor && (
+          <DeckGLOverlay layers={layers} />
+          {mapPin && (
               <Marker
-                longitude={corridorAnchor[0]}
-                latitude={corridorAnchor[1]}
+                longitude={mapPin[0]}
+                latitude={mapPin[1]}
                 anchor="center"
               >
                 <div
                   className="relative h-5 w-5"
-                  title="Affected corridor"
+                  title={corridorAnchor ? "Affected corridor" : "Location of interest"}
                 >
                   <span
                     className="absolute inset-0 rounded-full bg-dim-social/40 ring-1 ring-white/95 shadow-[0_0_6px_rgba(219,39,119,0.55)]"
@@ -931,8 +946,7 @@ export default function ScenarioSimulation() {
                 </div>
               </Marker>
             )}
-          </Map>
-        </DeckGL>
+        </Map>
         ) : (
           <div className="absolute inset-0 bg-background" aria-hidden="true" />
         )}
@@ -953,42 +967,56 @@ export default function ScenarioSimulation() {
             layers={[
               { id: "agents", label: "Agent Trajectories", icon: Route, active: !!activeLayers.agents },
               { id: "congestion", label: "Congestion", icon: Activity, active: !!activeLayers.congestion },
-              { id: "confidence", label: "Confidence", icon: Gauge, active: !!activeLayers.confidence },
               { id: "flood", label: "Flood Zones", icon: Waves, active: !!activeLayers.flood },
             ]}
             onToggleLayer={handleToggleLayer}
           />
         </div>
 
-        {/* Timeline Scrubber — only once results have loaded (run reached DONE).
-            While the first run is still computing, the control slot shows an
-            "Initializing" pill instead of an inert play button. */}
-        {resultsReady ? (
-          <div className="glass absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl flex items-center gap-4 min-w-[300px] print:hidden">
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              aria-label={isPlaying ? "Pause playback" : "Play playback"}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-colors active:scale-95"
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max={maxTime > 0 ? maxTime : 1000}
-              value={time}
-              onChange={(e) => setTime(Number(e.target.value))}
-              className="flex-1 accent-primary"
-            />
-            <span className="text-xs font-mono w-12">{time}</span>
-          </div>
-        ) : isRunActive ? (
-          <div className="glass absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl flex items-center justify-center min-w-[300px] print:hidden">
-            <InitializingState variant="pill" />
-          </div>
-        ) : null}
+        </div>
       </div>
-      </div>
+
+      {exitConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="exit-confirm-title"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setExitConfirmOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="glass relative w-full max-w-sm rounded-xl p-5">
+            <h2 id="exit-confirm-title" className="text-base font-bold text-foreground">
+              Leave this scenario?
+            </h2>
+            <p className="mt-2 text-sm text-text-muted">
+              An in-progress run will be cancelled. Finished results stay saved.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setExitConfirmOpen(false)}
+                className="px-3 py-1.5 rounded-lg border border-border text-sm font-medium text-text hover:bg-surface-elevated transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setExitConfirmOpen(false);
+                  exitToCockpit();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary-hover transition-colors"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

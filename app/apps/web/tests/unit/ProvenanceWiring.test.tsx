@@ -15,6 +15,9 @@ vi.mock("react-map-gl/maplibre", () => ({
   Map: () => null,
 }));
 vi.mock("maplibre-gl", () => ({ default: {} }));
+vi.mock("@/components/map/DeckGLOverlay", () => ({
+  DeckGLOverlay: () => null,
+}));
 vi.mock("@deck.gl/react", () => ({
   default: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="deckgl">{children}</div>

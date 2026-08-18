@@ -34,6 +34,21 @@ function isPersistedMapView(value: unknown): value is PersistedMapView {
   );
 }
 
+export function isCityDefaultView(
+  view: { longitude: number; latitude: number; zoom: number },
+  city: { longitude: number; latitude: number; zoom: number } = {
+    longitude: 122.56,
+    latitude: 10.72,
+    zoom: 13,
+  },
+): boolean {
+  return (
+    Math.abs(view.longitude - city.longitude) < 1e-4 &&
+    Math.abs(view.latitude - city.latitude) < 1e-4 &&
+    Math.abs(view.zoom - city.zoom) < 1e-4
+  );
+}
+
 export function loadMapView(scenarioId: string): PersistedMapView | null {
   if (typeof sessionStorage === "undefined" || !scenarioId) return null;
   try {

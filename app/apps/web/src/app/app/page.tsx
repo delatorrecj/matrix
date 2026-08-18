@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Map } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import DeckGL from "@deck.gl/react";
 import {
   Users, Briefcase, Leaf, HeartHandshake, Route,
   Layers, Play, Loader2, WifiOff, AlertTriangle, SlidersHorizontal,
@@ -115,15 +114,12 @@ export default function MatrixCockpit() {
   const [activeNavId, setActiveNavId] = useState("home");
 
   useEffect(() => {
-    if (inspectMetric && mapRef.current) {
-      setViewState(prev => ({
-        ...prev,
-        longitude: 122.56,
-        latitude: 10.71,
-        zoom: 14.5,
-        transitionDuration: 800,
-      }));
-    }
+    if (!inspectMetric) return;
+    mapRef.current?.flyTo({
+      center: [122.56, 10.71],
+      zoom: 14.5,
+      duration: 800,
+    });
   }, [inspectMetric]);
 
   // Layer Toggles — only buildings are live on the cockpit (agents/confidence need a run).
@@ -257,28 +253,27 @@ export default function MatrixCockpit() {
           onContextMenu={handleContextMenu}
         >
           {mapMounted ? (
-          <DeckGL
-            viewState={{
-              ...viewState,
-              padding: {
-                right: ((sampleMode && showResultsPanel) || !!inspectMetric) ? 424 : 0,
-                left: 64, top: 0, bottom: 0
-              }
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any}
-            controller={true}
-            onViewStateChange={(e) => setViewState(handleViewStateChange(e))}
-            layers={[]}
-          >
-            <Map
-              ref={mapRef}
-              mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
-              mapLib={maplibregl}
-              attributionControl={false}
-              reuseMaps
-              onLoad={() => setMapLoaded(true)}
-            />
-          </DeckGL>
+          <Map
+            id="basemap-stage"
+            ref={mapRef}
+            longitude={viewState.longitude}
+            latitude={viewState.latitude}
+            zoom={viewState.zoom}
+            pitch={viewState.pitch}
+            bearing={viewState.bearing}
+            padding={{
+              left: 64,
+              right: ((sampleMode && showResultsPanel) || !!inspectMetric) ? 424 : 0,
+              top: 0,
+              bottom: 0,
+            }}
+            onMove={(e) => setViewState(handleViewStateChange({ viewState: e.viewState }))}
+            mapStyle={theme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
+            mapLib={maplibregl}
+            attributionControl={false}
+            onLoad={() => setMapLoaded(true)}
+            style={{ width: "100%", height: "100%" }}
+          />
           ) : (
             <div className="absolute inset-0 bg-background" aria-hidden="true" />
           )}
