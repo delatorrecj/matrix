@@ -441,6 +441,98 @@ def test_latest_run_for_scenario_happy_and_404(client):
     assert eco["directional"] is True  # confidence L
 
 
+def _persist_done_latest_run(scenario_id: str = "scn-latest") -> str:
+    """Same save_scenario / save_run / results setup as test_latest_run_for_scenario_happy_and_404."""
+    db.save_scenario(_fake_scenario(scenario_id), raw_input="q")
+    run_id = db.save_run(scenario_id, status="running")
+    assert db.save_dimension_results(run_id, _results()) == 2
+    db.save_run(
+        scenario_id,
+        run_id=run_id,
+        status="done",
+        duration_ms=1000,
+        timings={
+            "sumo_ms": 10,
+            "modules_ms": 20,
+            "llm_ms": 5,
+            "total_ms": 1000,
+            "affected_edges": ["e-molo"],
+            "edge_resolution": "keyword-match",
+        },
+    )
+    return run_id
+
+
+def _assert_latest_run_public_view(body: dict, run_id: str, scenario_id: str = "scn-latest") -> None:
+    """Existing latest-run contract: results + timings with corridor keys lifted, not nested."""
+    assert body["run_id"] == run_id
+    assert body["scenario_id"] == scenario_id
+    assert body["status"] == "done"
+    assert body["affected_edges"] == ["e-molo"]
+    assert body["edge_resolution"] == "keyword-match"
+    assert body["timings"] == {
+        "sumo_ms": 10,
+        "modules_ms": 20,
+        "llm_ms": 5,
+        "total_ms": 1000,
+    }
+    assert "affected_edges" not in (body["timings"] or {})
+    assert {r["equation_id"] for r in body["results"]} == {"BEH-1", "ECO-2"}
+    eco = next(r for r in body["results"] if r["equation_id"] == "ECO-2")
+    assert eco["directional"] is True  # confidence L
+
+
+def test_latest_run_includes_playback_from_redis(client, monkeypatch):
+    from matrix_kernel.trajectory import Frame, Trajectory
+
+    traj = Trajectory(
+        edge_counts={"e-molo": 9},
+        frames=[Frame(tick=0.0, agents=[{"id": "a", "lon": 122.5, "lat": 10.7}])],
+        meta={"affected_edges": ["e-molo"], "edge_resolution": "keyword-match"},
+    )
+
+    class _R:
+        def get(self, key):
+            assert key == "scenario:scn-latest:latest"
+            return traj.to_json()
+
+    import sys
+
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(from_url=lambda url: _R()))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run()
+    body = client.get("/scenarios/scn-latest/latest-run").json()
+    _assert_latest_run_public_view(body, run_id)
+    assert body["playback"]["edge_counts"] == {"e-molo": 9}
+    assert body["playback"]["edge_resolution"] == "keyword-match"
+    assert body["playback"]["affected_edges"] == ["e-molo"]
+    assert body["playback"]["frames"][0]["tick"] == 0.0
+    assert body["playback"]["frames"][0]["agents"] == [{"id": "a", "lon": 122.5, "lat": 10.7}]
+
+
+def test_latest_run_playback_null_on_cache_miss(client, monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=None))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run("scn-miss")
+    body = client.get("/scenarios/scn-miss/latest-run").json()
+    _assert_latest_run_public_view(body, run_id, scenario_id="scn-miss")
+    assert body["playback"] is None
+
+
 # ─── audit log (PRD-F6) ─────────────────────────────────────────────────────────────────
 
 

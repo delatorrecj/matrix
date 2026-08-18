@@ -291,13 +291,37 @@ def _run_public_view(run: dict) -> dict:
     return out
 
 
+def _playback_from_cache(scenario_id: str) -> dict | None:
+    """Redis trajectory only. Returns None on miss/error. Must not run SUMO."""
+    try:
+        import redis
+        from matrix_kernel.trajectory import Trajectory
+        raw = redis.from_url(REDIS_URL).get(f"scenario:{scenario_id}:latest")
+        if not raw:
+            return None
+        traj = Trajectory.from_json(raw)
+    except Exception:
+        return None
+    frames = [
+        {"tick": fr.tick, "agents": fr.agents}
+        for fr in traj.frames[:MAX_STREAM_FRAMES]
+    ]
+    return {
+        "edge_counts": traj.edge_counts,
+        "frames": frames,
+        "affected_edges": traj.meta.get("affected_edges") or [],
+        "edge_resolution": traj.meta.get("edge_resolution"),
+    }
+
+
 @app.get("/scenarios/{scenario_id}/latest-run")
 def get_latest_run(scenario_id: str) -> dict:
     """Most recent completed run for a scenario (glass-box results intact).
 
     The results URL is `/scenario/{scenario_id}` — the internal UUID run_id never
     reaches the client — so reload/share hydrates via this lookup instead of
-    re-opening WS /simulate.
+    re-opening WS /simulate. Playback frames come from the Redis trajectory cache
+    only (never `_get_trajectory` / SUMO on a miss).
     """
     run = db.get_latest_run_for_scenario(scenario_id)
     if run is None:
@@ -305,7 +329,9 @@ def get_latest_run(scenario_id: str) -> dict:
             status_code=404,
             content={"error": "no completed run", "scenario_id": scenario_id},
         )
-    return _run_public_view(run)
+    view = _run_public_view(run)
+    view["playback"] = _playback_from_cache(scenario_id)
+    return view
 
 
 @app.get("/runs/{run_id}")
