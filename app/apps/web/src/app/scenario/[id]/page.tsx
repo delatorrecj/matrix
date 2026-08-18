@@ -35,7 +35,6 @@ import { LayerLegend } from "@/components/LayerLegend";
 import {
   useMapLayers,
   fetchStaticLayer,
-  confidenceCellsFromGeoJSON,
   affectedEdgesLayer,
   filterAffectedFeatures,
   honestAffectedEdgeIds,
@@ -48,7 +47,6 @@ import {
   zoomWithoutPullingOut,
 } from "@/components/map";
 import type {
-  ConfidenceCell,
   EdgeCounts,
   EdgesFeatureCollection,
   FeatureCollection,
@@ -280,19 +278,18 @@ export default function ScenarioSimulation() {
   const [tripsData, setTripsData] = useState<{ id: string, path: [number, number][], timestamps: number[] }[]>([]);
   const [maxTime, setMaxTime] = useState(1000);
 
-  // Map data layers. `agents` toggles the page-owned TripsLayer; congestion/confidence/flood
-  // are assembled by useMapLayers. Static files (edges/flood/confidence) load once; congestion
+  // Map data layers. `agents` toggles the page-owned TripsLayer; congestion/flood
+  // are assembled by useMapLayers. Static files (edges/flood) load once; congestion
   // is driven by the live EDGE_COUNTS stream event (reset per run, like tripsData/results).
   const [edgeCounts, setEdgeCounts] = useState<EdgeCounts>({});
   const [affectedEdges, setAffectedEdges] = useState<string[]>([]);
   const [edgeResolution, setEdgeResolution] = useState<string | null>(null);
   const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
   const [activeLayers, setActiveLayers] = useState<MapLayerToggles>({
-    agents: true, congestion: true, confidence: false, flood: false,
+    agents: true, congestion: true, flood: false,
   });
   const [edgesGeoJSON, setEdgesGeoJSON] = useState<EdgesFeatureCollection | null>(null);
   const [floodGeoJSON, setFloodGeoJSON] = useState<FeatureCollection | null>(null);
-  const [confidenceCells, setConfidenceCells] = useState<ConfidenceCell[]>([]);
   const [synthesis, setSynthesis] = useState<{
     narrative: string;
     citations: SynthesisCitation[];
@@ -362,12 +359,11 @@ export default function ScenarioSimulation() {
     setRunState((s) => reduceRunEvent(s, event));
   }, []);
 
-  // DeckGL setup — data layers (flood/congestion/confidence, bottom→top) sit under the
-  // animated agent trajectories. useMapLayers omits any layer whose data is absent.
+  // DeckGL setup — data layers (flood then congestion) sit under the animated
+  // agent trajectories. useMapLayers omits any layer whose data is absent.
   const dataLayers = useMapLayers(activeLayers, {
     edgesGeoJSON,
     edgeCounts,
-    confidenceCells,
     floodGeoJSON,
   });
   const tripsLayer = new TripsLayer({
@@ -396,7 +392,6 @@ export default function ScenarioSimulation() {
     
     if (dim === "ecological" && layer.id === "flood-layer") isHighlighted = true;
     if (dim === "behavioral" && (layer.id === "trips-layer" || layer.id === "congestion-layer")) isHighlighted = true;
-    if (["social", "economic", "societal"].includes(dim) && layer.id === "confidence-layer") isHighlighted = true;
 
     return layer.clone({ opacity: isHighlighted ? (layer.props.opacity ?? 1) : 0.05 });
   });
@@ -409,15 +404,13 @@ export default function ScenarioSimulation() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [edges, flood, confidence] = await Promise.all([
+      const [edges, flood] = await Promise.all([
         fetchStaticLayer("edges"),
         fetchStaticLayer("flood"),
-        fetchStaticLayer("confidence"),
       ]);
       if (cancelled) return;
       setEdgesGeoJSON(edges as EdgesFeatureCollection | null);
       setFloodGeoJSON(flood);
-      setConfidenceCells(confidence ? confidenceCellsFromGeoJSON(confidence) : []);
     })();
     return () => {
       cancelled = true;
@@ -853,7 +846,7 @@ export default function ScenarioSimulation() {
               </div>
             ) : isRunActive && results.length === 0 ? (
               <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
-                <InitializingState variant="panel" />
+                <InitializingState />
               </div>
             ) : (
               <div className={`transition-all duration-300 ${isDrawerOpen ? "blur-[2px] opacity-40 pointer-events-none" : ""}`}>
@@ -962,7 +955,7 @@ export default function ScenarioSimulation() {
         </div>
 
         {/* Map layer toggles — drives useMapLayers + the page-owned TripsLayer */}
-        <div className="absolute left-4 top-4 z-10 print:hidden">
+        <div className="absolute left-4 top-4 z-10 print:hidden" data-testid="scenario-map-layers">
           <LayerLegend
             layers={[
               { id: "agents", label: "Agent Trajectories", icon: Route, active: !!activeLayers.agents },

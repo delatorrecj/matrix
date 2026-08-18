@@ -13,7 +13,7 @@
 import type { Feature, FeatureCollection } from "./types";
 
 /** Known static layer names shipped under public/layers/ (open set). */
-export type StaticLayerName = "edges" | "flood" | "confidence" | (string & {});
+export type StaticLayerName = "edges" | "flood" | (string & {});
 
 const NAME_RE = /^[a-z0-9][a-z0-9_-]*$/i;
 

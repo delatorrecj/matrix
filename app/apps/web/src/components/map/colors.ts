@@ -77,13 +77,6 @@ export function divergingCongestionRGB(t: number): RGB {
     : lerpRGB(TOKEN_RGB.warning, TOKEN_RGB.error, (k - 0.5) * 2);
 }
 
-/** Confidence tier → token color. H=success, M=warning, L=error. */
-export const CONFIDENCE_RGB: Record<"H" | "M" | "L", RGB> = {
-  H: TOKEN_RGB.success,
-  M: TOKEN_RGB.warning,
-  L: TOKEN_RGB.error,
-};
-
 export function withAlpha(rgb: RGB, alpha: number): RGBA {
   const a = Math.round(Math.min(255, Math.max(0, alpha)));
   return [rgb[0], rgb[1], rgb[2], a];

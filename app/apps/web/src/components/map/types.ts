@@ -79,24 +79,6 @@ export type EdgeFeature = Feature<
 
 export type EdgesFeatureCollection = FeatureCollection<EdgeFeature>;
 
-/** Confidence tiers — same H/M/L scale the kernel's DimensionResult uses. */
-export type ConfidenceTier = "H" | "M" | "L";
-
-/**
- * One confidence-heatmap cell. Supply EITHER `polygon` (rendered as a filled
- * polygon) OR `position` (rendered as a fixed-size grid cell centred near it).
- * Cells without a valid tier are skipped — a tier is never guessed (PRD-F14).
- */
-export interface ConfidenceCell {
-  /** Exterior ring, [lon, lat] pairs (≥ 3 distinct positions). */
-  polygon?: LonLat[];
-  /** Cell anchor, [lon, lat]. Ignored when `polygon` is present. */
-  position?: LonLat;
-  confidence: ConfidenceTier;
-  /** Optional human-readable basis for the tier (surfaces in picking info). */
-  basis?: string;
-}
-
 /**
  * Toggle state consumed by `useMapLayers`. A superset of the LayerLegend ids —
  * `buildings` and `agents` are owned by the pages (PolygonLayer / TripsLayer)
@@ -106,7 +88,6 @@ export interface ConfidenceCell {
 export interface MapLayerToggles {
   buildings?: boolean;
   agents?: boolean;
-  confidence?: boolean;
   congestion?: boolean;
   flood?: boolean;
   [layerId: string]: boolean | undefined;
@@ -121,8 +102,6 @@ export interface MapLayerData {
   /** Nightly-baseline per-edge counts; when present the choropleth shows the
    * scenario-minus-baseline delta instead of absolute counts. */
   baselineCounts?: EdgeCounts | null;
-  /** Confidence heatmap cells (e.g. from confidenceCellsFromGeoJSON). */
-  confidenceCells?: ConfidenceCell[] | null;
   /** Flood-zone polygons (e.g. fetchStaticLayer("flood")). */
   floodGeoJSON?: FeatureCollection | null;
 }
