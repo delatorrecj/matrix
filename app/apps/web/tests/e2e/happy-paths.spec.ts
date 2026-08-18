@@ -68,8 +68,7 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     await page.goto(SCENARIO);
     await expect(page.getByTestId('ws-status')).toContainText('Done');
 
-    // DeckGL's view overlay intercepts pointer events on the canvas — dispatch
-    // contextmenu on the map container so the handler runs without hit-testing.
+    // MapLibre canvas receives pointer events — dispatch contextmenu on the map container.
     const mapContainer = page.locator('.flex-1.relative .absolute.inset-0').first();
     await mapContainer.evaluate((el) => {
       const rect = el.getBoundingClientRect();

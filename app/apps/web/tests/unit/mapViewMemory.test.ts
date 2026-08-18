@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { loadMapView, saveMapView } from "@/components/map/mapViewMemory";
+import { isCityDefaultView, loadMapView, saveMapView } from "@/components/map/mapViewMemory";
 
 const SAMPLE = {
   longitude: 122.55,
@@ -27,5 +27,12 @@ describe("mapViewMemory", () => {
   it("ignores corrupt payloads", () => {
     sessionStorage.setItem("matrix:map-view:s1", "{not-json");
     expect(loadMapView("s1")).toBeNull();
+  });
+
+  it("treats the Iloilo city overview as the default camera", () => {
+    expect(
+      isCityDefaultView({ longitude: 122.56, latitude: 10.72, zoom: 13 }),
+    ).toBe(true);
+    expect(isCityDefaultView(SAMPLE)).toBe(false);
   });
 });

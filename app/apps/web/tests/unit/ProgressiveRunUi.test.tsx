@@ -27,6 +27,7 @@ const { pushMock, replaceMock, assignMock, SCENARIO_RECORD } = vi.hoisted(() => 
     location: "Diversion Road",
     parameters: { lanes_closed: 1 },
     geometry: null,
+    location_of_interest: [122.5621, 10.7202] as [number, number],
   },
 }));
 
@@ -38,7 +39,32 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("react-map-gl/maplibre", () => ({
-  Map: () => null,
+  Map: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="basemap">{children}</div>
+  ),
+  Marker: ({
+    longitude,
+    latitude,
+  }: {
+    longitude: number;
+    latitude: number;
+  }) => (
+    <div
+      data-testid="map-pin"
+      data-lng={String(longitude)}
+      data-lat={String(latitude)}
+    />
+  ),
+  useControl: () => ({ setProps: vi.fn() }),
+}));
+vi.mock("maplibre-gl", () => ({ default: {} }));
+vi.mock("@/components/map/DeckGLOverlay", () => ({
+  DeckGLOverlay: () => null,
+}));
+vi.mock("@deck.gl/mapbox", () => ({
+  MapboxOverlay: class {
+    setProps() {}
+  },
 }));
 vi.mock("maplibre-gl", () => ({ default: {} }));
 vi.mock("@deck.gl/react", () => ({
@@ -314,6 +340,13 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     );
   });
 
+  it("pins the map at GET /scenario LoI when there is no honest corridor overlay", async () => {
+    await renderScenario();
+    const pin = await screen.findByTestId("map-pin");
+    expect(pin).toHaveAttribute("data-lng", "122.5621");
+    expect(pin).toHaveAttribute("data-lat", "10.7202");
+  });
+
   it("shows the prompt card from session handoff when GET /scenario fails", async () => {
     savePromptHandoff("scn-test", {
       rawInput: "Close a lane on Diversion Road",
@@ -466,7 +499,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(assignMock).not.toHaveBeenCalled();
   });
 
-  it("Home mid-run cancels the socket and exits to /app", async () => {
+  it("Home mid-run opens a confirm dialog and does not exit until Leave", async () => {
     await renderScenario();
     const ws = lastSocket();
     act(() => {
@@ -476,13 +509,24 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
 
+    expect(screen.getByRole("dialog", { name: /leave this scenario/i })).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(ws.closed).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Stay" }));
+    expect(screen.queryByRole("dialog", { name: /leave this scenario/i })).not.toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    fireEvent.click(screen.getByRole("button", { name: "Leave" }));
+
     expect(ws.closed).toBe(true);
     expect(screen.getByTestId("cancelled-notice")).toBeInTheDocument();
     expect(replaceMock).toHaveBeenCalledWith("/app");
     expect(assignMock).toHaveBeenCalledWith("/app");
   });
 
-  it("logo Home mid-run also exits to /app", async () => {
+  it("logo Home mid-run also confirms before exiting to /app", async () => {
     await renderScenario();
     const ws = lastSocket();
     act(() => {
@@ -491,6 +535,8 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "MATRIX home" }));
+    expect(replaceMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Leave" }));
 
     expect(ws.closed).toBe(true);
     expect(screen.getByTestId("cancelled-notice")).toBeInTheDocument();
@@ -498,7 +544,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(assignMock).toHaveBeenCalledWith("/app");
   });
 
-  it("Home after DONE still exits to /app without requiring Cancel", async () => {
+  it("Home after DONE still confirms, then exits to /app without requiring Cancel", async () => {
     await renderScenario();
     const ws = lastSocket();
     act(() => {
@@ -511,9 +557,30 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.queryByTestId("cancel-run")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    expect(replaceMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Leave" }));
 
     expect(replaceMock).toHaveBeenCalledWith("/app");
     expect(assignMock).toHaveBeenCalledWith("/app");
+  });
+
+  it("hides the confidence map toggle and the playback scrubber", async () => {
+    await renderScenario();
+    const ws = lastSocket();
+    act(() => {
+      ws.onopen?.();
+      ws.emit({ type: "ACCEPTED", scenario_id: "scn-test" });
+      ws.emit(RESULT_BEH_1);
+      ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 });
+    });
+
+    expect(screen.getByText("Map Layers")).toBeInTheDocument();
+    expect(screen.getByText("Agent Trajectories")).toBeInTheDocument();
+    expect(screen.getByText("Congestion")).toBeInTheDocument();
+    expect(screen.getByText("Flood Zones")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confidence" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/playback/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
   });
 
   it("renders the ERROR banner and retry opens a fresh socket", async () => {
