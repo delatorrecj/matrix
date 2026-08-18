@@ -533,6 +533,33 @@ def test_latest_run_playback_null_on_cache_miss(client, monkeypatch):
     assert body["playback"] is None
 
 
+def test_latest_run_playback_null_on_malformed_cache(client, monkeypatch):
+    """Trajectory.from_json accepts meta:null; latest-run must still return playback:null, not 500."""
+    import sys
+
+    raw = json.dumps(
+        {
+            "edge_counts": {"e-molo": 9},
+            "frames": [{"tick": 0.0, "agents": [{"id": "a", "lon": 122.5, "lat": 10.7}]}],
+            "meta": None,
+        }
+    )
+    monkeypatch.setitem(sys.modules, "redis", _fake_redis_module(get_returns=raw))
+
+    def _boom(*_a, **_k):
+        raise AssertionError("latest-run must not call simulate() or _get_trajectory()")
+
+    monkeypatch.setattr(main, "simulate", _boom)
+    monkeypatch.setattr(main, "_get_trajectory", _boom)
+
+    run_id = _persist_done_latest_run("scn-bad")
+    resp = client.get("/scenarios/scn-bad/latest-run")
+    assert resp.status_code == 200
+    body = resp.json()
+    _assert_latest_run_public_view(body, run_id, scenario_id="scn-bad")
+    assert body["playback"] is None
+
+
 # ─── audit log (PRD-F6) ─────────────────────────────────────────────────────────────────
 
 

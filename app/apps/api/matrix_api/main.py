@@ -300,18 +300,18 @@ def _playback_from_cache(scenario_id: str) -> dict | None:
         if not raw:
             return None
         traj = Trajectory.from_json(raw)
+        frames = [
+            {"tick": fr.tick, "agents": fr.agents}
+            for fr in traj.frames[:MAX_STREAM_FRAMES]
+        ]
+        return {
+            "edge_counts": traj.edge_counts,
+            "frames": frames,
+            "affected_edges": traj.meta.get("affected_edges") or [],
+            "edge_resolution": traj.meta.get("edge_resolution"),
+        }
     except Exception:
         return None
-    frames = [
-        {"tick": fr.tick, "agents": fr.agents}
-        for fr in traj.frames[:MAX_STREAM_FRAMES]
-    ]
-    return {
-        "edge_counts": traj.edge_counts,
-        "frames": frames,
-        "affected_edges": traj.meta.get("affected_edges") or [],
-        "edge_resolution": traj.meta.get("edge_resolution"),
-    }
 
 
 @app.get("/scenarios/{scenario_id}/latest-run")
