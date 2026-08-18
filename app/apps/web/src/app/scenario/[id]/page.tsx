@@ -32,6 +32,7 @@ import {
   isTerminal,
   reduceRunEvent,
 } from "@/lib/simulationRun";
+import { accumulateTripFrame } from "@/lib/playbackTrips";
 import { LayerLegend } from "@/components/LayerLegend";
 import {
   useMapLayers,
@@ -491,36 +492,11 @@ export default function ScenarioSimulation() {
       dispatch(msg as RunEvent);
 
       if (msg.type === "PLAYBACK_FRAME") {
-        // Accumulate playback frames for Deck.gl TripsLayer
         const tick = typeof msg.tick === "number" ? msg.tick : 0;
         setMaxTime((prev) => Math.max(prev, tick));
         if (Array.isArray(msg.agents)) {
-          // Hoist the narrowed array into a typed local: Array.isArray narrowing on
-          // `msg.agents` (an `unknown` field) does not survive into the setTripsData
-          // closure, so `next build` type-checks it as `unknown` without this.
           const agents = msg.agents as Array<{ id: string; lon: number; lat: number }>;
-          setTripsData((prev) => {
-            const next = [...prev];
-            for (const a of agents) {
-              const idx = next.findIndex((t) => t.id === a.id);
-              if (idx >= 0) {
-                // Agent exists, append to path and timestamps
-                next[idx] = {
-                  ...next[idx],
-                  path: [...next[idx].path, [a.lon, a.lat]],
-                  timestamps: [...next[idx].timestamps, tick],
-                };
-              } else {
-                // New agent
-                next.push({
-                  id: a.id,
-                  path: [[a.lon, a.lat]],
-                  timestamps: [tick],
-                });
-              }
-            }
-            return next;
-          });
+          setTripsData((prev) => accumulateTripFrame(prev, tick, agents));
         }
       } else if (msg.type === "EDGE_COUNTS") {
         // Aggregate per-edge counts that drive the congestion choropleth.
