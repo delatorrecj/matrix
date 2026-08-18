@@ -82,3 +82,25 @@ def test_diversion_aliases_resolve_to_aquino():
 
 def test_location_coordinates_miss():
     assert location_coordinates("this has no colloquial terms in it") is None
+
+
+def test_load_gazetteer_ignores_unknown_json_keys(tmp_path, monkeypatch):
+    """JSON can grow new keys without crashing Scenario parse (street_name TypeError)."""
+    payload = {
+        "molo": {
+            "canonical_name": "Molo",
+            "feature_type": "district",
+            "osm_id": "node/molo-centroid",
+            "sumo_edge": "E_molo_plaza",
+            "coordinates": [122.5446, 10.6969],
+            "provisional": True,
+            "street_name": "Avanceña",
+            "future_field": "must-not-crash",
+        }
+    }
+    path = tmp_path / "gazetteer.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr("matrix_kernel.gazetteer.GAZETTEER_FILE", str(path))
+    gaz = load_gazetteer()
+    assert gaz["molo"].street_name == "Avanceña"
+    assert gaz["molo"].canonical_name == "Molo"

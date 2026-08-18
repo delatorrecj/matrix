@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Any
 
 GAZETTEER_FILE = os.path.join(os.path.dirname(__file__), "gazetteer_iloilo.json")
@@ -35,6 +35,14 @@ class GazetteerEntry:
     street_name: str = ""
 
 
+_ENTRY_FIELDS = {f.name for f in fields(GazetteerEntry)}
+
+
+def _entry_from_raw(val: dict[str, Any]) -> GazetteerEntry:
+    """Build an entry from JSON, ignoring keys the dataclass does not declare."""
+    return GazetteerEntry(**{k: v for k, v in val.items() if k in _ENTRY_FIELDS})
+
+
 def load_gazetteer() -> dict[str, GazetteerEntry]:
     """Load the JSON gazetteer map into memory."""
     if not os.path.exists(GAZETTEER_FILE):
@@ -43,7 +51,7 @@ def load_gazetteer() -> dict[str, GazetteerEntry]:
         raw_data = json.load(f)
 
     return {
-        key.lower(): GazetteerEntry(**val)
+        key.lower(): _entry_from_raw(val)
         for key, val in raw_data.items()
     }
 
