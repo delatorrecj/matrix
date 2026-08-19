@@ -1,13 +1,16 @@
 /**
  * Honest "where we edited the net" helpers for the results map.
  *
- * Overlay + camera follow the honest corridor when the kernel sets overlay_honest.
- * Fallback and facility-demand stay on the city default — no gazetteer fly/pin.
+ * Overlay follows the honest corridor when the kernel sets overlay_honest.
+ * Camera + pin fall back to location_of_interest (gazetteer / map-drop) when
+ * no honest corridor exists yet (Simulation Focus).
  */
 
 import type { EdgesFeatureCollection, Feature, LonLat } from "./types";
 
 export const AFFECTED_BUFFER_M = 300;
+/** Zoom when flying to a gazetteer / map-drop point (no corridor yet). */
+export const LOI_FOCUS_ZOOM = 16.5;
 
 /** ~meters per degree latitude (WGS84 sphere). */
 const M_PER_DEG_LAT = 111_320;
@@ -95,14 +98,17 @@ export function affectedBounds(
 
 export type ResultsCameraFly =
   | { kind: "stay" }
-  | { kind: "corridor"; bbox: [number, number, number, number] };
+  | { kind: "corridor"; bbox: [number, number, number, number] }
+  | { kind: "point"; lonlat: LonLat };
 
-/** Camera follows the corridor box only (CONTEXT.md Q6). */
+/** Corridor box first; else location of interest point. */
 export function resultsCameraFly(
   collection: EdgesFeatureCollection | null,
+  locationOfInterest?: LonLat | null,
 ): ResultsCameraFly {
   const bbox = affectedBounds(collection);
   if (bbox) return { kind: "corridor", bbox };
+  if (locationOfInterest) return { kind: "point", lonlat: locationOfInterest };
   return { kind: "stay" };
 }
 
@@ -115,9 +121,12 @@ export function corridorAnchorLonLat(
   return [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
 }
 
-/** Pin: honest corridor midpoint only — no gazetteer fallback. */
-export function resultsMapPin(corridorAnchor: LonLat | null): LonLat | null {
-  return corridorAnchor;
+/** Pin: honest corridor midpoint, else location of interest. */
+export function resultsMapPin(
+  corridorAnchor: LonLat | null,
+  locationOfInterest?: LonLat | null,
+): LonLat | null {
+  return corridorAnchor ?? locationOfInterest ?? null;
 }
 
 export function parseLonLat(value: unknown): LonLat | null {
@@ -148,7 +157,7 @@ export function zoomWithoutPullingOut(currentZoom: number, fittedZoom: number): 
 export function zoomForBbox(
   bbox: [number, number, number, number],
   minZoom = 11,
-  maxZoom = 16,
+  maxZoom = 17,
 ): number {
   const span = Math.max(bbox[2] - bbox[0], bbox[3] - bbox[1], 1e-6);
   const z = Math.log2(360 / span) - 1.2;

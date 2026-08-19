@@ -246,6 +246,9 @@ export function isDimensionComplete(state: RunState, dim: DimensionId): boolean 
  * Phase-weighted progress percent (0–100).
  * SUMO finishes before any DIMENSION_RESULT, so resultCount alone stays 0% through
  * the longest wait — weight phases so the bar moves during that gap.
+ *
+ * The "running with 0 results" ceiling is 55 so the trickle timer in RunProgress
+ * has room to animate smoothly before real results land.
  */
 export function progressPercent(state: RunState): number {
   switch (state.phase) {
@@ -254,10 +257,11 @@ export function progressPercent(state: RunState): number {
     case "queued":
       return 10;
     case "running":
-      if (state.resultCount === 0) return 40;
+      if (state.synthesisReceived) return 95;
+      if (state.resultCount === 0) return 55;
       return Math.min(
-        95,
-        40 + Math.round((state.resultCount / TOTAL_EXPECTED_RESULTS) * 55),
+        92,
+        55 + Math.round((state.resultCount / TOTAL_EXPECTED_RESULTS) * 37),
       );
     case "done":
       return 100;
@@ -265,10 +269,10 @@ export function progressPercent(state: RunState): number {
     case "cancelled":
     case "disconnected":
       return Math.min(
-        95,
+        92,
         state.resultCount === 0
-          ? 40
-          : 40 + Math.round((state.resultCount / TOTAL_EXPECTED_RESULTS) * 55),
+          ? 55
+          : 55 + Math.round((state.resultCount / TOTAL_EXPECTED_RESULTS) * 37),
       );
   }
 }

@@ -33,7 +33,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from pydantic import BaseModel
 
@@ -228,12 +228,26 @@ def _geometry_lnglat(geometry: dict | None) -> list[float] | None:
     return None
 
 
+def _camera_location_of_interest(location: object, geometry: dict | None) -> list[float] | None:
+    """Camera-only [lon, lat]: map-drop centroid, else gazetteer coords for `location`."""
+    pt = _geometry_lnglat(geometry)
+    if pt:
+        return pt
+    if not location or not str(location).strip():
+        return None
+    try:
+        from matrix_kernel.gazetteer import location_coordinates
+    except ImportError:  # pragma: no cover - bare env without kernel package
+        return None
+    return location_coordinates(str(location))
+
+
 @app.get("/scenario/{scenario_id}")
 def get_scenario(scenario_id: str) -> dict:
     """A saved scenario's parsed fields for the results prompt card.
 
-    Map truth (overlay, corridor box, location marker) comes from simulate /
-    EDGE_COUNTS only — not from this endpoint (CONTEXT.md Q5).
+    `location_of_interest` is camera-only (map-drop centroid, else gazetteer).
+    Honest corridor overlay still comes from simulate / EDGE_COUNTS (CONTEXT.md Q5).
     """
     record = db.get_scenario(scenario_id)
     if record is None:
@@ -252,6 +266,7 @@ def get_scenario(scenario_id: str) -> dict:
         "location": record.get("location"),
         "parameters": parameters if isinstance(parameters, dict) else {},
         "geometry": geom,
+        "location_of_interest": _camera_location_of_interest(record.get("location"), geom),
     }
 
 
@@ -340,16 +355,21 @@ def compare_scenarios(a: str, b: str) -> dict:
 
 
 @app.get("/scenarios/{scenario_id}/latest-run")
-def get_latest_run(scenario_id: str) -> dict:
+def get_latest_run(scenario_id: str, missing_ok: bool = False) -> dict:
     """Most recent completed run for a scenario (glass-box results intact).
 
     The results URL is `/scenario/{scenario_id}` — the internal UUID run_id never
     reaches the client — so reload/share hydrates via this lookup instead of
     re-opening WS /simulate. Playback frames come from the Redis trajectory cache
     only (never `_get_trajectory` / SUMO on a miss).
+
+    When `missing_ok=1`, return 204 instead of 404 if no completed run yet (avoids
+    noisy browser console errors on first paint for a fresh scenario).
     """
     run = db.get_latest_run_for_scenario(scenario_id)
     if run is None:
+        if missing_ok:
+            return Response(status_code=204)
         return JSONResponse(
             status_code=404,
             content={"error": "no completed run", "scenario_id": scenario_id},

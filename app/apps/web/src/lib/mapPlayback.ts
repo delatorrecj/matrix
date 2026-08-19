@@ -52,7 +52,7 @@ export function mapPlaybackFromLatestRun(
         : [],
       edgeResolution: resolution,
       overlayHonest: honest,
-      locationOfInterest: honest ? parseLonLat(playback.location_of_interest) : null,
+      locationOfInterest: parseLonLat(playback.location_of_interest),
       trips,
       maxTime,
       playbackExpired: false,
@@ -86,6 +86,6 @@ export function mapPlaybackFromWs(msg: WsEdgeCounts): Pick<
     affectedEdges: honest ? edges : [],
     edgeResolution: resolution,
     overlayHonest: honest,
-    locationOfInterest: honest ? parseLonLat(msg.location_of_interest) : null,
+    locationOfInterest: parseLonLat(msg.location_of_interest),
   };
 }

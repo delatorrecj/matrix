@@ -51,13 +51,13 @@ describe("reduceRunEvent lifecycle", () => {
     expect(s.resultCount).toBe(3);
     expect(dimensionsReported(s)).toBe(2);
     expect(formatProgress(s)).toBe("2/5 dimensions · 3/18 results");
-    expect(progressPercent(s)).toBe(40 + Math.round((3 / 18) * 55));
+    expect(progressPercent(s)).toBe(55 + Math.round((3 / 18) * 37));
   });
 
   it("shows SUMO-stage copy and mid-band percent before any results", () => {
     const running = stateAfter([{ type: "ACCEPTED" }]);
     expect(formatProgress(running)).toBe("Running traffic simulation…");
-    expect(progressPercent(running)).toBe(40);
+    expect(progressPercent(running)).toBe(55);
     expect(progressPercent(initialRunState())).toBe(5);
     expect(progressPercent(stateAfter([{ type: "QUEUED", position: 1 }]))).toBe(10);
     expect(progressPercent(stateAfter([{ type: "DONE", duration_ms: 1 }]))).toBe(100);

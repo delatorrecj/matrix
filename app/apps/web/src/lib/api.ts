@@ -117,6 +117,8 @@ export interface ScenarioRecord {
   /** Scenario.parameters (facility kind/capacity, lanes_closed, …). */
   parameters?: Record<string, unknown>;
   geometry: ScenarioGeometry | null;
+  /** Camera-only [lon, lat] from map-drop centroid or gazetteer (GET /scenario). */
+  location_of_interest?: [number, number] | null;
 }
 
 /**
@@ -220,9 +222,9 @@ export async function getLatestRun(
   scenarioId: string
 ): Promise<LatestRunRecord | null> {
   const res = await apiFetch(
-    `/scenarios/${encodeURIComponent(scenarioId)}/latest-run`
+    `/scenarios/${encodeURIComponent(scenarioId)}/latest-run?missing_ok=1`
   );
-  if (res.status === 404) return null;
+  if (res.status === 204 || res.status === 404) return null;
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(body?.error ?? `Latest run lookup failed (HTTP ${res.status})`);
