@@ -36,7 +36,28 @@ class ScenarioSchema(BaseModel):
                     "without closing the road (widening, road diet). new_facility: a school, "
                     "market, or terminal that changes travel demand (BEH-4), not road geometry.",
         default="lane_closure")
-    location: str = Field(description="The street, corridor, barangay, or landmark affected (e.g., 'Diversion Rd', 'Molo'). Extract from the user query. Leave empty string if not mentioned.", default="")
+    location: str = Field(
+        description=(
+            "The road being edited, canonical street name only "
+            "(e.g. 'Cuartero Street'). Never put segment/from/up to or a second street here. "
+            "Leave empty string if the user named no street and there is no map-drop."
+        ),
+        default="",
+    )
+    from_cross: str = Field(
+        description=(
+            "Bounding cross street or landmark the segment starts at "
+            "(e.g. 'Fajardo Street'). Empty string if the user did not name one."
+        ),
+        default="",
+    )
+    to_cross: str = Field(
+        description=(
+            "Bounding cross street or landmark the segment ends at "
+            "(e.g. 'El 98 Street'). Empty string if the user did not name one."
+        ),
+        default="",
+    )
     lanes_closed: int = Field(description="lane_closure only: number of lanes to close. Default is 1 if unspecified but implicitly a closure.", default=1)
     max_speed_kph: Optional[float] = Field(description="speed_change only: the new speed limit in km/h. Leave null if the user did not state or clearly imply one.", default=None)
     capacity_factor: Optional[float] = Field(description="capacity_change only: multiplicative capacity factor (e.g., 1.5 for +50% from widening, 0.7 for a road diet). Leave null if the user did not state or clearly imply one.", default=None)
@@ -86,7 +107,17 @@ def parse_scenario(
         "Only fill numeric parameters the user stated or clearly implied; otherwise leave them "
         "null/default -- never invent numbers.\n"
         "If the query lacks a location or an action (e.g., 'what if we build a school?' - where?), "
-        "or a new_facility lacks a stated size, flag it as ambiguous and ask for clarification."
+        "or a new_facility lacks a stated size, flag it as ambiguous and ask for clarification.\n"
+        "Location is a SPAN, not a sentence.\n"
+        "- location = the road being edited, canonical street name only.\n"
+        "- from_cross / to_cross = the bounding streets or corners, each its own field, or \"\".\n"
+        "- \"close Cuartero from Fajardo up to EL98\" → "
+        "location=\"Cuartero Street\", from_cross=\"Fajardo Street\", to_cross=\"El 98 Street\"\n"
+        "- \"close Cuartero Street\" → location=\"Cuartero Street\", from_cross=\"\", to_cross=\"\"\n"
+        "- Never put \"segment\", \"from\", \"up to\", or a second street inside location.\n"
+        "- Expand St/St. to Street. Expand EL98/EL 98 to \"El 98\".\n"
+        "- You do not know GIS ids. Leave ids empty; the kernel matches names on the live net.\n"
+        "- A named street with no bounding crosses is a whole-street closure, not ambiguous."
     )
 
     # Annotate colloquial terms with explicit GIS/OSM node hits (CR-008 Item 7)
@@ -140,6 +171,16 @@ def parse_scenario(
         if result.capacity is not None:
             parameters["capacity"] = result.capacity
 
+    from matrix_kernel.span import peel_span_fields
+
+    loc, from_cross, to_cross = peel_span_fields(
+        result.location, result.from_cross, result.to_cross
+    )
+    if from_cross:
+        parameters["from_cross"] = from_cross
+    if to_cross:
+        parameters["to_cross"] = to_cross
+
     # `geometry` only ever carries a map-drop GeoJSON supplied structurally by the API
     # (PRD-F14: the LLM never originates it). For an NL-only query, the ground-truth
     # location-of-interest comes from the runner's own edge resolution at simulate time
@@ -151,10 +192,10 @@ def parse_scenario(
     return Scenario(
         scenario_id=str(uuid.uuid4()),
         description=result.description,
-        corridor=result.location,         # legacy v1 channel -- /scenario consumers still read it
+        corridor=loc,         # legacy v1 channel -- /scenario consumers still read it
         lanes_closed=result.lanes_closed,
         intervention_type=result.intervention_type,
-        location=result.location,
+        location=loc,
         geometry=resolved_geometry,
         parameters=parameters,
     )

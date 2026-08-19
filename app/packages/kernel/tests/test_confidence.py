@@ -8,6 +8,8 @@ from matrix_kernel.confidence import (
     earned_confidence_interval,
     method_capped_confidence,
     provisional_capped_confidence,
+    validation_capped_confidence,
+    validation_factor,
 )
 
 
@@ -33,6 +35,29 @@ def test_method_capped_takes_worst_of_data_and_method():
     assert method_capped_confidence(["S5P-NO2"], "H") == "M"
     # Equal factors pass through.
     assert method_capped_confidence(["OSM-ILO"], "H") == "H"
+
+
+def test_validation_factor_only_pass_is_high():
+    # methods §2 validation column: unvalidated / FAIL stays L; PASS does not cap.
+    assert validation_factor("FAIL") == "L"
+    assert validation_factor("NOT_RUN") == "L"
+    assert validation_factor(None) == "L"
+    assert validation_factor("PASS") == "H"
+
+
+def test_validation_capped_does_not_stamp_high_on_fail():
+    # OSM/SUMO inputs are H; VAL-01 FAIL still forces L (do not inherit data tier).
+    assert validation_capped_confidence(["OSM-ILO", "OVERTURE", "PERSONA-POOL"], "FAIL") == "L"
+    assert validation_capped_confidence(["SUMO-NET", "OSM-ILO"], "FAIL") == "L"
+    assert validation_capped_confidence(["OSM-ILO", "OVERTURE", "PERSONA-POOL"], "NOT_RUN") == "L"
+
+
+def test_validation_capped_lifts_only_on_pass():
+    # Live chips stay L until VAL-01 PASSes; the PASS branch is the legitimate unlock.
+    assert validation_capped_confidence(["OSM-ILO", "OVERTURE", "PERSONA-POOL"], "PASS") == "H"
+    assert validation_capped_confidence(["SUMO-NET", "OSM-ILO"], "PASS") == "H"
+    # A weaker data tier still wins after PASS (worst factor).
+    assert validation_capped_confidence(["Calderon2014"], "PASS") == "M"
 
 
 def test_provisional_capped_always_low():

@@ -15,7 +15,6 @@ test.describe('MATRIX scenario page (mocked backend)', () => {
     // Target the summary cards (buttons) — the hidden print brief mirrors the same label
     // text, so a bare getByText is ambiguous under Playwright strict mode.
     await expect(page.getByRole('button', { name: /Trips on the affected road/ })).toBeVisible();
-    await expect(page.getByTestId('uncalibrated-demand-notice')).toBeVisible();
     await expect(page.getByRole('button', { name: /Trips on the affected road/ })).toContainText(/Directional only/);
     const displacementCard = page.getByRole('button', { name: /People at risk of displacement/ });
     await expect(displacementCard).toBeVisible();

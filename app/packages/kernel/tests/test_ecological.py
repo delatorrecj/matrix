@@ -32,7 +32,9 @@ def test_ecological_results():
     assert by_id["ECO-4"].value == 0.0  # lane closure without flood_hazard
     # The ECO-2 PM2.5∝CO2e proxy constant surfaces its provenance under Inspect (PRD-F14).
     eco2_assumptions = " ".join(by_id["ECO-2"].assumptions)
+    eco2_assumptions = " ".join(by_id["ECO-2"].assumptions)
     assert "PROVISIONAL" in eco2_assumptions and "0.05" in eco2_assumptions
+    assert "not a sourced" in eco2_assumptions.lower() or "scale check" in eco2_assumptions.lower()
 
 
 def test_eco4_flood_uses_cchain():

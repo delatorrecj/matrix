@@ -16,6 +16,16 @@ describe("formatScenarioPlan", () => {
   it("returns null when nothing is known", () => {
     expect(formatScenarioPlan({})).toBeNull();
   });
+
+  it("shows from/to crosses without stuffing them into location", () => {
+    expect(
+      formatScenarioPlan({
+        interventionType: "full_closure",
+        location: "Cuartero Street",
+        parameters: { from_cross: "Fajardo Street", to_cross: "El 98 Street" },
+      }),
+    ).toBe("Full closure · Cuartero Street, segment from Fajardo Street to El 98 Street");
+  });
 });
 
 describe("ScenarioPromptReview", () => {

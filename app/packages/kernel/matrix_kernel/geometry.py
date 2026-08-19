@@ -242,6 +242,35 @@ def edges_near_point(net, lon: float, lat: float, radius_m: float = 100.0) -> li
     return sorted({edge.getID() for edge, _dist in net.getNeighboringEdges(x, y, radius_m)})
 
 
+def nearest_edges(
+    net, lon: float, lat: float, radius_m: float, cap: int,
+) -> list[str]:
+    """Closest SUMO edge IDs within ``radius_m``, nearest first, at most ``cap``.
+
+    ``[]`` is the honest miss. Unlike ``edges_near_point`` this is ordered by
+    distance (not id) so a gazetteer snap can take a plaza frontage instead of
+    every alley in the radius. ``cap`` must be >= 1.
+    """
+    lon, lat = _position((lon, lat))
+    if not radius_m > 0:
+        raise ValueError(f"radius_m must be > 0, got {radius_m!r}")
+    if not isinstance(cap, int) or cap < 1:
+        raise ValueError(f"cap must be an int >= 1, got {cap!r}")
+    x, y = net.convertLonLat2XY(lon, lat)
+    ranked = sorted(net.getNeighboringEdges(x, y, radius_m), key=lambda pair: pair[1])
+    seen: set[str] = set()
+    out: list[str] = []
+    for edge, _dist in ranked:
+        eid = edge.getID()
+        if eid in seen:
+            continue
+        seen.add(eid)
+        out.append(eid)
+        if len(out) >= cap:
+            break
+    return out
+
+
 def edges_in_polygon(net, polygon: dict) -> list[str]:
     """SUMO edge IDs whose centreline shape intersects or lies inside a GeoJSON Polygon.
 
@@ -273,6 +302,29 @@ def edge_midpoint_lonlat(net, edge_id: str) -> Position:
     shape = net.getEdge(edge_id).getShape()
     mx, my = shape[len(shape) // 2]
     return net.convertXY2LonLat(mx, my)
+
+
+def edge_shape_lonlat(net, edge_id: str) -> list[Position]:
+    """Full centreline of a SUMO edge in lon/lat (magenta overlay when static geojson misses)."""
+    return [net.convertXY2LonLat(x, y) for x, y in net.getEdge(edge_id).getShape()]
+
+
+def affected_edge_features(net, edge_ids: list[str]) -> list[dict]:
+    """GeoJSON LineString features for closed edges. Skip ids the net does not know."""
+    features: list[dict] = []
+    for eid in edge_ids:
+        try:
+            coords = edge_shape_lonlat(net, eid)
+        except Exception:
+            continue
+        if len(coords) < 2:
+            continue
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": [list(p) for p in coords]},
+            "properties": {"edge_id": eid},
+        })
+    return features
 
 
 def resolve_geometry(net, geojson: dict, radius_m: float = 100.0) -> list[str]:

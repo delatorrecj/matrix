@@ -39,6 +39,7 @@ import {
   affectedEdgesLayer,
   filterAffectedFeatures,
   honestAffectedEdgeIds,
+  mergeEdgeFeatures,
   LOI_FOCUS_ZOOM,
   resultsCameraFly,
   corridorAnchorLonLat,
@@ -268,6 +269,13 @@ export default function ScenarioSimulation() {
   const [affectedEdges, setAffectedEdges] = useState<string[]>([]);
   const [edgeResolution, setEdgeResolution] = useState<string | null>(null);
   const [overlayHonest, setOverlayHonest] = useState(false);
+  const [affectedEdgeGeoms, setAffectedEdgeGeoms] = useState<EdgesFeatureCollection | null>(null);
+  const [corridorSite, setCorridorSite] = useState<{
+    method: string | null;
+    corridor: string | null;
+    fromCross: string | null;
+    toCross: string | null;
+  }>({ method: null, corridor: null, fromCross: null, toCross: null });
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [activeLayers, setActiveLayers] = useState<MapLayerToggles>({
     agents: true, congestion: true, flood: false,
@@ -296,10 +304,10 @@ export default function ScenarioSimulation() {
   const affectedCollection = useMemo(
     () =>
       filterAffectedFeatures(
-        edgesGeoJSON,
+        mergeEdgeFeatures(edgesGeoJSON, affectedEdgeGeoms),
         honestAffectedEdgeIds(edgeResolution, affectedEdges, overlayHonest),
       ),
-    [edgesGeoJSON, edgeResolution, affectedEdges, overlayHonest],
+    [edgesGeoJSON, affectedEdgeGeoms, edgeResolution, affectedEdges, overlayHonest],
   );
 
   const haloLayer = useMemo(() => affectedEdgesLayer(affectedCollection), [affectedCollection]);
@@ -447,6 +455,13 @@ export default function ScenarioSimulation() {
           setEdgeResolution(playbackState.edgeResolution);
           setAffectedEdges(playbackState.affectedEdges);
           setOverlayHonest(playbackState.overlayHonest);
+          setAffectedEdgeGeoms(playbackState.affectedEdgeGeoms);
+          setCorridorSite({
+            method: playbackState.edgeResolution,
+            corridor: playbackState.corridor,
+            fromCross: playbackState.fromCross,
+            toCross: playbackState.toCross,
+          });
           if (playbackState.locationOfInterest) {
             setLocationOfInterest(playbackState.locationOfInterest);
           }
@@ -515,6 +530,13 @@ export default function ScenarioSimulation() {
         setEdgeResolution(pb.edgeResolution);
         setAffectedEdges(pb.affectedEdges);
         setOverlayHonest(pb.overlayHonest);
+        setAffectedEdgeGeoms(pb.affectedEdgeGeoms);
+        setCorridorSite({
+          method: pb.edgeResolution,
+          corridor: pb.corridor,
+          fromCross: pb.fromCross,
+          toCross: pb.toCross,
+        });
         if (pb.locationOfInterest) {
           setLocationOfInterest((prev) => prev ?? pb.locationOfInterest);
         }
@@ -859,6 +881,12 @@ export default function ScenarioSimulation() {
             metricId={inspectData?.equationId || null}
             data={inspectData}
             runId={currentRunId}
+            site={{
+              method: corridorSite.method ?? edgeResolution,
+              corridor: corridorSite.corridor,
+              fromCross: corridorSite.fromCross,
+              toCross: corridorSite.toCross,
+            }}
           >
             <div className="flex flex-col gap-4 mt-2">
               <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">

@@ -91,6 +91,32 @@ def provisional_capped_confidence(input_dataset_ids: Sequence[str]) -> Confidenc
     return method_capped_confidence(input_dataset_ids, "L")
 
 
+def validation_factor(gate_status: str | None) -> Confidence:
+    """methods §2 validation column. Only an explicit PASS lifts the factor off Low.
+
+    FAIL, NOT_RUN, missing, or any other string is unvalidated → L. Never inherit H
+    from OSM/SUMO inputs while the gate is unpublished or failing.
+    """
+    if (gate_status or "").strip().upper() == "PASS":
+        return "H"
+    return "L"
+
+
+def validation_capped_confidence(
+    input_dataset_ids: Sequence[str],
+    gate_status: str | None,
+    *,
+    pass_method: Confidence = "H",
+) -> Confidence:
+    """Worst of data tier and the VAL-gate factor (methods §2).
+
+    On PASS, `pass_method` is the equation's method-maturity ceiling (H for BEH-1/BEH-3
+    network physics). On any other status the validation factor is L and wins.
+    """
+    method = pass_method if validation_factor(gate_status) == "H" else "L"
+    return method_capped_confidence(input_dataset_ids, method)
+
+
 def earned_confidence_interval(
     point: float,
     sample: Callable[[], float],

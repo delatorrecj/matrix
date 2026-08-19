@@ -118,6 +118,8 @@ def main():
     (OUT / "routes.json").write_text(json.dumps(routes, indent=2), encoding="utf-8")
     print(f"\nsaved {len(routes)} route pages -> raw/transport/routes/  (routes.json index)")
     print("NOTE: descriptions are street-level (Medium confidence). Next: map to OSM ways -> partial GTFS.")
+    print("Headways: published LPTRP pages are street tables; parse with "
+          "matrix_kernel.pt_demand.parse_lptrp_page — do not invent frequencies.")
     return 0
 
 

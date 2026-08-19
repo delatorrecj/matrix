@@ -8,6 +8,7 @@ export {
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
+  mergeEdgeFeatures,
   LOI_FOCUS_ZOOM,
   resultsCameraFly,
   resultsMapPin,

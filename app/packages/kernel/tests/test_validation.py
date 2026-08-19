@@ -21,6 +21,7 @@ from matrix_kernel.validation import (
     length_weighted_iou,
     load_fixture,
     load_validation_report,
+    published_val01_status,
     normalized_rmse,
     rmse,
     run_validation_gates,
@@ -322,3 +323,20 @@ def test_markdown_ledger_publishes_val01_fail_not_withheld(tmp_path):
     assert str(VAL01_THRESHOLD_NRMSE) in text or "<= 0.3" in text
     assert "withheld" not in text.lower()
     assert "WITHHELD" not in text
+
+
+def test_published_val01_status_reads_report_or_not_run(tmp_path):
+    missing = tmp_path / "absent.json"
+    assert published_val01_status(missing) == "NOT_RUN"
+
+    report = run_validation_gates(
+        calderon_simulated=_calderon_sim(3.0), calderon_source="injected:test"
+    )
+    path = write_validation_report(report, tmp_path / "validation_report.json")
+    assert published_val01_status(path) == "FAIL"
+
+    pass_report = run_validation_gates(
+        calderon_simulated=_calderon_sim(1.12), calderon_source="injected:test"
+    )
+    pass_path = write_validation_report(pass_report, tmp_path / "validation_pass.json")
+    assert published_val01_status(pass_path) == "PASS"

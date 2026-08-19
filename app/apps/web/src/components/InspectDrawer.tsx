@@ -12,7 +12,16 @@ interface InspectDrawerProps {
   metricId: string | null;
   data: ProvenanceData | null;
   runId?: string | null;
+  site?: CorridorSite | null;
   children?: React.ReactNode;
+}
+
+/** Kernel corridor resolution shown under Inspect (method + names, never GIS ids). */
+export interface CorridorSite {
+  method?: string | null;
+  corridor?: string | null;
+  fromCross?: string | null;
+  toCross?: string | null;
 }
 
 /**
@@ -83,7 +92,7 @@ function MetaField({
   );
 }
 
-export default function InspectDrawer({ isOpen, onClose, data, runId, children }: InspectDrawerProps) {
+export default function InspectDrawer({ isOpen, onClose, data, runId, site, children }: InspectDrawerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -196,6 +205,19 @@ export default function InspectDrawer({ isOpen, onClose, data, runId, children }
           <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
             {data?.metric || "Loading..."}
           </h3>
+          {site?.method ? (
+            <p className="mt-2 text-xs font-mono text-text-muted wrap-break-word" data-testid="inspect-corridor-site">
+              {site.method}
+              {site.corridor ? ` · ${site.corridor}` : ""}
+              {site.fromCross && site.toCross
+                ? ` from ${site.fromCross} to ${site.toCross}`
+                : site.fromCross
+                  ? ` from ${site.fromCross}`
+                  : site.toCross
+                    ? ` up to ${site.toCross}`
+                    : ""}
+            </p>
+          ) : null}
           <div className="flex flex-col mt-4 min-w-0">
             <span className="text-4xl font-mono font-bold tracking-tight wrap-break-word">{data?.value}</span>
             <span className="text-xs font-mono text-text-muted mt-1 wrap-break-word">range: {data?.range}</span>

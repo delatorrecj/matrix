@@ -23,7 +23,14 @@ def test_beh_results_are_glass_box():
     scenario = Trajectory(
         edge_counts={"C0": 20, "C1": 40, "OTHER": 210},
         frames=[],
-        meta={"closed_edges": ["C0", "C1"], "edge_lanes": {"C0": 2, "C1": 1}, "lanes_closed": 1},
+        meta={
+            "closed_edges": ["C0", "C1"],
+            "edge_lanes": {"C0": 2, "C1": 1},
+            "lanes_closed": 1,
+            # Published live gate (CR-014). Injected so the test does not depend on
+            # validation_report.json I/O — FAIL must keep BEH-1/BEH-3 at L.
+            "val01_status": "FAIL",
+        },
     )
     results = score(scenario, baseline=baseline)
 
@@ -107,3 +114,30 @@ def test_beh4_emitted_only_when_demand_delta_on_trajectory():
     assert beh4.input_dataset_ids == ["Calderon2014"]
     assert beh4.unit == "trips/window"
     assert beh4.range[0] <= beh4.value <= beh4.range[1]
+
+
+def test_beh1_beh3_lift_only_when_val01_pass():
+    """Corridor-volume chips follow the VAL-01 factor — they must not stay hardcoded L.
+
+    Injecting PASS is the legitimate unlock (independent demand already back-tested).
+    This test fails if BEH-1/BEH-3 ignore gate status and stamp L forever.
+    """
+    baseline = {"C0": 100, "C1": 50}
+    traj = Trajectory(
+        edge_counts={"C0": 20, "C1": 40},
+        frames=[],
+        meta={
+            "closed_edges": ["C0", "C1"],
+            "edge_lanes": {"C0": 2, "C1": 1},
+            "lanes_closed": 1,
+            "val01_status": "PASS",
+        },
+    )
+    results = score(traj, baseline=baseline)
+    beh1 = next(r for r in results if r.equation_id == "BEH-1")
+    beh3 = next(r for r in results if r.equation_id == "BEH-3")
+    assert beh1.confidence == "H"
+    assert beh1.directional is False
+    assert beh3.confidence == "H"
+    assert any("VAL-01" in a and "PASS" in a for a in beh1.assumptions)
+    assert not any("capped at L" in a for a in beh1.assumptions)

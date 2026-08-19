@@ -324,6 +324,10 @@ def _playback_from_cache(scenario_id: str) -> dict | None:
             "edge_resolution": meta.get("edge_resolution"),
             "overlay_honest": meta.get("overlay_honest"),
             "location_of_interest": meta.get("location_of_interest"),
+            "affected_edge_geoms": meta.get("affected_edge_geoms") or [],
+            "from_cross": meta.get("from_cross") or "",
+            "to_cross": meta.get("to_cross") or "",
+            "corridor": meta.get("corridor") or "",
         }
     except Exception:
         return None
@@ -701,6 +705,10 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
             "edge_resolution": traj.meta.get("edge_resolution"),
             "overlay_honest": traj.meta.get("overlay_honest"),
             "affected_edges": traj.meta.get("affected_edges") or [],
+            "affected_edge_geoms": traj.meta.get("affected_edge_geoms") or [],
+            "from_cross": traj.meta.get("from_cross") or "",
+            "to_cross": traj.meta.get("to_cross") or "",
+            "corridor": traj.meta.get("corridor") or "",
         })
 
         # Public bias audit (PRD-F6): log this run's persona mode share vs the ground-truth

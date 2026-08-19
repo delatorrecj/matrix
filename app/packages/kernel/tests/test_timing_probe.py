@@ -79,10 +79,12 @@ def test_concurrent_simulate_calls_do_not_collide():
 
 
 def test_location_of_interest_is_ground_truth_from_the_real_net():
-    """CR-013 end-to-end: a keyword-matched location gets a real [lon, lat] derived
-    from the actual matched edge (real net, real SUMO) -- not a pre-simulation guess."""
-    traj = simulate(Scenario("s-loi", "close a lane on Iznart St", location="Iznart"))
-    assert traj.meta["edge_resolution"] == "keyword-match"
+    """CR-013 end-to-end: a resolved location (whether from gazetteer or keyword-match)
+    gets a real [lon, lat] derived from the actual matched edge (real net, real SUMO),
+    not a pre-simulation guess."""
+    traj = simulate(Scenario("s-loi", "close a lane on Diversion Rd", location="Diversion"))
+    # Diversion is in the gazetteer as an alias, so it resolves via gazetteer-alias (CR-020 resolution order).
+    assert traj.meta["edge_resolution"] in ("gazetteer-alias", "gazetteer-osmid", "gazetteer-snap", "keyword-match")
     loi = traj.meta["location_of_interest"]
     assert loi is not None
     lon, lat = loi

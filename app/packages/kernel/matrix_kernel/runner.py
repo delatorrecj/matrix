@@ -29,6 +29,7 @@ from matrix_kernel.baseline import NET, ROU, SIM_END, load_baseline
 from matrix_kernel.map_truth import map_truth_fields
 from matrix_kernel.personas import ILOILO_MODE_SHARE
 from matrix_kernel.scenario import Scenario, apply_intervention  # noqa: F401  (Scenario re-exported)
+from matrix_kernel.span import clip_named_span, extract_live_street, keyword_edges, peel_span_fields
 from matrix_kernel.trajectory import Frame, Trajectory
 
 
@@ -46,6 +47,99 @@ def _edge_ids() -> frozenset[str]:
     return frozenset(e.getID() for e in _net().getEdges())
 
 
+_SNAP_RADIUS_M = {"bridge": 80.0, "market": 100.0, "plaza": 100.0, "district": 120.0}
+_SNAP_CAP = {"bridge": 4, "market": 6, "plaza": 6, "district": 8}
+
+
+def _parse_osm_way_id(osm_id: str) -> str | None:
+    """Numeric OSM way id from a gazetteer osm_id, or None for nodes / placeholders."""
+    raw = (osm_id or "").strip()
+    if not raw:
+        return None
+    lowered = raw.lower()
+    if lowered.startswith("node/"):
+        return None
+    if lowered.startswith("way/"):
+        raw = raw[4:]
+    return raw if raw.isdigit() else None
+
+
+def _lane_orig_id(lane) -> str:
+    raw = ""
+    for name in ("getParam", "getParameter"):
+        fn = getattr(lane, name, None)
+        if callable(fn):
+            val = fn("origId")
+            if val:
+                raw = str(val)
+                break
+    if not raw:
+        params = getattr(lane, "getParams", None)
+        if callable(params):
+            val = (params() or {}).get("origId")
+            if val:
+                raw = str(val)
+    token = raw.split()[0].strip() if raw else ""
+    return token if token.isdigit() else ""
+
+
+@lru_cache(maxsize=1)
+def _osm_orig_ids() -> dict[str, tuple[str, ...]]:
+    """OSM way origId -> live SUMO edge ids (both directions / split segments)."""
+    grouped: dict[str, list[str]] = {}
+    for edge in _net().getEdges():
+        eid = edge.getID()
+        if eid.startswith(":"):
+            continue
+        oid = ""
+        for lane in edge.getLanes():
+            oid = _lane_orig_id(lane)
+            if oid:
+                break
+        if not oid:
+            continue
+        grouped.setdefault(oid, []).append(eid)
+    return {oid: tuple(eids) for oid, eids in grouped.items()}
+
+
+def _gazetteer_edges(entry) -> tuple[list[str], str] | None:
+    """Resolve a gazetteer hit against the live net. None = not a geographic match."""
+    from matrix_kernel.gazetteer import live_sumo_edges
+
+    live = [eid for eid in live_sumo_edges(entry) if eid in _edge_ids()]
+    if live:
+        flag = " (PROVISIONAL-id)" if getattr(entry, "provisional", True) else ""
+        return live, f"gazetteer-match{flag}"
+
+    oid = _parse_osm_way_id(getattr(entry, "osm_id", "") or "")
+    if oid:
+        osm_edges = list(_osm_orig_ids().get(oid, ()))
+        if osm_edges:
+            return osm_edges, "gazetteer-osmid"
+
+    alias = (getattr(entry, "street_name", "") or "").strip()
+    if alias:
+        kw_alias = _keyword_edges(alias)
+        if kw_alias:
+            return kw_alias, "gazetteer-alias"
+
+    coords = getattr(entry, "coordinates", None) or []
+    ftype = getattr(entry, "feature_type", "") or ""
+    radius = getattr(entry, "snap_radius_m", None)
+    if radius is None:
+        radius = _SNAP_RADIUS_M.get(ftype, 0.0)
+    if radius and len(coords) >= 2:
+        from matrix_kernel.geometry import nearest_edges
+
+        cap = _SNAP_CAP.get(ftype, 6)
+        snapped = nearest_edges(
+            _net(), float(coords[0]), float(coords[1]), float(radius), cap
+        )
+        if snapped:
+            return snapped, "gazetteer-snap"
+    return None
+
+
 def _mode_for(vehicle_id: str) -> str:
     """Deterministically assign a persona mode to a SUMO vehicle (slice simplification: the
     demand is vehicle-routed, modes label it for BEH-2 mode-share accounting -- Behavioral
@@ -61,16 +155,18 @@ def _mode_for(vehicle_id: str) -> str:
 
 
 def _keyword_edges(corridor: str) -> list[str]:
-    """SUMO edge ids whose street name contains `corridor` (case-insensitive), else [].
+    """SUMO edge ids whose street name matches `corridor` (normalized), else [].
 
-    Kept separate from the busiest-edge fallback so the resolution METHOD can be reported
-    honestly (a real name match vs a fallback). Requires the net to carry street names
-    (build_network.py `--output.street-names`); an empty result is an honest miss, not a
-    guess (PRD-F14)."""
-    key = corridor.strip().lower()
-    if not key:
-        return []
-    return [e.getID() for e in _net().getEdges() if e.getName() and key in e.getName().lower()]
+    A stuffed span phrase is not a match — tokenize/normalize first, then look up
+    the live street index. If that misses, the longest live street name contained
+    in the string is tried. Empty is an honest miss, not a guess (PRD-F14).
+    """
+    net = _net()
+    hits = keyword_edges(net, corridor)
+    if hits:
+        return hits
+    extracted = extract_live_street(net, corridor)
+    return keyword_edges(net, extracted) if extracted else []
 
 
 def _busiest_baseline_edges(top_n: int = 1) -> list[str]:
@@ -88,60 +184,121 @@ def target_edges(corridor: str, top_n: int = 1) -> list[str]:
     return _keyword_edges(corridor) or _busiest_baseline_edges(top_n)
 
 
-def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
-    """Resolve WHERE a scenario applies -> (SUMO edge ids, resolution method).
+def _span_fields(scenario: Scenario) -> tuple[str, str, str]:
+    """Corridor-only location + bounding crosses. Kernel re-peels sloppy LLM strings."""
+    params = scenario.parameters or {}
+    return peel_span_fields(
+        scenario.effective_location,
+        str(params.get("from_cross") or ""),
+        str(params.get("to_cross") or ""),
+    )
 
-    Order: a map-drop `geometry` (resolved against the cached net via
-    matrix_kernel.geometry) wins; else the location keyword is mapped via gazetteer;
-    else it is matched against edge street names; else a deterministic hash of the
-    location selects from the top 50 busiest edges. The method string is
-    recorded verbatim in Trajectory.meta (PRD-F14) and names the fallback explicitly.
-    This ensures that different unknown locations hit different distinct edges,
-    producing varied module outputs rather than identically falling back to the single
-    busiest edge every time."""
+
+def _clip_corridor(
+    edges: list[str], method: str, from_cross: str, to_cross: str
+) -> tuple[list[str], str, list[str], str]:
+    """Clip a live named-street set. Empty walk keeps the corridor (never hash)."""
+    if not from_cross and not to_cross:
+        return edges, method, [], ""
+    clip = clip_named_span(_net(), edges, from_cross, to_cross)
+    if clip.method == "miss" or not clip.edges:
+        return edges, method, list(clip.span_nodes), clip.assumption
+    out_method = clip.method
+    if method.endswith("(geometry off-network)") and out_method.startswith("keyword-"):
+        out_method = f"{out_method} (geometry off-network)"
+    return clip.edges, out_method, list(clip.span_nodes), clip.assumption
+
+
+def _resolve_site(scenario: Scenario, top_n: int = 1) -> dict:
+    """WHERE a scenario applies, plus span provenance for Trajectory.meta."""
+    loc, from_cross, to_cross = _span_fields(scenario)
+    empty = {
+        "from_cross": from_cross,
+        "to_cross": to_cross,
+        "span_nodes": [],
+        "span_assumption": "",
+        "corridor": loc,
+    }
+
     geom = scenario.geometry is not None
     if geom:
         from matrix_kernel.geometry import resolve_geometry
 
         edges = resolve_geometry(_net(), scenario.geometry)
         if edges:
-            return edges, "geometry"
+            return {"edges": edges, "method": "geometry", **empty}
 
-    loc = scenario.effective_location
+    from matrix_kernel.gazetteer import resolve_colloquial_term
 
-    if loc:
-        from matrix_kernel.gazetteer import resolve_colloquial_term
-        entry = resolve_colloquial_term(loc)
-        # A gazetteer hit is only a real match if its sumo_edge actually exists in the
-        # deployed net (PRD-F14): a curated entry can carry a stale/placeholder id, and
-        # claiming "gazetteer-match" while touching zero edges would be a glass-box lie.
-        if entry and entry.sumo_edge and entry.sumo_edge in _edge_ids():
-            flag = " (PROVISIONAL-id)" if entry.provisional else ""
-            return [entry.sumo_edge], f"gazetteer-match{flag}"
-        # District / colloquial names often have no live edge id. A curated street_name
-        # (e.g. Molo → Avanceña, Diversion Rd → Aquino Jr) is still an honest match.
-        alias = (getattr(entry, "street_name", "") or "") if entry else ""
-        if alias:
-            kw_alias = _keyword_edges(alias)
-            if kw_alias:
-                return kw_alias, "gazetteer-alias"
+    entry = resolve_colloquial_term(loc) if loc else None
+    raw_loc = scenario.effective_location
+    if entry is None and raw_loc and raw_loc != loc:
+        entry = resolve_colloquial_term(raw_loc)
+    if entry is None and scenario.description:
+        entry = resolve_colloquial_term(scenario.description)
+    if entry:
+        hit = _gazetteer_edges(entry)
+        if hit:
+            edges, method = hit
+            return {"edges": edges, "method": method, **empty}
 
     kw = _keyword_edges(loc)
+    if not kw and raw_loc and raw_loc != loc:
+        kw = _keyword_edges(raw_loc)
+    if not kw and " " in (scenario.description or ""):
+        extracted = extract_live_street(_net(), scenario.description)
+        if extracted:
+            kw = _keyword_edges(extracted)
     if kw:
-        return kw, "keyword-match (geometry off-network)" if geom else "keyword-match"
+        method = "keyword-match (geometry off-network)" if geom else "keyword-match"
+        edges, method, span_nodes, assumption = _clip_corridor(
+            kw, method, from_cross, to_cross
+        )
+        return {
+            "edges": edges,
+            "method": method,
+            "from_cross": from_cross,
+            "to_cross": to_cross,
+            "span_nodes": span_nodes,
+            "span_assumption": assumption,
+            "corridor": loc,
+        }
 
-    detail = f"no edge named like {loc!r}" if loc.strip() else "no location given"
+    detail_src = raw_loc or loc
+    detail = f"no edge named like {detail_src!r}" if detail_src.strip() else "no location given"
     if geom:
         detail = f"geometry off-network; {detail}"
-        
+
     busiest_50 = _busiest_baseline_edges(50)
-    if busiest_50 and loc.strip():
+    if busiest_50 and detail_src.strip():
         import hashlib
-        h = int(hashlib.md5(loc.strip().encode('utf-8')).hexdigest(), 16)
+
+        h = int(hashlib.md5(detail_src.strip().encode("utf-8")).hexdigest(), 16)
         fallback_edge = busiest_50[h % len(busiest_50)]
-        return [fallback_edge], f"busiest-baseline-fallback (deterministic-hash; {detail})"
-        
-    return _busiest_baseline_edges(top_n), f"busiest-baseline-fallback ({detail})"
+        return {
+            "edges": [fallback_edge],
+            "method": f"busiest-baseline-fallback (deterministic-hash; {detail})",
+            **empty,
+        }
+
+    return {
+        "edges": _busiest_baseline_edges(top_n),
+        "method": f"busiest-baseline-fallback ({detail})",
+        **empty,
+    }
+
+
+def _resolve_edges(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
+    """Resolve WHERE a scenario applies -> (SUMO edge ids, resolution method).
+
+    Order: map-drop geometry; gazetteer (live ids / origId / alias / snap);
+    live-net street index on the corridor name; optional span clip when
+    from_cross/to_cross resolve on that corridor; longest live street name
+    contained in a leftover stuffed phrase; then busiest-baseline-fallback.
+    The method string is recorded verbatim in Trajectory.meta (PRD-F14).
+    """
+    site = _resolve_site(scenario, top_n)
+    return site["edges"], site["method"]
 
 
 def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:
@@ -151,9 +308,23 @@ def resolve_edges(scenario: Scenario, top_n: int = 1) -> list[str]:
 
 def resolve_intervention_site(scenario: Scenario, top_n: int = 1) -> tuple[list[str], str]:
     """Where the intervention applies: demand-only facilities touch no corridor edges."""
+    site = _intervention_site(scenario, top_n)
+    return site["edges"], site["method"]
+
+
+def _intervention_site(scenario: Scenario, top_n: int = 1) -> dict:
     if scenario.intervention_type == "new_facility":
-        return [], "facility-demand"
-    return _resolve_edges(scenario, top_n)
+        loc, frm, to = _span_fields(scenario)
+        return {
+            "edges": [],
+            "method": "facility-demand",
+            "from_cross": frm,
+            "to_cross": to,
+            "span_nodes": [],
+            "span_assumption": "",
+            "corridor": loc,
+        }
+    return _resolve_site(scenario, top_n)
 
 
 def facility_demand_meta(scenario: Scenario) -> dict | None:
@@ -211,11 +382,15 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int | None
         raise FileNotFoundError("network/demand missing -- run build_network.py + build_demand.py")
     import traci
 
-    affected, edge_resolution = resolve_intervention_site(scenario)
+    site = _intervention_site(scenario)
+    affected, edge_resolution = site["edges"], site["method"]
     location_of_interest = _location_of_interest(affected, edge_resolution)
     demand_meta = facility_demand_meta(scenario)
     demand_delta = _facility_demand_delta(scenario)
     truth = map_truth_fields(affected, edge_resolution, location_of_interest)
+    from matrix_kernel.geometry import affected_edge_features
+
+    geoms = affected_edge_features(_net(), affected) if truth["overlay_honest"] else []
 
     with tempfile.TemporaryDirectory() as td:
         add = Path(td) / "ed.add.xml"
@@ -273,11 +448,16 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int | None
             "intervention_type": scenario.intervention_type,
             "affected_edges": affected,
             "applied": applied,  # dispatch record: edges touched, parameters, TraCI calls, assumptions
-            "edge_resolution": edge_resolution,  # "geometry" (map-drop) or "keyword-match"
+            "edge_resolution": edge_resolution,  # "geometry" (map-drop) or "keyword-match" / "keyword-span"
             "overlay_honest": truth["overlay_honest"],
             # [lon, lat] of the first affected edge's midpoint, or None for a fallback
             # resolution (CR-013: location marker only; camera uses corridor box).
             "location_of_interest": truth["location_of_interest"],
+            "from_cross": site.get("from_cross") or "",
+            "to_cross": site.get("to_cross") or "",
+            "span_nodes": site.get("span_nodes") or [],
+            "corridor": site.get("corridor") or scenario.effective_location,
+            "affected_edge_geoms": geoms,
             # -- legacy keys: the five modules read these as "the affected corridor" -- keep. --
             "closed_edges": affected,
             "edge_lanes": applied["edge_lanes"],

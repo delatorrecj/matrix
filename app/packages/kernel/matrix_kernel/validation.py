@@ -399,6 +399,36 @@ def load_validation_report(path: Path = DEFAULT_REPORT_PATH) -> dict:
     return report
 
 
+def published_val01_status(path: Path | None = None) -> str:
+    """VAL-01 status from the published report, or NOT_RUN if none is loadable.
+
+    Searches the same paths GET /validation uses (app/validation_report.json, then
+    the kernel .tmp report). Missing/malformed files are NOT_RUN — never guessed PASS.
+    Pass `path` in tests to avoid depending on a live report.
+    """
+    if path is not None:
+        candidates = (Path(path),)
+    else:
+        app_root = Path(__file__).resolve().parents[3]
+        candidates = (
+            app_root / "validation_report.json",
+            DEFAULT_REPORT_PATH,
+        )
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            report = load_validation_report(candidate)
+        except (OSError, json.JSONDecodeError, ValueError):
+            continue
+        for gate in report.get("gates") or []:
+            if gate.get("gate_id") == "VAL-01":
+                status = str(gate.get("status") or "NOT_RUN").upper()
+                if status in ("PASS", "FAIL", "NOT_RUN"):
+                    return status
+    return "NOT_RUN"
+
+
 _GATE_REQUIRED_KEYS = (
     "gate_id", "name", "metric", "value", "unit", "threshold", "comparator", "status",
     "fixture_id", "fixture_provenance", "fixture_provisional", "simulated_source",

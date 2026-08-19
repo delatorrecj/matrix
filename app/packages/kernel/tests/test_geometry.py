@@ -15,6 +15,7 @@ from matrix_kernel.geometry import (
     edges_in_polygon,
     edges_near_point,
     geometries,
+    nearest_edges,
     point_in_polygon,
     point_in_ring,
     polygon_rings,
@@ -245,6 +246,24 @@ def test_edges_near_point_filters_by_radius_and_sorts():
     assert edges_near_point(fake, 50.0, 50.0, radius_m=1.0) == []  # honest miss
 
 
+def test_nearest_edges_returns_closest_up_to_cap():
+    fake = FakeNet(
+        [
+            FakeEdge("far", [(8.0, 0.0), (8.0, 10.0)]),       # 3 m from (5, 5)
+            FakeEdge("mid", [(0.0, 5.0), (10.0, 5.0)]),       # 0 m (on the line)
+            FakeEdge("near_stub", [(4.5, 5.5), (5.5, 5.5)]),  # 0.5 m north
+        ]
+    )
+    assert nearest_edges(fake, 5.0, 5.0, radius_m=4.0, cap=2) == ["mid", "near_stub"]
+    assert nearest_edges(fake, 5.0, 5.0, radius_m=4.0, cap=1) == ["mid"]
+    assert nearest_edges(fake, 50.0, 50.0, radius_m=1.0, cap=2) == []
+
+
+def test_nearest_edges_rejects_bad_cap(net):
+    with pytest.raises(ValueError):
+        nearest_edges(net, 5.0, 5.0, radius_m=1.0, cap=0)
+
+
 @pytest.mark.parametrize("radius", [0.0, -5.0, float("nan")])
 def test_edges_near_point_rejects_bad_radius(net, radius):
     with pytest.raises(ValueError):
@@ -318,3 +337,11 @@ def test_resolve_geometry_raises_for_unsupported(net):
 def test_edge_midpoint_lonlat_returns_middle_shape_point(net):
     # B_horizontal's shape is [(0.0, 5.0), (10.0, 5.0)] -- 2 points, midpoint index 1.
     assert edge_midpoint_lonlat(net, "B_horizontal") == (10.0, 5.0)
+
+
+def test_affected_edge_features_are_linestrings_keyed_by_edge_id(net):
+    feats = geometry.affected_edge_features(net, ["B_horizontal", "missing"])
+    assert len(feats) == 1
+    assert feats[0]["properties"]["edge_id"] == "B_horizontal"
+    assert feats[0]["geometry"]["type"] == "LineString"
+    assert feats[0]["geometry"]["coordinates"] == [[0.0, 5.0], [10.0, 5.0]]

@@ -4,12 +4,11 @@ Resolves regional colloquialisms to deterministic GIS/OSM edges before or alongs
 Glass-box guarantee: the LLM never *originates* a GIS node id — it can only extract/normalize the
 phrase; the id always comes from this curated map, not the model.
 
-PROVISIONAL DATA (CR-008): the current `gazetteer_iloilo.json` entries carry placeholder `osm_id` /
-`sumo_edge` values (each flagged `"provisional": true`) that have NOT yet been verified against the
-deployed OSM extract or the SUMO net. They demonstrate the colloquial→id resolution path; until a
-real GIS pass replaces them, hits are annotated as PROVISIONAL so neither the LLM nor a reader treats
-the id as ground truth. The "never invented" guarantee is about *who produces the id* (the map, not
-the model) — it is not a claim that these placeholder ids resolve to real network edges yet.
+PROVISIONAL DATA (CR-008, verified CR-018): entries in `gazetteer_iloilo.json` that
+still cannot be tied to the live net stay `"provisional": true`. Verified entries
+carry live OSM way ids / SUMO edge ids / street_name aliases from the deployed net.
+The "never invented" guarantee is about *who produces the id* (the map, not the
+model).
 """
 from __future__ import annotations
 
@@ -33,6 +32,10 @@ class GazetteerEntry:
     provisional: bool = True
     # OSM/SUMO street-name keyword used when `sumo_edge` is missing from the live net.
     street_name: str = ""
+    # Both-direction / multi-segment live SUMO ids. Wins over `sumo_edge` when non-empty.
+    sumo_edges: tuple[str, ...] = ()
+    # Override for gazetteer-snap radius (metres). None -> feature_type default in runner.
+    snap_radius_m: float | None = None
 
 
 _ENTRY_FIELDS = {f.name for f in fields(GazetteerEntry)}
@@ -40,7 +43,23 @@ _ENTRY_FIELDS = {f.name for f in fields(GazetteerEntry)}
 
 def _entry_from_raw(val: dict[str, Any]) -> GazetteerEntry:
     """Build an entry from JSON, ignoring keys the dataclass does not declare."""
-    return GazetteerEntry(**{k: v for k, v in val.items() if k in _ENTRY_FIELDS})
+    raw = {k: v for k, v in val.items() if k in _ENTRY_FIELDS}
+    edges = raw.get("sumo_edges") or ()
+    raw["sumo_edges"] = tuple(str(e) for e in edges if str(e).strip())
+    snap = raw.get("snap_radius_m")
+    raw["snap_radius_m"] = None if snap is None else float(snap)
+    return GazetteerEntry(**raw)
+
+
+def live_sumo_edges(entry: GazetteerEntry) -> tuple[str, ...]:
+    """Edge ids to try against the live net: `sumo_edges` if set, else the legacy single id."""
+    listed = tuple(e for e in (getattr(entry, "sumo_edges", ()) or ()) if str(e).strip())
+    if listed:
+        return listed
+    single = (getattr(entry, "sumo_edge", "") or "").strip()
+    if single:
+        return (single,)
+    return ()
 
 
 def load_gazetteer() -> dict[str, GazetteerEntry]:
@@ -57,23 +76,56 @@ def load_gazetteer() -> dict[str, GazetteerEntry]:
 
 
 def resolve_colloquial_term(term: str) -> GazetteerEntry | None:
-    """Attempt to resolve a raw text string to a gazetteer entry.
-    
-    Checks exact matches or substring inclusion.
-    Returns the first matching entry, or None if no alias matches.
+    """Resolve a raw location or query string to a gazetteer entry.
+
+    Order: exact JSON key, exact canonical_name, exact street_name, then
+    longest-first substrings of key / canonical_name / street_name (street
+    names shorter than 4 characters are skipped so fragments like "Jr" do
+    not false-hit). The LLM often extracts the English canonical name
+    ("Forbes Bridge") rather than the Hiligaynon key ("tulay sa forbes").
     """
-    term_lower = term.lower()
+    term_lower = (term or "").strip().lower()
+    if not term_lower:
+        return None
     gaz = load_gazetteer()
-    
-    # Direct hit
+
     if term_lower in gaz:
         return gaz[term_lower]
-        
-    # Substring hit (e.g., "siraduhon ang tulay sa forbes" -> matches "tulay sa forbes")
-    for key, entry in gaz.items():
-        if key in term_lower:
+
+    for entry in gaz.values():
+        name = (entry.canonical_name or "").strip().lower()
+        if name and term_lower == name:
             return entry
-            
+
+    for entry in gaz.values():
+        street = (entry.street_name or "").strip().lower()
+        if street and term_lower == street:
+            return entry
+
+    for key, entry in sorted(gaz.items(), key=lambda kv: len(kv[0]), reverse=True):
+        if key and key in term_lower:
+            return entry
+
+    by_canonical = sorted(
+        gaz.values(),
+        key=lambda e: len((e.canonical_name or "").strip()),
+        reverse=True,
+    )
+    for entry in by_canonical:
+        name = (entry.canonical_name or "").strip().lower()
+        if name and name in term_lower:
+            return entry
+
+    by_street = sorted(
+        gaz.values(),
+        key=lambda e: len((e.street_name or "").strip()),
+        reverse=True,
+    )
+    for entry in by_street:
+        street = (entry.street_name or "").strip().lower()
+        if len(street) >= 4 and street in term_lower:
+            return entry
+
     return None
 
 

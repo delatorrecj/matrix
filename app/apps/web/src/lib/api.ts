@@ -167,6 +167,10 @@ export interface LatestRunRecord {
     edge_resolution?: string | null;
     overlay_honest?: boolean;
     location_of_interest?: [number, number] | null;
+    affected_edge_geoms?: unknown;
+    from_cross?: string | null;
+    to_cross?: string | null;
+    corridor?: string | null;
   } | null;
 }
 

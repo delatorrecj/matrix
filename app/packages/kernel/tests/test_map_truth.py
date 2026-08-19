@@ -5,7 +5,11 @@ from matrix_kernel.map_truth import map_truth_fields, overlay_honest
 def test_overlay_honest_for_keyword_match():
     assert overlay_honest("keyword-match") is True
     assert overlay_honest("gazetteer-alias") is True
+    assert overlay_honest("gazetteer-osmid") is True
+    assert overlay_honest("gazetteer-snap") is True
     assert overlay_honest("geometry") is True
+    assert overlay_honest("keyword-span") is True
+    assert overlay_honest("keyword-span-open") is True
 
 
 def test_overlay_honest_false_for_fallback_and_facility():

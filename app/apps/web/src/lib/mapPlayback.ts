@@ -2,7 +2,7 @@
  * Unified playback state from live WS EDGE_COUNTS or GET latest-run hydrate.
  * One interface; two adapters (live stream + Redis cache).
  */
-import type { EdgeCounts } from "@/components/map/types";
+import type { EdgeCounts, EdgesFeatureCollection } from "@/components/map/types";
 import { overlayHonest, parseLonLat } from "@/components/map/affectedCorridor";
 import { framesToTrips } from "@/lib/playbackTrips";
 
@@ -12,6 +12,10 @@ export type MapPlaybackState = {
   edgeResolution: string | null;
   overlayHonest: boolean;
   locationOfInterest: [number, number] | null;
+  affectedEdgeGeoms: EdgesFeatureCollection | null;
+  fromCross: string | null;
+  toCross: string | null;
+  corridor: string | null;
   trips: ReturnType<typeof framesToTrips>["trips"];
   maxTime: number;
   playbackExpired: boolean;
@@ -26,6 +30,10 @@ export type LatestRunPlayback = {
   edge_resolution?: string | null;
   overlay_honest?: boolean;
   location_of_interest?: [number, number] | null;
+  affected_edge_geoms?: unknown;
+  from_cross?: string | null;
+  to_cross?: string | null;
+  corridor?: string | null;
 };
 
 export type WsEdgeCounts = {
@@ -34,7 +42,32 @@ export type WsEdgeCounts = {
   edge_resolution?: string;
   overlay_honest?: boolean;
   location_of_interest?: unknown;
+  affected_edge_geoms?: unknown;
+  from_cross?: unknown;
+  to_cross?: unknown;
+  corridor?: unknown;
 };
+
+function parseEdgeGeoms(raw: unknown): EdgesFeatureCollection | null {
+  if (!raw) return null;
+  if (Array.isArray(raw) && raw.length > 0) {
+    return { type: "FeatureCollection", features: raw as EdgesFeatureCollection["features"] };
+  }
+  if (
+    typeof raw === "object" &&
+    raw !== null &&
+    (raw as { type?: string }).type === "FeatureCollection" &&
+    Array.isArray((raw as { features?: unknown }).features)
+  ) {
+    const features = (raw as EdgesFeatureCollection).features;
+    return features.length > 0 ? (raw as EdgesFeatureCollection) : null;
+  }
+  return null;
+}
+
+function parseName(raw: unknown): string | null {
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
 
 export function mapPlaybackFromLatestRun(
   playback: LatestRunPlayback | null | undefined,
@@ -55,6 +88,10 @@ export function mapPlaybackFromLatestRun(
       edgeResolution: resolution,
       overlayHonest: honest,
       locationOfInterest: parseLonLat(playback.location_of_interest),
+      affectedEdgeGeoms: honest ? parseEdgeGeoms(playback.affected_edge_geoms) : null,
+      fromCross: parseName(playback.from_cross),
+      toCross: parseName(playback.to_cross),
+      corridor: parseName(playback.corridor),
       trips,
       maxTime,
       playbackExpired: false,
@@ -66,6 +103,10 @@ export function mapPlaybackFromLatestRun(
     edgeResolution: runFallback?.edge_resolution ?? null,
     overlayHonest: false,
     locationOfInterest: null,
+    affectedEdgeGeoms: null,
+    fromCross: null,
+    toCross: null,
+    corridor: null,
     trips: [],
     maxTime: 0,
     playbackExpired: true,
@@ -74,7 +115,15 @@ export function mapPlaybackFromLatestRun(
 
 export function mapPlaybackFromWs(msg: WsEdgeCounts): Pick<
   MapPlaybackState,
-  "edgeCounts" | "affectedEdges" | "edgeResolution" | "overlayHonest" | "locationOfInterest"
+  | "edgeCounts"
+  | "affectedEdges"
+  | "edgeResolution"
+  | "overlayHonest"
+  | "locationOfInterest"
+  | "affectedEdgeGeoms"
+  | "fromCross"
+  | "toCross"
+  | "corridor"
 > {
   const resolution = typeof msg.edge_resolution === "string" ? msg.edge_resolution : null;
   const honest = overlayHonest(msg.overlay_honest, resolution);
@@ -89,5 +138,9 @@ export function mapPlaybackFromWs(msg: WsEdgeCounts): Pick<
     edgeResolution: resolution,
     overlayHonest: honest,
     locationOfInterest: parseLonLat(msg.location_of_interest),
+    affectedEdgeGeoms: honest ? parseEdgeGeoms(msg.affected_edge_geoms) : null,
+    fromCross: parseName(msg.from_cross),
+    toCross: parseName(msg.to_cross),
+    corridor: parseName(msg.corridor),
   };
 }

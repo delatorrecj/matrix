@@ -23,8 +23,15 @@ export function formatScenarioPlan(opts: {
   const type = opts.interventionType?.trim();
   if (type) bits.push(TYPE_LABELS[type] ?? type.replace(/_/g, " "));
   const location = opts.location?.trim();
-  if (location) bits.push(location);
   const params = opts.parameters ?? {};
+  const from = typeof params.from_cross === "string" ? params.from_cross.trim() : "";
+  const to = typeof params.to_cross === "string" ? params.to_cross.trim() : "";
+  if (location) {
+    if (from && to) bits.push(`${location}, segment from ${from} to ${to}`);
+    else if (from) bits.push(`${location} from ${from}`);
+    else if (to) bits.push(`${location} up to ${to}`);
+    else bits.push(location);
+  }
   const kind = typeof params.facility_kind === "string" ? params.facility_kind : "";
   if (kind) bits.push(kind);
   const capacity = typeof params.capacity === "number" ? params.capacity : Number(params.capacity);

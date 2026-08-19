@@ -40,6 +40,28 @@ export function honestAffectedEdgeIds(
   return ids.filter((id): id is string => typeof id === "string" && id.length > 0);
 }
 
+export function mergeEdgeFeatures(
+  staticEdges: EdgesFeatureCollection | null | undefined,
+  live: EdgesFeatureCollection | null | undefined,
+): EdgesFeatureCollection | null {
+  const extra = live?.features ?? [];
+  const base = staticEdges?.features ?? [];
+  if (extra.length === 0 && base.length === 0) return null;
+  const seen = new Set<string>();
+  const features: EdgesFeatureCollection["features"] = [];
+  for (const f of extra) {
+    const id = f?.properties?.edge_id;
+    if (typeof id === "string" && id) seen.add(id);
+    features.push(f);
+  }
+  for (const f of base) {
+    const id = f?.properties?.edge_id;
+    if (typeof id === "string" && seen.has(id)) continue;
+    features.push(f);
+  }
+  return { type: "FeatureCollection", features };
+}
+
 export function filterAffectedFeatures(
   edges: EdgesFeatureCollection | null | undefined,
   edgeIds: string[],

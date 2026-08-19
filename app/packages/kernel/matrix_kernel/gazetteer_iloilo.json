@@ -2,133 +2,360 @@
   "tulay sa forbes": {
     "canonical_name": "Forbes Bridge",
     "feature_type": "bridge",
-    "osm_id": "way/12345678",
-    "sumo_edge": "E_forbes_bridge",
-    "coordinates": [122.563, 10.702],
-    "provisional": true
+    "osm_id": "way/937061655",
+    "sumo_edge": "-937061655",
+    "coordinates": [
+      122.571242,
+      10.702232
+    ],
+    "provisional": false,
+    "sumo_edges": [
+      "-937061655",
+      "-306785269",
+      "937061662",
+      "306785268"
+    ]
   },
   "merkado": {
     "canonical_name": "Iloilo Central Market",
     "feature_type": "market",
-    "osm_id": "way/87654321",
-    "sumo_edge": "E_central_mkt_front",
-    "coordinates": [122.568, 10.697],
-    "provisional": true
+    "osm_id": "way/935651848",
+    "sumo_edge": "",
+    "street_name": "Valeria",
+    "coordinates": [
+      122.568,
+      10.697
+    ],
+    "provisional": false
   },
   "banwa": {
     "canonical_name": "Iloilo City Proper (Downtown)",
     "feature_type": "district",
-    "osm_id": "node/1111111",
-    "sumo_edge": "E_downtown_main",
-    "coordinates": [122.566, 10.695],
-    "provisional": true
+    "osm_id": "way/821303432",
+    "sumo_edge": "",
+    "coordinates": [
+      122.566,
+      10.695
+    ],
+    "provisional": false
   },
   "plasa": {
     "canonical_name": "Plaza Libertad",
     "feature_type": "plaza",
-    "osm_id": "way/2222222",
-    "sumo_edge": "E_plaza_libertad",
-    "coordinates": [122.571, 10.693],
-    "provisional": true
+    "osm_id": "way/49257258",
+    "sumo_edge": "",
+    "street_name": "Mapa",
+    "coordinates": [
+      122.571,
+      10.693
+    ],
+    "provisional": false
   },
   "super": {
     "canonical_name": "Iloilo Terminal Market (Super)",
     "feature_type": "market",
-    "osm_id": "way/3333333",
-    "sumo_edge": "E_terminal_mkt",
-    "coordinates": [122.561, 10.691],
-    "provisional": true
+    "osm_id": "way/91899293",
+    "sumo_edge": "",
+    "street_name": "Pala-pala",
+    "coordinates": [
+      122.561,
+      10.691
+    ],
+    "provisional": false
   },
   "molo": {
     "canonical_name": "Molo",
     "feature_type": "district",
-    "osm_id": "node/molo-centroid",
-    "sumo_edge": "E_molo_plaza",
+    "osm_id": "way/69583035",
+    "sumo_edge": "",
     "street_name": "Avanceña",
-    "coordinates": [122.5446, 10.6969],
-    "provisional": true
+    "coordinates": [
+      122.5446,
+      10.6969
+    ],
+    "provisional": false
   },
   "diversion road": {
     "canonical_name": "Benigno S. Aquino Jr. Avenue",
     "feature_type": "corridor",
-    "osm_id": "way/benigno-aquino-jr",
+    "osm_id": "",
     "sumo_edge": "",
     "street_name": "Aquino Jr",
-    "coordinates": [122.555, 10.720],
-    "provisional": true
+    "coordinates": [
+      122.555,
+      10.72
+    ],
+    "provisional": false
   },
   "diversion rd": {
     "canonical_name": "Benigno S. Aquino Jr. Avenue",
     "feature_type": "corridor",
-    "osm_id": "way/benigno-aquino-jr",
+    "osm_id": "",
     "sumo_edge": "",
     "street_name": "Aquino Jr",
-    "coordinates": [122.555, 10.720],
-    "provisional": true
+    "coordinates": [
+      122.555,
+      10.72
+    ],
+    "provisional": false
   },
   "diversion": {
     "canonical_name": "Benigno S. Aquino Jr. Avenue",
     "feature_type": "corridor",
-    "osm_id": "way/benigno-aquino-jr",
+    "osm_id": "",
     "sumo_edge": "",
     "street_name": "Aquino Jr",
-    "coordinates": [122.555, 10.720],
-    "provisional": true
+    "coordinates": [
+      122.555,
+      10.72
+    ],
+    "provisional": false
   },
   "jaro": {
     "canonical_name": "Jaro",
     "feature_type": "district",
-    "osm_id": "node/jaro-centroid",
-    "sumo_edge": "E_jaro_cathedral",
-    "coordinates": [122.5573, 10.7233],
-    "provisional": true
+    "osm_id": "way/1123799159",
+    "sumo_edge": "",
+    "street_name": "Plaza Rizal",
+    "coordinates": [
+      122.5573,
+      10.7233
+    ],
+    "provisional": false
   },
   "la paz": {
     "canonical_name": "La Paz",
     "feature_type": "district",
-    "osm_id": "node/lapaz-centroid",
-    "sumo_edge": "E_la_paz_plaza",
-    "coordinates": [122.5720, 10.7130],
-    "provisional": true
+    "osm_id": "way/823671963",
+    "sumo_edge": "",
+    "street_name": "Jereos",
+    "coordinates": [
+      122.572,
+      10.713
+    ],
+    "provisional": false
   },
   "lapaz": {
     "canonical_name": "La Paz",
     "feature_type": "district",
-    "osm_id": "node/lapaz-centroid",
-    "sumo_edge": "E_la_paz_plaza",
-    "coordinates": [122.5720, 10.7130],
-    "provisional": true
+    "osm_id": "way/823671963",
+    "sumo_edge": "",
+    "street_name": "Jereos",
+    "coordinates": [
+      122.572,
+      10.713
+    ],
+    "provisional": false
   },
   "mandurriao": {
     "canonical_name": "Mandurriao",
     "feature_type": "district",
-    "osm_id": "node/mandurriao-centroid",
-    "sumo_edge": "E_mandurriao",
-    "coordinates": [122.5480, 10.7190],
-    "provisional": true
+    "osm_id": "way/285167117",
+    "sumo_edge": "",
+    "street_name": "Megaworld",
+    "coordinates": [
+      122.548,
+      10.719
+    ],
+    "provisional": false
   },
   "arevalo": {
     "canonical_name": "Arevalo",
     "feature_type": "district",
-    "osm_id": "node/arevalo-centroid",
-    "sumo_edge": "E_arevalo_plaza",
-    "coordinates": [122.5160, 10.6860],
-    "provisional": true
+    "osm_id": "way/171029214",
+    "sumo_edge": "",
+    "street_name": "Osmeña",
+    "coordinates": [
+      122.516,
+      10.686
+    ],
+    "provisional": false
   },
   "villa arevalo": {
     "canonical_name": "Arevalo",
     "feature_type": "district",
-    "osm_id": "node/arevalo-centroid",
-    "sumo_edge": "E_arevalo_plaza",
-    "coordinates": [122.5160, 10.6860],
-    "provisional": true
+    "osm_id": "way/171029214",
+    "sumo_edge": "",
+    "street_name": "Osmeña",
+    "coordinates": [
+      122.516,
+      10.686
+    ],
+    "provisional": false
   },
   "city proper": {
     "canonical_name": "Iloilo City Proper (Downtown)",
     "feature_type": "district",
-    "osm_id": "node/1111111",
-    "sumo_edge": "E_downtown_main",
-    "coordinates": [122.566, 10.695],
-    "provisional": true
+    "osm_id": "way/821303432",
+    "sumo_edge": "",
+    "coordinates": [
+      122.566,
+      10.695
+    ],
+    "provisional": false
+  },
+  "lopez jaena": {
+    "canonical_name": "Lopez Jaena Street",
+    "feature_type": "corridor",
+    "osm_id": "",
+    "sumo_edge": "",
+    "street_name": "Lopez Jaena",
+    "coordinates": [
+      122.564,
+      10.72
+    ],
+    "provisional": false
+  },
+  "forbes bridge": {
+    "canonical_name": "Forbes Bridge",
+    "feature_type": "bridge",
+    "osm_id": "way/937061655",
+    "sumo_edge": "-937061655",
+    "coordinates": [
+      122.571242,
+      10.702232
+    ],
+    "provisional": false,
+    "sumo_edges": [
+      "-937061655",
+      "-306785269",
+      "937061662",
+      "306785268"
+    ]
+  },
+  "forbes": {
+    "canonical_name": "Forbes Bridge",
+    "feature_type": "bridge",
+    "osm_id": "way/937061655",
+    "sumo_edge": "-937061655",
+    "coordinates": [
+      122.571242,
+      10.702232
+    ],
+    "provisional": false,
+    "sumo_edges": [
+      "-937061655",
+      "-306785269",
+      "937061662",
+      "306785268"
+    ]
+  },
+  "iloilo central market": {
+    "canonical_name": "Iloilo Central Market",
+    "feature_type": "market",
+    "osm_id": "way/935651848",
+    "sumo_edge": "",
+    "street_name": "Valeria",
+    "coordinates": [
+      122.568,
+      10.697
+    ],
+    "provisional": false
+  },
+  "central market": {
+    "canonical_name": "Iloilo Central Market",
+    "feature_type": "market",
+    "osm_id": "way/935651848",
+    "sumo_edge": "",
+    "street_name": "Valeria",
+    "coordinates": [
+      122.568,
+      10.697
+    ],
+    "provisional": false
+  },
+  "plaza libertad": {
+    "canonical_name": "Plaza Libertad",
+    "feature_type": "plaza",
+    "osm_id": "way/49257258",
+    "sumo_edge": "",
+    "street_name": "Mapa",
+    "coordinates": [
+      122.571,
+      10.693
+    ],
+    "provisional": false
+  },
+  "iloilo terminal market": {
+    "canonical_name": "Iloilo Terminal Market (Super)",
+    "feature_type": "market",
+    "osm_id": "way/91899293",
+    "sumo_edge": "",
+    "street_name": "Pala-pala",
+    "coordinates": [
+      122.561,
+      10.691
+    ],
+    "provisional": false
+  },
+  "terminal market": {
+    "canonical_name": "Iloilo Terminal Market (Super)",
+    "feature_type": "market",
+    "osm_id": "way/91899293",
+    "sumo_edge": "",
+    "street_name": "Pala-pala",
+    "coordinates": [
+      122.561,
+      10.691
+    ],
+    "provisional": false
+  },
+  "benigno s. aquino jr. avenue": {
+    "canonical_name": "Benigno S. Aquino Jr. Avenue",
+    "feature_type": "corridor",
+    "osm_id": "",
+    "sumo_edge": "",
+    "street_name": "Aquino Jr",
+    "coordinates": [
+      122.555,
+      10.72
+    ],
+    "provisional": false
+  },
+  "aquino jr": {
+    "canonical_name": "Benigno S. Aquino Jr. Avenue",
+    "feature_type": "corridor",
+    "osm_id": "",
+    "sumo_edge": "",
+    "street_name": "Aquino Jr",
+    "coordinates": [
+      122.555,
+      10.72
+    ],
+    "provisional": false
+  },
+  "lopez jaena street": {
+    "canonical_name": "Lopez Jaena Street",
+    "feature_type": "corridor",
+    "osm_id": "",
+    "sumo_edge": "",
+    "street_name": "Lopez Jaena",
+    "coordinates": [
+      122.564,
+      10.72
+    ],
+    "provisional": false
+  },
+  "downtown": {
+    "canonical_name": "Iloilo City Proper (Downtown)",
+    "feature_type": "district",
+    "osm_id": "way/821303432",
+    "sumo_edge": "",
+    "coordinates": [
+      122.566,
+      10.695
+    ],
+    "provisional": false
+  },
+  "iloilo city proper": {
+    "canonical_name": "Iloilo City Proper (Downtown)",
+    "feature_type": "district",
+    "osm_id": "way/821303432",
+    "sumo_edge": "",
+    "coordinates": [
+      122.566,
+      10.695
+    ],
+    "provisional": false
   }
 }

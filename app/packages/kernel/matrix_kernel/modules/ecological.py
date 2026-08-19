@@ -90,6 +90,8 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
             "uncalibrated Milestone-A stand-in for the methods §3.2 dispersion-to-station "
             "model; no published coefficient backs this value (placeholder, not a measurement)",
             "confidence capped at L: §3.6 PROVISIONAL constant (methods §2 low-confidence protocol)",
+            "OpenAQ/EMB ambient is a scale check only — not a sourced ΔPM2.5/Δemissions "
+            "coefficient (fixture median is not a dispersion calibration)",
         ],
     ))
 

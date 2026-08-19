@@ -25,3 +25,4 @@ This is the bridge from [INVENTORY.md](INVENTORY.md) (what we have) to the spec 
 - **Confidence-floor dimensions:** Economic is Medium (FIES/ASPBI/BIR in hand). Behavioral **mode-share stays M** on literature — **CR-016 open-data-only** (FOI wont-file); do not invent shares. VAL-01 absolute corridor volumes are directional.
 - **Economic uplift summary (2026-06-02):** OpenStat + World Bank fetches; city proxies remain CCHAIN RWI + lights + buildings.
 - **Nothing blocks the build.** Freshness = [OPEN_REFRESH.md](OPEN_REFRESH.md). Outreach drafts under `outreach/` are **archive only** (CR-016).
+- **Post-gazetteer backlog:** [CR-019](../docs/cr-019-credibility-next-steps.md) — ship live-net gazetteer (CR-018); do not raise chips by wiring unused files; later work is independent VAL-01 + named provisional methods.

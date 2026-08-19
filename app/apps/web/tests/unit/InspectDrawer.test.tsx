@@ -212,4 +212,18 @@ describe("InspectDrawer", () => {
     expandDrawerDetails();
     expect(screen.getByRole("link", { name: /Calderon 2014/i })).toBeInTheDocument();
   });
+
+  it("shows the kernel corridor method and cross names", () => {
+    renderDrawer({
+      site: {
+        method: "keyword-span",
+        corridor: "Cuartero Street",
+        fromCross: "Fajardo Street",
+        toCross: "El 98 Street",
+      },
+    });
+    expect(screen.getByTestId("inspect-corridor-site")).toHaveTextContent(
+      "keyword-span · Cuartero Street from Fajardo Street to El 98 Street",
+    );
+  });
 });

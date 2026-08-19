@@ -197,3 +197,80 @@ def test_system_instruction_classifies_new_facility_not_construction(monkeypatch
     assert "new_facility" in text
     assert "construction-phase" not in text
     assert "BEH-4" in text
+
+
+def test_span_fields_map_onto_parameters_location_is_corridor_only():
+    schema = ScenarioSchema(
+        description="Close Cuartero from Fajardo to El 98",
+        intervention_type="full_closure",
+        location="Cuartero Street",
+        from_cross="Fajardo Street",
+        to_cross="El 98 Street",
+        is_ambiguous=False,
+    )
+    sc = parse_scenario("close Cuartero from Fajardo up to EL98", client=FakeClient(schema))
+    assert sc.location == "Cuartero Street"
+    assert sc.corridor == "Cuartero Street"
+    assert sc.parameters["from_cross"] == "Fajardo Street"
+    assert sc.parameters["to_cross"] == "El 98 Street"
+
+
+def test_stuffed_location_is_peeled_into_span_fields():
+    schema = ScenarioSchema(
+        description="Full road closure on Cuartero",
+        intervention_type="full_closure",
+        location="Cuartero Street, segment from Fajardo St. to EL98 st.",
+        from_cross="",
+        to_cross="",
+        is_ambiguous=False,
+    )
+    sc = parse_scenario("A full road closure on Cuartero Street", client=FakeClient(schema))
+    assert sc.location == "Cuartero Street"
+    assert "segment" not in sc.location.lower()
+    assert sc.parameters["from_cross"] == "Fajardo Street"
+    assert sc.parameters["to_cross"] == "El 98 Street"
+
+
+def test_named_street_without_crosses_is_not_ambiguous():
+    schema = ScenarioSchema(
+        description="Close all of Cuartero Street",
+        intervention_type="full_closure",
+        location="Cuartero Street",
+        from_cross="",
+        to_cross="",
+        is_ambiguous=False,
+    )
+    sc = parse_scenario("close Cuartero Street", client=FakeClient(schema))
+    assert sc.location == "Cuartero Street"
+    assert "from_cross" not in sc.parameters
+    assert "to_cross" not in sc.parameters
+
+
+def test_system_instruction_describes_span_fields(monkeypatch):
+    seen: dict[str, str] = {}
+
+    def capture(client, *, messages, **kwargs):
+        seen["content"] = messages[0]["content"]
+        schema = ScenarioSchema(
+            description="x", intervention_type="full_closure",
+            location="Cuartero Street", from_cross="", to_cross="", is_ambiguous=False,
+        )
+        class _Msg:
+            parsed = schema
+            content = ""
+        class _Choice:
+            message = _Msg()
+        class _Resp:
+            choices = [_Choice()]
+        return _Resp()
+
+    monkeypatch.setattr("matrix_kernel.orchestrator.generate_chat_completion", capture)
+    parse_scenario("close Cuartero from Fajardo up to EL98", client=FakeClient(
+        ScenarioSchema(
+            description="x", intervention_type="full_closure",
+            location="Cuartero Street", is_ambiguous=False,
+        )
+    ))
+    text = seen["content"]
+    assert "from_cross" in text
+    assert "Never put" in text or "canonical street name only" in text

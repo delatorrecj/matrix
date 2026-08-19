@@ -7,6 +7,7 @@ import {
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
+  mergeEdgeFeatures,
   overlayHonest,
   resultsCameraFly,
   resultsMapPin,
@@ -82,6 +83,30 @@ describe("filterAffectedFeatures", () => {
 
   it("returns null when none match", () => {
     expect(filterAffectedFeatures(EDGES, ["nope"])).toBeNull();
+  });
+
+  it("paints live closed-edge shapes that the static layer lacks", () => {
+    const live: EdgesFeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [122.554, 10.726],
+              [122.5555, 10.7235],
+            ],
+          },
+          properties: { edge_id: "154184307#10" },
+        },
+      ],
+    };
+    const merged = mergeEdgeFeatures(EDGES, live);
+    const fc = filterAffectedFeatures(merged, ["154184307#10"]);
+    expect(fc?.features).toHaveLength(1);
+    expect(fc?.features[0].properties.edge_id).toBe("154184307#10");
+    expect(filterAffectedFeatures(EDGES, ["154184307#10"])).toBeNull();
   });
 });
 
