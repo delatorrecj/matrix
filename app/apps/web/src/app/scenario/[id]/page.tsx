@@ -44,7 +44,6 @@ import {
   corridorAnchorLonLat,
   resultsMapPin,
   parseLonLat,
-  shouldAutoFly,
   zoomForBbox,
   zoomWithoutPullingOut,
 } from "@/components/map";
@@ -920,6 +919,9 @@ export default function ScenarioSimulation() {
                 anchor="center"
               >
                 <div
+                  data-testid="map-pin"
+                  data-lng={mapPin[0].toFixed(4)}
+                  data-lat={mapPin[1].toFixed(4)}
                   className="relative h-5 w-5"
                   title={corridorAnchor ? "Affected corridor" : "Location of interest"}
                 >

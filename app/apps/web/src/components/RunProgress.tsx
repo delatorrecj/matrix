@@ -61,13 +61,13 @@ function useTrickleProgress(target: number, active: boolean): number {
 }
 
 export default function RunProgress({ runState }: RunProgressProps) {
-  if (runState.phase === "done") {
-    return <DoneSummary runState={runState} />;
-  }
-
   const realPct = progressPercent(runState);
   const active = !isTerminal(runState.phase) && runState.phase !== "disconnected";
   const pct = useTrickleProgress(realPct, active);
+
+  if (runState.phase === "done") {
+    return <DoneSummary runState={runState} />;
+  }
 
   return (
     <div data-testid="run-progress">
