@@ -19,8 +19,10 @@ export type MapPlaybackState = {
 
 export type LatestRunPlayback = {
   edge_counts?: EdgeCounts;
-  frames?: Array<{ tick: number; agents: unknown[] }>;
-  affected_edges?: string[];
+  frames?: Array<{ tick: number; agents: Array<{ id: string; lon: number; lat: number }> }>;
+  // Some API payloads (and legacy caches) may return `null` instead of omitting the field.
+  // `mapPlaybackFromLatestRun` already handles this safely via `Array.isArray(...)`.
+  affected_edges?: string[] | null;
   edge_resolution?: string | null;
   overlay_honest?: boolean;
   location_of_interest?: [number, number] | null;
