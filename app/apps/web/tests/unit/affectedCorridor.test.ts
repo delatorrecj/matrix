@@ -86,9 +86,16 @@ describe("filterAffectedFeatures", () => {
 });
 
 describe("resultsCameraFly", () => {
-  it("stays on the city default when there is no honest corridor", () => {
+  it("stays on the city default when there is no corridor or LoI", () => {
     expect(resultsCameraFly(null)).toEqual({ kind: "stay" });
     expect(resultsCameraFly(filterAffectedFeatures(EDGES, []))).toEqual({ kind: "stay" });
+  });
+
+  it("flies to LoI point when no honest corridor", () => {
+    expect(resultsCameraFly(null, [122.5446, 10.6969])).toEqual({
+      kind: "point",
+      lonlat: [122.5446, 10.6969],
+    });
   });
 
   it("flies to corridor box when overlay exists", () => {
@@ -100,12 +107,14 @@ describe("resultsCameraFly", () => {
 });
 
 describe("resultsMapPin", () => {
-  it("is null without a corridor overlay", () => {
-    expect(resultsMapPin(null)).toBeNull();
+  it("uses LoI when there is no corridor overlay", () => {
+    expect(resultsMapPin(null, [122.5446, 10.6969])).toEqual([122.5446, 10.6969]);
   });
 
-  it("uses the corridor midpoint when the overlay exists", () => {
-    expect(resultsMapPin([122.545, 10.695])).toEqual([122.545, 10.695]);
+  it("prefers corridor midpoint over LoI", () => {
+    expect(resultsMapPin([122.545, 10.695], [122.5446, 10.6969])).toEqual([
+      122.545, 10.695,
+    ]);
   });
 });
 

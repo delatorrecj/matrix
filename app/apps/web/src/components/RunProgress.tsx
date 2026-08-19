@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import {
   RunState,
   formatMs,
   formatProgress,
+  isTerminal,
   progressPercent,
 } from "@/lib/simulationRun";
 
@@ -9,17 +11,63 @@ import {
  * Progress line while the run streams (phase-weighted percent + stage/result copy)
  * and, once DONE, the stage-timing summary (SUMO / modules / Azure OpenAI breakdown when
  * the server provides `timings`; legacy `duration_ms` otherwise).
+ *
+ * A cosmetic trickle keeps the bar moving during long waits (SUMO simulation)
+ * so the UI never looks frozen. The trickle never exceeds the real progress
+ * and never reaches 100 — it just fills the gap between real milestones.
  */
 interface RunProgressProps {
   runState: RunState;
 }
 
+/** Smoothly trickle toward `target` so the bar always appears alive. */
+function useTrickleProgress(target: number, active: boolean): number {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef<number>(0);
+  const prevTarget = useRef(target);
+
+  useEffect(() => {
+    if (!active) {
+      setDisplay(target);
+      return;
+    }
+
+    if (target > prevTarget.current) {
+      setDisplay((d) => Math.max(d, prevTarget.current));
+    }
+    prevTarget.current = target;
+
+    let last = performance.now();
+
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
+
+      setDisplay((d) => {
+        if (d >= target) return target;
+        const gap = target - d;
+        const step = Math.max(0.05, gap * 0.04) * (dt / 0.016);
+        return Math.min(target, d + step);
+      });
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, active]);
+
+  return Math.round(display);
+}
+
 export default function RunProgress({ runState }: RunProgressProps) {
+  const realPct = progressPercent(runState);
+  const active = !isTerminal(runState.phase) && runState.phase !== "disconnected";
+  const pct = useTrickleProgress(realPct, active);
+
   if (runState.phase === "done") {
     return <DoneSummary runState={runState} />;
   }
-
-  const pct = progressPercent(runState);
 
   return (
     <div data-testid="run-progress">
@@ -29,7 +77,7 @@ export default function RunProgress({ runState }: RunProgressProps) {
       </div>
       <div className="mt-1 h-1.5 rounded-full bg-secondary overflow-hidden">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
+          className="h-full rounded-full bg-primary transition-[width] duration-150"
           style={{ width: `${pct}%` }}
         />
       </div>

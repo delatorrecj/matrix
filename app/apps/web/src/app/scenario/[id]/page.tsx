@@ -39,10 +39,11 @@ import {
   affectedEdgesLayer,
   filterAffectedFeatures,
   honestAffectedEdgeIds,
+  LOI_FOCUS_ZOOM,
   resultsCameraFly,
   corridorAnchorLonLat,
   resultsMapPin,
-  shouldAutoFly,
+  parseLonLat,
   zoomForBbox,
   zoomWithoutPullingOut,
 } from "@/components/map";
@@ -159,16 +160,20 @@ export default function ScenarioSimulation() {
   const mapMounted = useHasMounted();
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [promptReview, setPromptReview] = useState<PromptHandoff | null>(null);
+  const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const handoff = takePromptHandoff(scenarioId);
     if (handoff) setPromptReview(handoff);
+    setLocationOfInterest(null);
 
     getScenario(scenarioId)
       .then((record) => {
         if (cancelled) return;
         setPromptReview((prev) => overlayPromptHandoff(record, prev));
+        const loi = parseLonLat(record.location_of_interest);
+        if (loi) setLocationOfInterest(loi);
       })
       .catch(() => {
         // Keep the handoff card if GET 404s (in-memory/Postgres split).
@@ -302,23 +307,47 @@ export default function ScenarioSimulation() {
     () => corridorAnchorLonLat(affectedCollection),
     [affectedCollection],
   );
-  const mapPin = useMemo(() => resultsMapPin(corridorAnchor), [corridorAnchor]);
+  const mapPin = useMemo(
+    () => resultsMapPin(corridorAnchor, locationOfInterest),
+    [corridorAnchor, locationOfInterest],
+  );
 
-  // Live run, or a hydrate still on the city default: corridor box only.
+  // Fly to corridor or LoI once per scenario load.
+  const hasAutoFlown = useRef(false);
+  useEffect(() => { hasAutoFlown.current = false; }, [scenarioId]);
+
   useEffect(() => {
     if (!mapLoaded || !viewReady) return;
-    if (!shouldAutoFly(shouldSimulate, isCityDefaultView(viewState))) return;
     const map = mapRef.current;
     if (!map) return;
-    const fly = resultsCameraFly(affectedCollection);
+    const fly = resultsCameraFly(affectedCollection, locationOfInterest);
     if (fly.kind === "stay") return;
-    const [minLng, minLat, maxLng, maxLat] = fly.bbox;
+
+    // IMPORTANT: prevent repeated flyTo while EDGE_COUNTS keeps streaming and
+    // `affectedCollection` changes (this was causing lag).
+    if (hasAutoFlown.current) return;
+
+    // During hydration (shouldSimulate=false), only auto-fly when still on the
+    // city default. For live simulation runs, always do the first fly.
+    const atCityDefault = isCityDefaultView(viewState);
+    if (!shouldSimulate && !atCityDefault) return;
+
+    hasAutoFlown.current = true;
+    if (fly.kind === "corridor") {
+      const [minLng, minLat, maxLng, maxLat] = fly.bbox;
+      map.flyTo({
+        center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
+        zoom: zoomWithoutPullingOut(map.getZoom(), zoomForBbox(fly.bbox)),
+        duration: 1800,
+      });
+      return;
+    }
     map.flyTo({
-      center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
-      zoom: zoomWithoutPullingOut(map.getZoom(), zoomForBbox(fly.bbox)),
+      center: fly.lonlat,
+      zoom: zoomWithoutPullingOut(map.getZoom(), LOI_FOCUS_ZOOM),
       duration: 1800,
     });
-  }, [affectedCollection, mapLoaded, shouldSimulate, viewReady]);
+  }, [affectedCollection, locationOfInterest, mapLoaded, shouldSimulate, viewReady, viewState]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const leavingRef = useRef(false);
@@ -418,6 +447,9 @@ export default function ScenarioSimulation() {
           setEdgeResolution(playbackState.edgeResolution);
           setAffectedEdges(playbackState.affectedEdges);
           setOverlayHonest(playbackState.overlayHonest);
+          if (playbackState.locationOfInterest) {
+            setLocationOfInterest(playbackState.locationOfInterest);
+          }
           if (typeof run.run_id === "string") setCurrentRunId(run.run_id);
           setSynthesis(null);
           const timings =
@@ -483,6 +515,9 @@ export default function ScenarioSimulation() {
         setEdgeResolution(pb.edgeResolution);
         setAffectedEdges(pb.affectedEdges);
         setOverlayHonest(pb.overlayHonest);
+        if (pb.locationOfInterest) {
+          setLocationOfInterest((prev) => prev ?? pb.locationOfInterest);
+        }
       } else if (msg.type === "DIMENSION_RESULT") {
         // Build provenance data payload format expected by InspectDrawer.
         // The raw value/range stay untouched here (Inspect = glass box, full
@@ -884,6 +919,9 @@ export default function ScenarioSimulation() {
                 anchor="center"
               >
                 <div
+                  data-testid="map-pin"
+                  data-lng={mapPin[0].toFixed(4)}
+                  data-lat={mapPin[1].toFixed(4)}
                   className="relative h-5 w-5"
                   title={corridorAnchor ? "Affected corridor" : "Location of interest"}
                 >

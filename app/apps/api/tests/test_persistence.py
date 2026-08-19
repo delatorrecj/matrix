@@ -172,7 +172,8 @@ def test_get_scenario_returns_location_and_geometry(client, monkeypatch):
     assert body["scenario_id"] == "scn-get-1"
     assert body["location"] == "Diversion Rd"
     assert body["geometry"] == {"type": "Point", "coordinates": [122.5621, 10.7202]}
-    assert "location_of_interest" not in body
+    # `location_of_interest` is camera-only (geometry centroid first).
+    assert body["location_of_interest"] == [122.5621, 10.7202]
     assert body["raw_input"] == "close a lane on Diversion Rd"
     assert body["intervention_type"] == "lane_closure"
     assert body["parameters"] == {"lanes_closed": 1}
@@ -197,7 +198,8 @@ def test_get_scenario_omits_map_truth_fields(client, monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["geometry"] is None
-    assert "location_of_interest" not in body
+    # Gazetter fallback for `location` (Molo alias) is used for LoI.
+    assert body["location_of_interest"] == [122.5446, 10.6969]
 
 
 def test_get_scenario_404_when_missing(client):

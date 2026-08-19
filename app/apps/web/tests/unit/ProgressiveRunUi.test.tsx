@@ -27,6 +27,7 @@ const { pushMock, replaceMock, assignMock, SCENARIO_RECORD } = vi.hoisted(() => 
     location: "Diversion Road",
     parameters: { lanes_closed: 1 },
     geometry: null,
+    location_of_interest: [122.5621, 10.7202],
   },
 }));
 
@@ -170,7 +171,7 @@ describe("RunStatusBanner", () => {
 });
 
 describe("RunProgress", () => {
-  it("shows the n/5 · m/17 progress line while streaming", () => {
+  it("shows the n/5 · m/18 progress line while streaming", () => {
     const mid = stateAfter([
       { type: "ACCEPTED" },
       { type: "DIMENSION_RESULT", dimension: "behavioral", metric: "a" },
@@ -179,13 +180,13 @@ describe("RunProgress", () => {
     ]);
     render(<RunProgress runState={mid} />);
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
-      "2/5 dimensions · 3/17 results",
+      "2/5 dimensions · 3/18 results",
     );
   });
 
   it("starts honestly at zero", () => {
     // CR-013 (44631f3): a fresh run never claims placeholder progress — it's
-    // "Connecting…" until the socket opens, not "0/5 · 0/17 results".
+    // "Connecting…" until the socket opens, not "0/5 · 0/18 results".
     render(<RunProgress runState={initialRunState()} />);
     expect(screen.getByTestId("progress-line")).toHaveTextContent("Connecting…");
   });
@@ -405,7 +406,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
     // CR-013 (44631f3): zero results reads as "Running traffic simulation…", not a
-    // "0/5 · 0/17" placeholder.
+    // "0/5 · 0/18" placeholder.
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
       "Running traffic simulation…",
     );
@@ -419,7 +420,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     expect(screen.queryByTestId("skeleton-behavioral")).not.toBeInTheDocument();
     expect(screen.getByTestId("skeleton-ecological")).toBeInTheDocument();
     expect(screen.getByTestId("progress-line")).toHaveTextContent(
-      "1/5 dimensions · 1/17 results",
+      "1/5 dimensions · 1/18 results",
     );
 
     act(() => ws.emit({ type: "DONE", scenario_id: "scn-test", duration_ms: 1000 }));
@@ -447,7 +448,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
 
     // EDGE_COUNTS is a no-op for run progress; the header chip uses the compact label.
     expect(screen.getByTestId("ws-status")).toHaveTextContent("Running…");
-    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
+    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/18 results");
 
     // Toggling a layer must not crash the page.
     fireEvent.click(screen.getByText("Flood Zones"));
@@ -464,7 +465,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
       ws.emit({ type: "TELEMETRY_V9", payload: { surprise: true } });
     });
     expect(screen.getByTestId("ws-status")).toHaveTextContent("Running…");
-    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
+    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/18 results");
   });
 
   it("shows the queue position while QUEUED", async () => {
@@ -635,7 +636,7 @@ describe("ScenarioSimulation page (progressive run UX)", () => {
     const banner = screen.getByTestId("disconnect-banner");
     expect(banner).toHaveTextContent(/connection lost mid-run/i);
     // Partial progress stays legible.
-    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/17 results");
+    expect(screen.getByTestId("progress-line")).toHaveTextContent("1/18 results");
 
     fireEvent.click(screen.getByRole("button", { name: /reconnect/i }));
     expect(FakeWebSocket.instances).toHaveLength(2);

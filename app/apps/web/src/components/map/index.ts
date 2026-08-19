@@ -8,6 +8,7 @@ export {
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
+  LOI_FOCUS_ZOOM,
   resultsCameraFly,
   resultsMapPin,
   parseLonLat,
