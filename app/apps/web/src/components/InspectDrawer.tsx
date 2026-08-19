@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfidenceChip, ConfidenceLevel, toConfidenceLevel } from "@/components/ConfidenceChip";
+import { PlannerFeedback } from "@/components/PlannerFeedback";
 import { resolveReferenceMeta } from "@/lib/datasets";
 import { X, ChevronDown, ExternalLink } from "lucide-react";
 
@@ -10,6 +11,7 @@ interface InspectDrawerProps {
   onClose: () => void;
   metricId: string | null;
   data: ProvenanceData | null;
+  runId?: string | null;
   children?: React.ReactNode;
 }
 
@@ -81,7 +83,7 @@ function MetaField({
   );
 }
 
-export default function InspectDrawer({ isOpen, onClose, data, children }: InspectDrawerProps) {
+export default function InspectDrawer({ isOpen, onClose, data, runId, children }: InspectDrawerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -402,6 +404,8 @@ export default function InspectDrawer({ isOpen, onClose, data, children }: Inspe
               {children}
             </div>
           )}
+
+          <PlannerFeedback runId={runId ?? null} equationId={data?.equationId ?? null} />
           </div>
         )}
       </div>

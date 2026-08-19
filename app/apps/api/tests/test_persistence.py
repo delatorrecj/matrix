@@ -172,23 +172,23 @@ def test_get_scenario_returns_location_and_geometry(client, monkeypatch):
     assert body["scenario_id"] == "scn-get-1"
     assert body["location"] == "Diversion Rd"
     assert body["geometry"] == {"type": "Point", "coordinates": [122.5621, 10.7202]}
-    assert body["location_of_interest"] == [122.5621, 10.7202]
+    assert "location_of_interest" not in body
     assert body["raw_input"] == "close a lane on Diversion Rd"
     assert body["intervention_type"] == "lane_closure"
     assert body["parameters"] == {"lanes_closed": 1}
 
 
-def test_get_scenario_location_of_interest_from_gazetteer(client, monkeypatch):
-    """NL place name, no map-drop: camera point comes from gazetteer coords, not geometry."""
+def test_get_scenario_omits_map_truth_fields(client, monkeypatch):
+    """GET /scenario is prompt metadata only — map truth rides on EDGE_COUNTS."""
     sc = SimpleNamespace(
         scenario_id="scn-molo-1",
         description="3-storey school in Molo",
         corridor="Molo",
         lanes_closed=1,
-        intervention_type="lane_closure",
+        intervention_type="new_facility",
         location="Molo",
         geometry=None,
-        parameters={"lanes_closed": 1},
+        parameters={"facility_kind": "school", "capacity": 3000},
     )
     monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: sc)
     client.post("/scenario", json={"query": "I want a 3-storey school in MOLO"})
@@ -197,32 +197,38 @@ def test_get_scenario_location_of_interest_from_gazetteer(client, monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["geometry"] is None
-    assert body["location_of_interest"][0] == pytest.approx(122.5446)
-    assert body["location_of_interest"][1] == pytest.approx(10.6969)
-
-
-def test_get_scenario_location_of_interest_null_when_unknown(client, monkeypatch):
-    sc = SimpleNamespace(
-        scenario_id="scn-unk-1",
-        description="somewhere unknown",
-        corridor="",
-        lanes_closed=1,
-        intervention_type="lane_closure",
-        location="NotAPlaceInTheGazetteer",
-        geometry=None,
-        parameters={"lanes_closed": 1},
-    )
-    monkeypatch.setattr(main, "parse_scenario", lambda q, geometry=None: sc)
-    client.post("/scenario", json={"query": "build at NotAPlaceInTheGazetteer"})
-
-    resp = client.get("/scenario/scn-unk-1")
-    assert resp.status_code == 200
-    assert resp.json()["location_of_interest"] is None
+    assert "location_of_interest" not in body
 
 
 def test_get_scenario_404_when_missing(client):
     resp = client.get("/scenario/does-not-exist")
     assert resp.status_code == 404
+
+
+def test_compare_scenarios_returns_latest_runs(client, monkeypatch):
+    """GET /scenarios/compare side-by-side hydrates playback fields."""
+    sid_a = "scn-cmp-a"
+    sid_b = "scn-cmp-b"
+    run_a = db.save_run(sid_a, status="running")
+    db.save_dimension_results(run_a, _results(2))
+    db.save_run(
+        sid_a,
+        run_id=run_a,
+        status="done",
+        duration_ms=1000,
+        timings={"affected_edges": ["e1"], "edge_resolution": "keyword-match"},
+    )
+    run_b = db.save_run(sid_b, status="running")
+    db.save_dimension_results(run_b, _results(1))
+    db.save_run(sid_b, run_id=run_b, status="done", duration_ms=900, timings={})
+    resp = client.get(f"/scenarios/compare?a={sid_a}&b={sid_b}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["a_scenario_id"] == sid_a
+    assert body["b_scenario_id"] == sid_b
+    assert body["a"]["run_id"] == run_a
+    assert body["b"]["run_id"] == run_b
+    assert body["a"]["affected_edges"] == ["e1"]
 
 
 # ─── the seam fix: a live run simulates the PERSISTED scenario, not a blank stand-in ─────

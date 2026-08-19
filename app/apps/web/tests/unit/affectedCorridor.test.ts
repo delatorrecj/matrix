@@ -7,6 +7,7 @@ import {
   filterAffectedFeatures,
   honestAffectedEdgeIds,
   isHonestEdgeResolution,
+  overlayHonest,
   resultsCameraFly,
   resultsMapPin,
   shouldAutoFly,
@@ -65,6 +66,11 @@ describe("honestAffectedEdgeIds", () => {
     expect(isHonestEdgeResolution("facility-demand")).toBe(false);
     expect(honestAffectedEdgeIds("facility-demand", ["e1"])).toEqual([]);
   });
+
+  it("respects kernel overlay_honest=false over method string", () => {
+    expect(honestAffectedEdgeIds("keyword-match", ["e1"], false)).toEqual([]);
+    expect(overlayHonest(false, "keyword-match")).toBe(false);
+  });
 });
 
 describe("filterAffectedFeatures", () => {
@@ -80,36 +86,26 @@ describe("filterAffectedFeatures", () => {
 });
 
 describe("resultsCameraFly", () => {
-  it("stays on the city default when there is no honest corridor and no LoI", () => {
+  it("stays on the city default when there is no honest corridor", () => {
     expect(resultsCameraFly(null)).toEqual({ kind: "stay" });
     expect(resultsCameraFly(filterAffectedFeatures(EDGES, []))).toEqual({ kind: "stay" });
   });
 
-  it("flies to GET /scenario LoI when there is no honest corridor", () => {
-    expect(resultsCameraFly(null, [122.5446, 10.6969])).toEqual({
-      kind: "point",
-      lonlat: [122.5446, 10.6969],
-    });
-  });
-
-  it("prefers the corridor box over LoI when both exist", () => {
+  it("flies to corridor box when overlay exists", () => {
     const collection = filterAffectedFeatures(EDGES, ["e1"]);
-    const fly = resultsCameraFly(collection, [122.5446, 10.6969]);
+    const fly = resultsCameraFly(collection);
     const bbox = affectedBounds(collection)!;
     expect(fly).toEqual({ kind: "corridor", bbox });
   });
 });
 
 describe("resultsMapPin", () => {
-  it("falls back to LoI when there is no corridor overlay", () => {
-    expect(resultsMapPin(null, [122.5446, 10.6969])).toEqual([122.5446, 10.6969]);
-    expect(resultsMapPin(null, null)).toBeNull();
+  it("is null without a corridor overlay", () => {
+    expect(resultsMapPin(null)).toBeNull();
   });
 
   it("uses the corridor midpoint when the overlay exists", () => {
-    expect(resultsMapPin([122.545, 10.695], [122.5446, 10.6969])).toEqual([
-      122.545, 10.695,
-    ]);
+    expect(resultsMapPin([122.545, 10.695])).toEqual([122.545, 10.695]);
   });
 });
 

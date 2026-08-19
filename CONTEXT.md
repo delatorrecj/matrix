@@ -34,9 +34,11 @@ A gazetteer `street_name` used when the curated `sumo_edge` is missing from the 
 
 - Camera follows the **corridor box**, never `GET /scenario` gazetteer coordinates and never a location marker.
 - Fallback resolution: overlay none, camera stays on the Iloilo default view.
+- Kernel emits **`overlay_honest`** on simulate / EDGE_COUNTS; web does not parse resolution strings when the flag is present.
 
-## Decisions (grill 2026-08-17)
+## Decisions (grill 2026-08-17, implemented 2026-08-19)
 
 - Q5 **B**: pan only after honest simulate edges; do not pan from `GET /scenario`.
 - Q6 **B**: corridor box only (no fly to a district centroid).
 - Q7 **B**: gazetteer repair for Molo + Diversion Road aliases (not every district).
+- Map-truth module: one `location_of_interest` (SUMO midpoint or null); no camera LoI on GET /scenario.

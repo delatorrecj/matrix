@@ -1,0 +1,16 @@
+{
+  "name": "Jakarta (ASEAN portability demo)",
+  "slug": "jakarta-demo",
+  "bbox": "-6.30,106.70,-6.10,106.90",
+  "net_path": "packages/kernel/data/jakarta-demo.net.xml",
+  "rou_path": "packages/kernel/data/jakarta-demo.rou.xml",
+  "mode_share": {
+    "ojek": 0.25,
+    "angkot": 0.20,
+    "private_car": 0.25,
+    "motorcycle": 0.20,
+    "walk": 0.07,
+    "bicycle": 0.03
+  },
+  "note": "Placeholder config for Phase 5 second-city demo. Build net/demand before enabling."
+}

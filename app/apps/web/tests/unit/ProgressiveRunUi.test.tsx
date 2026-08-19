@@ -27,7 +27,6 @@ const { pushMock, replaceMock, assignMock, SCENARIO_RECORD } = vi.hoisted(() => 
     location: "Diversion Road",
     parameters: { lanes_closed: 1 },
     geometry: null,
-    location_of_interest: [122.5621, 10.7202] as [number, number],
   },
 }));
 

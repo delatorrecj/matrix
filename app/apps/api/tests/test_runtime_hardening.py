@@ -32,6 +32,7 @@ FAKE_TRAJ = Trajectory(
     meta={
         "kind": "scenario",
         "edge_resolution": "keyword-match",
+        "overlay_honest": True,
         "location_of_interest": [122.56, 10.72],
         "affected_edges": ["edge-1"],
     },
@@ -125,6 +126,7 @@ def test_done_carries_timings_and_event_order(fast_pipeline, client):
     # results view's ground-truth source for panning/marking the map (NL-only queries).
     assert edge_evt["location_of_interest"] == [122.56, 10.72]
     assert edge_evt["edge_resolution"] == "keyword-match"
+    assert edge_evt["overlay_honest"] is True
     assert edge_evt["affected_edges"] == ["edge-1"]
     assert types.index("EDGE_COUNTS") > types.index("PLAYBACK_FRAME")
     assert types.index("EDGE_COUNTS") < types.index("DIMENSION_RESULT")
@@ -149,7 +151,7 @@ def test_edge_counts_location_of_interest_is_null_for_fallback_resolution(monkey
         edge_counts={"edge-1": 5},
         frames=[],
         meta={"kind": "scenario", "edge_resolution": "busiest-baseline-fallback (no location given)",
-              "location_of_interest": None},
+              "overlay_honest": False, "location_of_interest": None},
     )
     monkeypatch.setattr(main, "_get_trajectory", lambda scenario_id: fallback_traj)
     with client.websocket_connect("/simulate/s2") as ws:

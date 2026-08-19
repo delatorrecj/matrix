@@ -12,8 +12,8 @@ export {
   resultsMapPin,
   parseLonLat,
   corridorAnchorLonLat,
+  overlayHonest,
   shouldAutoFly,
-  shouldFlyToCorridor,
   zoomForBbox,
   zoomWithoutPullingOut,
 } from "./affectedCorridor";

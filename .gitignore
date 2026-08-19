@@ -1,7 +1,7 @@
 # ── matrix repo root ──────────────────────────────────────────────────────
-# FMD/ is a SEPARATE, independently-versioned git repository vendored into this
-# folder (its own remote). It is NOT part of the matrix repo — never embed it as
-# a gitlink. Operate on it with:  git -C FMD ...
+# Trap: never commit a nested FMD clone here. The documentation engine lives as
+# a sibling at D:\PROJECTS\FMD (github.com/delatorrecj/fmd). Operate on it with:
+#   git -C D:\PROJECTS\FMD ...
 /FMD/
 
 # Python tooling cruft (from data/fetch/*.py and any top-level scripts)

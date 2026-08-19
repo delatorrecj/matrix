@@ -258,7 +258,7 @@ Phase 0 ─ Gate 0 ─ Phase 1 ─ Gate 1 ─┬─ Phase 2 ─ Phase 3 ─ Phas
 | Mode-share calibration is literature-derived, not a live travel survey | Ongoing | Carry Behavioral behavior at **M**; show the H/M/L label honestly. Bias auditor + confidence layer turn this into a trust feature, not a hidden gap. **(Phase 8: still uncalibrated — carried, not closed.)** |
 | End-to-end ~123 s exceeds the 90 s budget | Ongoing | Phase 8 (PR #9) made **per-stage timings visible in the `DONE` event** so the dominant cost can be attacked precisely; the budget is not yet met. |
 | Validation gates / map samples ship on **PROVISIONAL** fixtures | Ongoing | Phase 8 computes VAL-01/VAL-02 from fixtures (Calderon genuinely sourced; flood **PROVISIONAL**) and labels flood/edges/confidence-map samples PROVISIONAL in-product. **Live numbers need the corridor→edge map + a kernel run.** Honesty is surfaced, not hidden. |
-| Nested app + docs in one repo blurs concerns (and `FMD/` is a *separate* nested repo) | Low | Resolved the two-repo sync risk by nesting — `app/` shares the clone + `data/`. Keep app changes scoped to `app/`; never `git add FMD`. If the app later needs its own CI/remote, split it out then. |
+| Nested app + docs in one repo blurs concerns | Low | `app/` shares the clone + `data/`. Keep app changes scoped to `app/`. The FMD engine is a sibling clone (`D:\PROJECTS\FMD`), not vendored here — do not nest a second `FMD/` under this repo. If the app later needs its own CI/remote, split it out then. |
 
 ---
 

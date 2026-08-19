@@ -24,9 +24,9 @@ describe("reduceRunEvent lifecycle", () => {
     expect(stateAfter([{ type: "ACCEPTED" }]).phase).toBe("running");
   });
 
-  it("expects 5 dimensions and 17 results in total", () => {
+  it("expects 5 dimensions and 18 results in total", () => {
     expect(TOTAL_DIMENSIONS).toBe(5);
-    expect(TOTAL_EXPECTED_RESULTS).toBe(17);
+    expect(TOTAL_EXPECTED_RESULTS).toBe(18);
   });
 
   it("tracks the QUEUED position and clears it on the first PLAYBACK_FRAME", () => {
@@ -50,8 +50,8 @@ describe("reduceRunEvent lifecycle", () => {
     expect(s.resultsByDimension.ecological).toBe(1);
     expect(s.resultCount).toBe(3);
     expect(dimensionsReported(s)).toBe(2);
-    expect(formatProgress(s)).toBe("2/5 dimensions · 3/17 results");
-    expect(progressPercent(s)).toBe(40 + Math.round((3 / 17) * 55));
+    expect(formatProgress(s)).toBe("2/5 dimensions · 3/18 results");
+    expect(progressPercent(s)).toBe(40 + Math.round((3 / 18) * 55));
   });
 
   it("shows SUMO-stage copy and mid-band percent before any results", () => {
@@ -73,13 +73,14 @@ describe("reduceRunEvent lifecycle", () => {
   });
 
   it("marks a dimension complete only at its expected count", () => {
-    const two = stateAfter([
+    const three = stateAfter([
+      { type: "DIMENSION_RESULT", dimension: "behavioral" },
       { type: "DIMENSION_RESULT", dimension: "behavioral" },
       { type: "DIMENSION_RESULT", dimension: "behavioral" },
     ]);
-    expect(isDimensionComplete(two, "behavioral")).toBe(false);
-    const three = reduceRunEvent(two, { type: "DIMENSION_RESULT", dimension: "behavioral" });
-    expect(isDimensionComplete(three, "behavioral")).toBe(true);
+    expect(isDimensionComplete(three, "behavioral")).toBe(false);
+    const four = reduceRunEvent(three, { type: "DIMENSION_RESULT", dimension: "behavioral" });
+    expect(isDimensionComplete(four, "behavioral")).toBe(true);
   });
 
   it("parses DONE with duration and per-stage timings", () => {

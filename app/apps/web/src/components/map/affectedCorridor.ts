@@ -1,10 +1,8 @@
 /**
  * Honest "where we edited the net" helpers for the results map.
  *
- * Overlay + camera fly the honest corridor when edge_resolution is a real match
- * (geometry / gazetteer / keyword / gazetteer-alias). Fallback and facility-demand
- * skip the halo. Camera + pin still use GET /scenario (or EDGE_COUNTS) LoI so a
- * school-in-Molo run is not a blank city overview.
+ * Overlay + camera follow the honest corridor when the kernel sets overlay_honest.
+ * Fallback and facility-demand stay on the city default — no gazetteer fly/pin.
  */
 
 import type { EdgesFeatureCollection, Feature, LonLat } from "./types";
@@ -20,11 +18,22 @@ export function isHonestEdgeResolution(method: string | null | undefined): boole
   return !method.startsWith("busiest-baseline-fallback");
 }
 
+/** Prefer kernel overlay_honest when present; else parse edge_resolution (legacy). */
+export function overlayHonest(
+  overlayHonestFlag: boolean | null | undefined,
+  resolution: string | null | undefined,
+): boolean {
+  if (typeof overlayHonestFlag === "boolean") return overlayHonestFlag;
+  return isHonestEdgeResolution(resolution);
+}
+
 export function honestAffectedEdgeIds(
   resolution: string | null | undefined,
   ids: unknown,
+  overlayHonestFlag?: boolean | null,
 ): string[] {
-  if (!isHonestEdgeResolution(resolution) || !Array.isArray(ids)) return [];
+  if (!overlayHonest(overlayHonestFlag, resolution)) return [];
+  if (!Array.isArray(ids)) return [];
   return ids.filter((id): id is string => typeof id === "string" && id.length > 0);
 }
 
@@ -86,17 +95,14 @@ export function affectedBounds(
 
 export type ResultsCameraFly =
   | { kind: "stay" }
-  | { kind: "corridor"; bbox: [number, number, number, number] }
-  | { kind: "point"; lonlat: LonLat };
+  | { kind: "corridor"; bbox: [number, number, number, number] };
 
-/** Camera follows the corridor box when we edited the net; else the scenario LoI. */
+/** Camera follows the corridor box only (CONTEXT.md Q6). */
 export function resultsCameraFly(
   collection: EdgesFeatureCollection | null,
-  locationOfInterest?: LonLat | null,
 ): ResultsCameraFly {
   const bbox = affectedBounds(collection);
   if (bbox) return { kind: "corridor", bbox };
-  if (locationOfInterest) return { kind: "point", lonlat: locationOfInterest };
   return { kind: "stay" };
 }
 
@@ -109,12 +115,9 @@ export function corridorAnchorLonLat(
   return [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
 }
 
-/** Pin: honest corridor midpoint, else GET /scenario / EDGE_COUNTS LoI. */
-export function resultsMapPin(
-  corridorAnchor: LonLat | null,
-  locationOfInterest: LonLat | null,
-): LonLat | null {
-  return corridorAnchor ?? locationOfInterest;
+/** Pin: honest corridor midpoint only — no gazetteer fallback. */
+export function resultsMapPin(corridorAnchor: LonLat | null): LonLat | null {
+  return corridorAnchor;
 }
 
 export function parseLonLat(value: unknown): LonLat | null {
@@ -134,11 +137,6 @@ export function parseLonLat(value: unknown): LonLat | null {
 /** Live run always; hydrate only while the camera is still the city default. */
 export function shouldAutoFly(liveSimulation: boolean, atCityDefault: boolean): boolean {
   return liveSimulation || atCityDefault;
-}
-
-/** Hydrated completed runs must not auto-fly — that is the refresh zoom-out. */
-export function shouldFlyToCorridor(liveSimulation: boolean): boolean {
-  return liveSimulation;
 }
 
 /** Pan/zoom-in to fit a corridor; never pull the camera farther out. */

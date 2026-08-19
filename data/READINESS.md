@@ -10,7 +10,7 @@ This is the bridge from [INVENTORY.md](INVENTORY.md) (what we have) to the spec 
 | Dimension | Data in hand (INVENTORY IDs) | Conf | Real gaps → next |
 |---|---|---|---|
 | **Engine / Base** | OSM network ✅ · Overture buildings/POIs ✅ · land-use ✅ | **H** | DEM gradients: GLO-30 ⏳ / LiPAD 10 m flood open ✅ path · refresh: [OPEN_REFRESH.md](OPEN_REFRESH.md) |
-| **Behavioral** *(trip gen, mode shift, ped flow)* | OSM + LPTRP index + PT relations ✅ · Calderon 2014 ✅ · Tier-B WorldPop demand ✅ | **H** network / **M** behavior | Mode-share stays **literature** (no FOI). VAL-01 directional. Refresh OSM + recalibrate demand monthly / pre-demo. |
+| **Behavioral** *(trip gen, mode shift, ped flow)* | OSM + LPTRP index + PT relations ✅ · Calderon 2014 ✅ · Tier-B WorldPop demand ✅ (`demand_calibration.py`, `MATRIX_DEMAND_SCALE`) | **H** network / **M** behavior | Mode-share stays **literature** (no FOI). VAL-01 live NRMSE at API startup (PASS or honest FAIL). Refresh OSM + recalibrate demand monthly / pre-demo. |
 | **Social** *(equity, displacement, access)* | CCHAIN WorldPop + RWI + health isochrones ✅ · DOH/OSM POIs ✅ | **M–H** | Open only: GHSL/WorldPop freshness; CBMS FOI **wont-file** (use CCHAIN) |
 | **Economic** *(land value, footfall, jobs, tax)* | BIR CSV ✅ · FIES/ASPBI OpenStat ✅ · WB + CCHAIN lights/buildings ✅ | **M** | Skip DOT regional tourism (no conf unlock). Re-pull OpenStat on refresh. |
 | **Ecological** *(emissions, air, green, flood, heat)* | ESA WorldCover ✅ · NOAH hazards ✅ · WHO-EMEP ✅ · OpenAQ fixture ✅ | **H** hazards/green / **M→L** air | LiPAD 10 m hazard ∩ roads · OpenAQ free key · GFM event VAL-02 stays NOT_RUN |

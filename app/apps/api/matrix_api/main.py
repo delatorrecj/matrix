@@ -144,7 +144,7 @@ def _warm_kernel_caches() -> None:
 # QUEUED and ERROR extend the original sequence (additive only -- never reordered).
 EVENT_TYPES = ("ACCEPTED", "QUEUED", "PLAYBACK_FRAME", "EDGE_COUNTS", "DIMENSION_RESULT", "SYNTHESIS", "DONE", "ERROR")
 REDIS_URL = os.environ.get("MATRIX_REDIS_URL", "redis://localhost:6379/0")
-MAX_STREAM_FRAMES = 20
+MAX_STREAM_FRAMES = int(os.environ.get("MATRIX_MAX_STREAM_FRAMES", "20"))
 
 
 @app.get("/health")
@@ -228,29 +228,13 @@ def _geometry_lnglat(geometry: dict | None) -> list[float] | None:
     return None
 
 
-def _camera_location_of_interest(location: object, geometry: dict | None) -> list[float] | None:
-    """Camera-only [lon, lat]: map-drop centroid, else gazetteer coords for `location`."""
-    pt = _geometry_lnglat(geometry)
-    if pt:
-        return pt
-    if not location or not str(location).strip():
-        return None
-    try:
-        from matrix_kernel.gazetteer import location_coordinates
-    except ImportError:  # pragma: no cover - bare env without kernel package
-        return None
-    return location_coordinates(str(location))
-
-
 @app.get("/scenario/{scenario_id}")
 def get_scenario(scenario_id: str) -> dict:
-    """A saved scenario's parsed fields, notably `location`/`geometry` -- the results view
-    (CR-013) fetches this once on load to pan/zoom the map to the scenario's location of
-    interest. `geometry` comes back from Postgres as a `ST_AsGeoJSON` *string*; the
-    in-memory fallback stores it as a dict already -- normalize both to a dict|None here.
-    `location_of_interest` is camera-only (not Scenario.geometry): map-drop centroid, else
-    gazetteer coordinates for the stored location name. `raw_input` is the planner's
-    original query so the results dock can restate it."""
+    """A saved scenario's parsed fields for the results prompt card.
+
+    Map truth (overlay, corridor box, location marker) comes from simulate /
+    EDGE_COUNTS only — not from this endpoint (CONTEXT.md Q5).
+    """
     record = db.get_scenario(scenario_id)
     if record is None:
         return JSONResponse(status_code=404, content={"error": "scenario not found", "scenario_id": scenario_id})
@@ -268,7 +252,6 @@ def get_scenario(scenario_id: str) -> dict:
         "location": record.get("location"),
         "parameters": parameters if isinstance(parameters, dict) else {},
         "geometry": geom,
-        "location_of_interest": _camera_location_of_interest(record.get("location"), geom),
     }
 
 
@@ -314,6 +297,7 @@ def _playback_from_cache(scenario_id: str) -> dict | None:
         if not raw:
             return None
         traj = Trajectory.from_json(raw)
+        meta = traj.meta
         frames = [
             {"tick": fr.tick, "agents": fr.agents}
             for fr in traj.frames[:MAX_STREAM_FRAMES]
@@ -321,8 +305,10 @@ def _playback_from_cache(scenario_id: str) -> dict | None:
         return {
             "edge_counts": traj.edge_counts,
             "frames": frames,
-            "affected_edges": traj.meta.get("affected_edges") or [],
-            "edge_resolution": traj.meta.get("edge_resolution"),
+            "affected_edges": meta.get("affected_edges") or [],
+            "edge_resolution": meta.get("edge_resolution"),
+            "overlay_honest": meta.get("overlay_honest"),
+            "location_of_interest": meta.get("location_of_interest"),
         }
     except Exception:
         return None
@@ -330,6 +316,27 @@ def _playback_from_cache(scenario_id: str) -> dict | None:
         if client is not None:
             with suppress(Exception):
                 client.close()
+
+
+@app.get("/scenarios/compare")
+def compare_scenarios(a: str, b: str) -> dict:
+    """Side-by-side latest completed runs for two scenarios (decision-intelligence path)."""
+    run_a = db.get_latest_run_for_scenario(a)
+    run_b = db.get_latest_run_for_scenario(b)
+    out: dict = {"a_scenario_id": a, "b_scenario_id": b}
+    if run_a:
+        view_a = _run_public_view(run_a)
+        view_a["playback"] = _playback_from_cache(a)
+        out["a"] = view_a
+    else:
+        out["a"] = None
+    if run_b:
+        view_b = _run_public_view(run_b)
+        view_b["playback"] = _playback_from_cache(b)
+        out["b"] = view_b
+    else:
+        out["b"] = None
+    return out
 
 
 @app.get("/scenarios/{scenario_id}/latest-run")
@@ -672,6 +679,7 @@ async def simulate_ws(ws: WebSocket, scenario_id: str) -> None:
             "edge_counts": traj.edge_counts,
             "location_of_interest": traj.meta.get("location_of_interest"),
             "edge_resolution": traj.meta.get("edge_resolution"),
+            "overlay_honest": traj.meta.get("overlay_honest"),
             "affected_edges": traj.meta.get("affected_edges") or [],
         })
 

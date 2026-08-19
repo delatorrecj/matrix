@@ -3,6 +3,7 @@ import DimensionCardSkeleton from "@/components/DimensionCardSkeleton";
 import SynthesisNarrative, { type SynthesisCitation } from "@/components/SynthesisNarrative";
 import ValidationPanel from "@/components/ValidationPanel";
 import BiasAuditLog from "@/components/BiasAuditLog";
+import { ScenarioCompare } from "@/components/ScenarioCompare";
 import { DIMENSIONS, EXPECTED_RESULTS, type DimensionId } from "@/lib/simulationRun";
 import { DIMENSION_LABELS, DIMENSION_DOT } from "@/lib/metrics";
 import { interpretDimension } from "@/lib/interpret";
@@ -76,6 +77,7 @@ export function AnalyticsView({
       )}
 
       <ValidationPanel />
+      <ScenarioCompare scenarioId={scenarioId} />
       <BiasAuditLog runId={scenarioId} />
     </div>
   );

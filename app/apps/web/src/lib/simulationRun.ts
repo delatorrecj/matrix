@@ -27,7 +27,7 @@ export type DimensionId = (typeof DIMENSIONS)[number];
 
 /** Expected result (metric) count per dimension — methods-matrix Phase 3 equations. */
 export const EXPECTED_RESULTS: Record<DimensionId, number> = {
-  behavioral: 3, // BEH-1..3
+  behavioral: 4, // BEH-1..3 + optional BEH-4 facility demand
   ecological: 4, // ECO-1..4
   social: 3, // SOC-1..3
   economic: 3, // ECON-1..3
@@ -38,7 +38,7 @@ export const TOTAL_DIMENSIONS = DIMENSIONS.length; // 5
 export const TOTAL_EXPECTED_RESULTS = Object.values(EXPECTED_RESULTS).reduce(
   (a, b) => a + b,
   0,
-); // 17
+); // 18
 
 export function isKnownDimension(id: unknown): id is DimensionId {
   return typeof id === "string" && (DIMENSIONS as readonly string[]).includes(id);

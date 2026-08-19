@@ -1,0 +1,19 @@
+---
+description: FMD formal-doc routing via sibling engine; MATRIX AGENTS.md is not an FMD pointer
+alwaysApply: true
+---
+
+# FMD (sibling engine)
+
+This repo's root `AGENTS.md` is the **MATRIX build-agents** guide (glass-box + eval gates). It is **not** an FMD pointer. Do not treat it as the FMD operating guide.
+
+**Pinned engine:** FMD v1.28.1 at `D:/PROJECTS/FMD` ([github.com/delatorrecj/fmd](https://github.com/delatorrecj/fmd) tag `v1.28.1`).
+
+When the user asks for a formal document (PRD, SDD, DSD, RFC, QAD, SAD, BUILD, CLR, GTM, OPS, CR, INDEX, postmortem, etc.):
+
+1. Read `D:/PROJECTS/FMD/AGENTS.md` for triggers, scale, and workflow.
+2. Load the matching template from `D:/PROJECTS/FMD/templates/<NAME>_Template.md`.
+3. Save filled output under this repo's `docs/` (e.g. `docs/prd-matrix.md`).
+4. Validate with `python D:/PROJECTS/FMD/scripts/check.py docs/`.
+
+Do **not** auto-load FMD `examples/`, `Playbook.md`, `plans/`, `benchmarks/`, or `CHANGELOG.md` into product/`app/` build sessions. Do not nest a second `FMD/` clone under this repo.

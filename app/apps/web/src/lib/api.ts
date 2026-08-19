@@ -117,8 +117,6 @@ export interface ScenarioRecord {
   /** Scenario.parameters (facility kind/capacity, lanes_closed, …). */
   parameters?: Record<string, unknown>;
   geometry: ScenarioGeometry | null;
-  /** Gazetteer/map-drop [lon, lat]; the results map does not pan from this field. */
-  location_of_interest?: [number, number] | null;
 }
 
 /**
@@ -165,7 +163,53 @@ export interface LatestRunRecord {
     frames: Array<{ tick: number; agents: Array<{ id: string; lon: number; lat: number }> }>;
     affected_edges?: string[] | null;
     edge_resolution?: string | null;
+    overlay_honest?: boolean;
+    location_of_interest?: [number, number] | null;
   } | null;
+}
+
+export interface FeedbackPayload {
+  run_id: string;
+  equation_id: string;
+  verdict: "plausible" | "implausible";
+  note?: string;
+  observed_value?: number | null;
+}
+
+export async function submitPlannerFeedback(
+  payload: FeedbackPayload,
+): Promise<{ status: string; feedback_id: string }> {
+  const res = await apiFetch("/feedback", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `Feedback failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+/** Compare two scenarios' latest completed runs via GET /scenarios/compare. */
+export async function compareScenarios(
+  scenarioA: string,
+  scenarioB: string,
+): Promise<{
+  a: LatestRunRecord | null;
+  b: LatestRunRecord | null;
+}> {
+  const res = await apiFetch(
+    `/scenarios/compare?a=${encodeURIComponent(scenarioA)}&b=${encodeURIComponent(scenarioB)}`,
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `Compare failed (HTTP ${res.status})`);
+  }
+  const body = await res.json();
+  return {
+    a: (body.a as LatestRunRecord | null) ?? null,
+    b: (body.b as LatestRunRecord | null) ?? null,
+  };
 }
 
 /**

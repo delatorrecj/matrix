@@ -1,0 +1,8 @@
+{
+  "name": "Iloilo City (full pilot net)",
+  "slug": "iloilo",
+  "bbox": "10.65,122.50,10.78,122.61",
+  "net_path": "packages/kernel/data/iloilo.net.xml",
+  "rou_path": "packages/kernel/data/iloilo.rou.xml",
+  "note": "SUMO proof on the full Iloilo pilot bbox. Set MATRIX_CITY_CONFIG to this file from app/."
+}

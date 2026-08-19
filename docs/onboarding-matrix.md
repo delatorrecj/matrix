@@ -105,9 +105,8 @@ Several constants are **named provisional proxies** (vendors per closed lane, PH
 | `app/packages/kernel` | SUMO runner, modules, glass-box types, bias auditor |
 | `app/packages/data` | Network/demand build scripts |
 | `data/` | Iloilo acquisition. Raw files are gitignored. Reproduce with `data/fetch/` |
-| `FMD/` | Separate nested git repo of templates. Do not edit templates as MATRIX work. |
 
-Two git repos share one folder: `matrix` at the root, `FMD/` ignored as its own clone.
+The FMD documentation engine is a **sibling clone** at `D:\PROJECTS\FMD` (v1.28.1), not nested under this repo. Use it only when writing or amending formal docs.
 
 ---
 

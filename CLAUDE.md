@@ -91,18 +91,16 @@ These were chosen deliberately with documented justification (MATRIX.md §6). Tr
 - **Stack:** Next.js 14 (App Router) + Tailwind v4 + shadcn/ui frontend; Mapbox GL JS + Deck.gl (TripsLayer) for animated playback; FastAPI + WebSocket backend; **Postgres + PostGIS** (run/scenario/results/audit — local via `docker compose`, with an **in-memory fallback** so prod needs no managed DB) + **ChromaDB** (GraphRAG vectors) + **Redis** (persona pool + baseline + trajectory cache); XGBoost baseline forecaster. **Deploy:** Vercel (web) + Hugging Face Spaces (API — Docker, Redis in-container; [CR-011](docs/cr-011-huggingface-migration.md)). *Not* Supabase, *not* Fly.io (both removed).
 - **Pilot city is Iloilo.** Geographic scaling is intended to be API-level (swap OSM bbox) and behavioral scaling prompt-level (reweight persona archetypes) — keep the engine city-agnostic.
 
-## The FMD framework (`FMD/` — a separate, nested repository)
+## The FMD framework (sibling clone)
 
-`FMD/` is a **distinct git repository vendored into this folder** (its own remote `github.com/delatorrecj/fmd.git`, its own history; it appears as *untracked* in the parent's `git status` and is **not** a submodule). It is the **Foundational Matrix Documents** system: a suite of documentation templates plus a trigger-phrase routing layer for generating a project's formal doc suite (BRD, PRD, DSD, SDD, RFC, QAD, SAD, BUILD, CLR, GTM, OPS, plus CR/PM/INDEX).
+FMD (Foundational Matrix Documents) is the documentation engine: templates plus a trigger-phrase routing layer. It lives as a **sibling clone**, not inside this repo:
 
-- When the user asks for a formal document ("write a PRD", "architect the system / write an SDD", "compliance review", etc.), **follow [FMD/AGENTS.md](FMD/AGENTS.md)** (its canonical operating guide) and [FMD/CLAUDE.md](FMD/CLAUDE.md) (Claude-Code-specific notes). That guide owns the trigger→template mapping, project-scale rules, sequencing, and living-docs/traceability conventions — do not duplicate them here.
-- Generated documents for MATRIX live in the **`docs/`** folder at this repo root (e.g. `docs/prd-matrix.md`), per FMD's naming convention. The full suite (PRD · SDD · DSD · Methods · QAD · SAD · BUILD · CLR · GTM · OPS · RFC-001) was generated 2026-06-02. **PRD, SDD, and methods-matrix are Locked** (CR-001, 2026-06-03); the rest are Draft. See [`docs/index.md`](docs/index.md) for current status.
-- The `FMD/*_Template.md` files are **canonical sources** — never hand-edit them as part of MATRIX work, and never delete them (FMD's `exit fmd` cleanup only removes generated `docs/` output, never templates).
-- The editor rule files under `FMD/.cursor/` and `FMD/.windsurf/` are thin pointers to FMD/AGENTS.md and apply only when operating inside FMD.
-
-## Git: two independent repositories in one folder
-
-Commands run from the root operate on the **matrix** repo (`github.com/delatorrecj/matrix.git`) and **do not see `FMD/`'s contents** (FMD is ignored as a nested clone). To act on FMD's own files and history, target it explicitly with `git -C FMD …`. Keep changes to the two repos in separate commits to their respective remotes.
+- **Engine path:** `D:\PROJECTS\FMD` (pinned **v1.28.1**, [github.com/delatorrecj/fmd](https://github.com/delatorrecj/fmd) tag `v1.28.1`)
+- When the user asks for a formal document ("write a PRD", "architect the system / write an SDD", "compliance review", "log a change", etc.), load `D:\PROJECTS\FMD\AGENTS.md` and the matching template under `D:\PROJECTS\FMD\templates/`. Do not duplicate that routing here.
+- Generated documents for MATRIX live in **`docs/`** at this repo root (e.g. `docs/prd-matrix.md`). The suite was generated 2026-06-02; **PRD, SDD, and methods-matrix are Locked**. See [`docs/index.md`](docs/index.md).
+- **Do not** auto-load FMD `examples/`, `Playbook.md`, `plans/`, `benchmarks/`, or `CHANGELOG.md` into an `app/` build session (FMD's anti-poison rule).
+- Validate filled docs with: `python D:\PROJECTS\FMD\scripts\check.py docs/`
+- Never nest a second `FMD/` clone under this repo (`.gitignore` traps `/FMD/`). Operate on the engine with `git -C D:\PROJECTS\FMD …`.
 
 ## Conventions
 

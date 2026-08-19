@@ -26,6 +26,7 @@ from pathlib import Path
 
 from matrix_kernel import sumo_env  # wires SUMO_HOME + tools
 from matrix_kernel.baseline import NET, ROU, SIM_END, load_baseline
+from matrix_kernel.map_truth import map_truth_fields
 from matrix_kernel.personas import ILOILO_MODE_SHARE
 from matrix_kernel.scenario import Scenario, apply_intervention  # noqa: F401  (Scenario re-exported)
 from matrix_kernel.trajectory import Frame, Trajectory
@@ -157,16 +158,25 @@ def resolve_intervention_site(scenario: Scenario, top_n: int = 1) -> tuple[list[
 
 def facility_demand_meta(scenario: Scenario) -> dict | None:
     """BEH-4 summary for Trajectory.meta, or None when the scenario is not a facility."""
+    delta = _facility_demand_delta(scenario)
+    if delta is None:
+        return None
+    from matrix_kernel.demand_delta import demand_delta_summary
+
+    return demand_delta_summary(delta)
+
+
+def _facility_demand_delta(scenario: Scenario):
+    """Full DemandDelta for injection, or None."""
     if scenario.intervention_type != "new_facility":
         return None
-    from matrix_kernel.demand_delta import demand_delta_summary, prepare_facility_demand
+    from matrix_kernel.demand_delta import prepare_facility_demand
 
-    delta = prepare_facility_demand(
+    return prepare_facility_demand(
         scenario.geometry,
         scenario.effective_location,
         scenario.effective_parameters(),
     )
-    return demand_delta_summary(delta)
 
 
 def _location_of_interest(affected: list[str], edge_resolution: str) -> list[float] | None:
@@ -190,9 +200,13 @@ def _location_of_interest(affected: list[str], edge_resolution: str) -> list[flo
     return [round(lon, 5), round(lat, 5)]
 
 
-def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
-             max_frames: int = 40) -> Trajectory:
+def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int | None = None,
+             max_frames: int | None = None) -> Trajectory:
     """Run the scenario via TraCI as a delta vs the cached baseline -> one Trajectory."""
+    if sample_period is None:
+        sample_period = int(os.environ.get("MATRIX_SIM_SAMPLE_PERIOD", "30"))
+    if max_frames is None:
+        max_frames = int(os.environ.get("MATRIX_SIM_MAX_FRAMES", "30"))
     if not NET.exists() or not ROU.exists():
         raise FileNotFoundError("network/demand missing -- run build_network.py + build_demand.py")
     import traci
@@ -200,6 +214,8 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
     affected, edge_resolution = resolve_intervention_site(scenario)
     location_of_interest = _location_of_interest(affected, edge_resolution)
     demand_meta = facility_demand_meta(scenario)
+    demand_delta = _facility_demand_delta(scenario)
+    truth = map_truth_fields(affected, edge_resolution, location_of_interest)
 
     with tempfile.TemporaryDirectory() as td:
         add = Path(td) / "ed.add.xml"
@@ -232,6 +248,12 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
         try:
             # Apply the scenario's network edit via the per-intervention dispatcher.
             applied = apply_intervention(conn, scenario, affected)
+            injection_record = None
+            if demand_delta is not None:
+                from matrix_kernel.facility_injection import inject_facility_demand
+
+                injection_record = inject_facility_demand(conn, _net(), demand_delta)
+                applied = {**applied, "facility_injection": injection_record}
             while conn.simulation.getMinExpectedNumber() > 0 and conn.simulation.getTime() < end:
                 conn.simulationStep()
         finally:
@@ -252,9 +274,10 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int = 30,
             "affected_edges": affected,
             "applied": applied,  # dispatch record: edges touched, parameters, TraCI calls, assumptions
             "edge_resolution": edge_resolution,  # "geometry" (map-drop) or "keyword-match"
+            "overlay_honest": truth["overlay_honest"],
             # [lon, lat] of the first affected edge's midpoint, or None for a fallback
-            # resolution (CR-013: the results-view map marker/pan; ground truth, not a guess).
-            "location_of_interest": location_of_interest,
+            # resolution (CR-013: location marker only; camera uses corridor box).
+            "location_of_interest": truth["location_of_interest"],
             # -- legacy keys: the five modules read these as "the affected corridor" -- keep. --
             "closed_edges": affected,
             "edge_lanes": applied["edge_lanes"],

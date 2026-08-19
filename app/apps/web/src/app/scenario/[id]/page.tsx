@@ -30,7 +30,8 @@ import {
   isTerminal,
   reduceRunEvent,
 } from "@/lib/simulationRun";
-import { accumulateTripFrame, framesToTrips } from "@/lib/playbackTrips";
+import { mapPlaybackFromLatestRun, mapPlaybackFromWs } from "@/lib/mapPlayback";
+import { accumulateTripFrame } from "@/lib/playbackTrips";
 import { LayerLegend } from "@/components/LayerLegend";
 import {
   useMapLayers,
@@ -41,7 +42,6 @@ import {
   resultsCameraFly,
   corridorAnchorLonLat,
   resultsMapPin,
-  parseLonLat,
   shouldAutoFly,
   zoomForBbox,
   zoomWithoutPullingOut,
@@ -62,35 +62,16 @@ import { useHasMounted } from "@/lib/useHasMounted";
 import { MapContextMenu } from "@/components/map/MapContextMenu";
 import { useMapContextMenu } from "@/components/map/useMapContextMenu";
 import { DeckGLOverlay } from "@/components/map/DeckGLOverlay";
+import {
+  SCENARIO_DEFAULT_VIEW,
+  clampScenarioViewState,
+} from "@/components/map/scenarioMapConstants";
 import { isCityDefaultView, loadMapView, saveMapView } from "@/components/map/mapViewMemory";
 import type { MapRef } from "react-map-gl/maplibre";
 import type { DimensionId, RunTimings } from "@/lib/simulationRun";
 
-const DEFAULT_VIEW = {
-  longitude: 122.56,
-  latitude: 10.72,
-  zoom: 13,
-  pitch: 45,
-  bearing: 0,
-};
-
-const ILOILO_BOUNDS = {
-  minLng: 122.48,
-  maxLng: 122.62,
-  minLat: 10.64,
-  maxLat: 10.79,
-  minZoom: 11
-};
-
-// deck.gl onViewStateChange is generic over ViewStateT (TransitionProps | MapViewState),
-// so no concrete view-state shape is assignable; we mutate the live viewState to clamp it.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleViewStateChange = ({ viewState }: any) => ({
-  ...viewState,
-  longitude: Math.min(Math.max(viewState.longitude, ILOILO_BOUNDS.minLng), ILOILO_BOUNDS.maxLng),
-  latitude: Math.min(Math.max(viewState.latitude, ILOILO_BOUNDS.minLat), ILOILO_BOUNDS.maxLat),
-  zoom: Math.max(viewState.zoom, ILOILO_BOUNDS.minZoom),
-});
+const DEFAULT_VIEW = SCENARIO_DEFAULT_VIEW;
+const handleViewStateChange = clampScenarioViewState;
 
 /** Map a stored GET /runs|/latest-run result into the same card shape as DIMENSION_RESULT. */
 function storedResultToCard(r: StoredDimensionResult, index: number): ResultCardData {
@@ -183,14 +164,11 @@ export default function ScenarioSimulation() {
     let cancelled = false;
     const handoff = takePromptHandoff(scenarioId);
     if (handoff) setPromptReview(handoff);
-    setLocationOfInterest(null);
 
     getScenario(scenarioId)
       .then((record) => {
         if (cancelled) return;
         setPromptReview((prev) => overlayPromptHandoff(record, prev));
-        const loi = parseLonLat(record.location_of_interest);
-        if (loi) setLocationOfInterest(loi);
       })
       .catch(() => {
         // Keep the handoff card if GET 404s (in-memory/Postgres split).
@@ -284,7 +262,8 @@ export default function ScenarioSimulation() {
   const [edgeCounts, setEdgeCounts] = useState<EdgeCounts>({});
   const [affectedEdges, setAffectedEdges] = useState<string[]>([]);
   const [edgeResolution, setEdgeResolution] = useState<string | null>(null);
-  const [locationOfInterest, setLocationOfInterest] = useState<[number, number] | null>(null);
+  const [overlayHonest, setOverlayHonest] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [activeLayers, setActiveLayers] = useState<MapLayerToggles>({
     agents: true, congestion: true, flood: false,
   });
@@ -313,9 +292,9 @@ export default function ScenarioSimulation() {
     () =>
       filterAffectedFeatures(
         edgesGeoJSON,
-        honestAffectedEdgeIds(edgeResolution, affectedEdges),
+        honestAffectedEdgeIds(edgeResolution, affectedEdges, overlayHonest),
       ),
-    [edgesGeoJSON, edgeResolution, affectedEdges],
+    [edgesGeoJSON, edgeResolution, affectedEdges, overlayHonest],
   );
 
   const haloLayer = useMemo(() => affectedEdgesLayer(affectedCollection), [affectedCollection]);
@@ -323,34 +302,23 @@ export default function ScenarioSimulation() {
     () => corridorAnchorLonLat(affectedCollection),
     [affectedCollection],
   );
-  const mapPin = useMemo(
-    () => resultsMapPin(corridorAnchor, locationOfInterest),
-    [corridorAnchor, locationOfInterest],
-  );
+  const mapPin = useMemo(() => resultsMapPin(corridorAnchor), [corridorAnchor]);
 
-  // Live run, or a hydrate still sitting on the city default: corridor box, else LoI.
+  // Live run, or a hydrate still on the city default: corridor box only.
   useEffect(() => {
     if (!mapLoaded || !viewReady) return;
     if (!shouldAutoFly(shouldSimulate, isCityDefaultView(viewState))) return;
     const map = mapRef.current;
     if (!map) return;
-    const fly = resultsCameraFly(affectedCollection, locationOfInterest);
+    const fly = resultsCameraFly(affectedCollection);
     if (fly.kind === "stay") return;
-    if (fly.kind === "corridor") {
-      const [minLng, minLat, maxLng, maxLat] = fly.bbox;
-      map.flyTo({
-        center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
-        zoom: zoomWithoutPullingOut(map.getZoom(), zoomForBbox(fly.bbox)),
-        duration: 1800,
-      });
-      return;
-    }
+    const [minLng, minLat, maxLng, maxLat] = fly.bbox;
     map.flyTo({
-      center: fly.lonlat,
-      zoom: zoomWithoutPullingOut(map.getZoom(), 14),
+      center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
+      zoom: zoomWithoutPullingOut(map.getZoom(), zoomForBbox(fly.bbox)),
       duration: 1800,
     });
-  }, [affectedCollection, locationOfInterest, mapLoaded, shouldSimulate, viewReady]);
+  }, [affectedCollection, mapLoaded, shouldSimulate, viewReady]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const leavingRef = useRef(false);
@@ -439,26 +407,18 @@ export default function ScenarioSimulation() {
         if (run && run.status === "done" && Array.isArray(run.results) && run.results.length > 0) {
           const cards = run.results.map(storedResultToCard);
           setResults(cards);
-          const playback = run.playback;
-          if (playback && typeof playback.edge_counts === "object") {
-            setEdgeCounts(playback.edge_counts);
-            const { trips, maxTime } = framesToTrips(Array.isArray(playback.frames) ? playback.frames : []);
-            setTripsData(trips);
-            setMaxTime((prev) => Math.max(prev, maxTime));
-            setMapPlaybackExpired(false);
-          } else {
-            setTripsData([]);
-            setEdgeCounts({});
-            setMapPlaybackExpired(true);
-          }
-          const resolution =
-            (playback && typeof playback.edge_resolution === "string" && playback.edge_resolution) ||
-            (typeof run.edge_resolution === "string" ? run.edge_resolution : null);
-          const edges =
-            (playback && Array.isArray(playback.affected_edges) && playback.affected_edges) ||
-            (Array.isArray(run.affected_edges) ? run.affected_edges : []);
-          setEdgeResolution(resolution);
-          setAffectedEdges(edges.filter((id): id is string => typeof id === "string"));
+          const playbackState = mapPlaybackFromLatestRun(run.playback, {
+            affected_edges: run.affected_edges,
+            edge_resolution: run.edge_resolution,
+          });
+          setEdgeCounts(playbackState.edgeCounts);
+          setTripsData(playbackState.trips);
+          setMaxTime((prev) => Math.max(prev, playbackState.maxTime));
+          setMapPlaybackExpired(playbackState.playbackExpired);
+          setEdgeResolution(playbackState.edgeResolution);
+          setAffectedEdges(playbackState.affectedEdges);
+          setOverlayHonest(playbackState.overlayHonest);
+          if (typeof run.run_id === "string") setCurrentRunId(run.run_id);
           setSynthesis(null);
           const timings =
             run.timings && typeof run.timings === "object"
@@ -518,18 +478,11 @@ export default function ScenarioSimulation() {
           setTripsData((prev) => accumulateTripFrame(prev, tick, agents));
         }
       } else if (msg.type === "EDGE_COUNTS") {
-        // Aggregate per-edge counts that drive the congestion choropleth.
-        if (msg.edge_counts && typeof msg.edge_counts === "object") {
-          setEdgeCounts(msg.edge_counts as EdgeCounts);
-        }
-        if (typeof msg.edge_resolution === "string") {
-          setEdgeResolution(msg.edge_resolution);
-        }
-        if (Array.isArray(msg.affected_edges)) {
-          setAffectedEdges(msg.affected_edges.filter((id): id is string => typeof id === "string"));
-        }
-        const loi = parseLonLat(msg.location_of_interest);
-        if (loi) setLocationOfInterest((prev) => prev ?? loi);
+        const pb = mapPlaybackFromWs(msg);
+        setEdgeCounts(pb.edgeCounts);
+        setEdgeResolution(pb.edgeResolution);
+        setAffectedEdges(pb.affectedEdges);
+        setOverlayHonest(pb.overlayHonest);
       } else if (msg.type === "DIMENSION_RESULT") {
         // Build provenance data payload format expected by InspectDrawer.
         // The raw value/range stay untouched here (Inspect = glass box, full
@@ -581,6 +534,11 @@ export default function ScenarioSimulation() {
           setSynthesis({ narrative: msg.narrative, citations });
         }
       } else if (msg.type === "DONE") {
+        void getLatestRun(scenarioId)
+          .then((run) => {
+            if (run?.run_id) setCurrentRunId(run.run_id);
+          })
+          .catch(() => {});
         ws.close();
       }
     };
@@ -865,6 +823,7 @@ export default function ScenarioSimulation() {
             onClose={closeInspect}
             metricId={inspectData?.equationId || null}
             data={inspectData}
+            runId={currentRunId}
           >
             <div className="flex flex-col gap-4 mt-2">
               <h4 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-1">

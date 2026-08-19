@@ -1,6 +1,10 @@
 """Third-party spot-checks (WHO-EMEP EF band + OpenAQ scale) — Credibility Phase 1."""
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("sumo", reason="eclipse-sumo not installed; run `uv sync` in app/packages/kernel")
+
 from matrix_kernel.external_checks import check_openaq_pm25_scale, check_who_emep_ef_band
 from matrix_kernel.modules.ecological import _EF_CO2_G_PER_KM
 

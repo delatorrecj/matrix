@@ -1,5 +1,7 @@
 # AGENTS.md — MATRIX Build Agents
 
+> This file is the **MATRIX product build-agents** guide only. The FMD documentation engine is the sibling clone at `D:\PROJECTS\FMD` (v1.28.1). Load that engine only for formal-doc work — see `.cursor/rules/fmd.mdc` and `CLAUDE.md`.
+
 **For the 5-person Team ATLAN, in Claude Code / Cursor / Windsurf.**
 
 These agents help enforce the two non-negotiable guardrails during build (Sprints 2–4): **glass-box traceability** and **test/validation gates** so they cannot be skipped under hackathon time pressure.
