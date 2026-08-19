@@ -304,21 +304,30 @@ export default function ScenarioSimulation() {
   );
   const mapPin = useMemo(() => resultsMapPin(corridorAnchor), [corridorAnchor]);
 
-  // Live run, or a hydrate still on the city default: corridor box only.
+  // Fly to corridor once per scenario load. The ref prevents repeat flights
+  // after the user manually pans away (sessionStorage view ≠ default).
+  const hasAutoFlown = useRef(false);
+  useEffect(() => { hasAutoFlown.current = false; }, [scenarioId]);
+
   useEffect(() => {
     if (!mapLoaded || !viewReady) return;
-    if (!shouldAutoFly(shouldSimulate, isCityDefaultView(viewState))) return;
     const map = mapRef.current;
     if (!map) return;
     const fly = resultsCameraFly(affectedCollection);
     if (fly.kind === "stay") return;
+
+    // Allow the fly if: (a) we haven't flown yet for this scenario,
+    // (b) it's a live simulation, or (c) we're still at the city default.
+    if (hasAutoFlown.current && !shouldAutoFly(shouldSimulate, isCityDefaultView(viewState))) return;
+
+    hasAutoFlown.current = true;
     const [minLng, minLat, maxLng, maxLat] = fly.bbox;
     map.flyTo({
       center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
       zoom: zoomWithoutPullingOut(map.getZoom(), zoomForBbox(fly.bbox)),
       duration: 1800,
     });
-  }, [affectedCollection, mapLoaded, shouldSimulate, viewReady]);
+  }, [affectedCollection, mapLoaded, shouldSimulate, viewReady, viewState]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const leavingRef = useRef(false);
