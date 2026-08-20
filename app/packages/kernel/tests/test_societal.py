@@ -45,7 +45,7 @@ def _trajectory() -> Trajectory:
     return Trajectory(
         edge_counts={"C0": 20, "C1": 40, "OTHER": 210},
         frames=[],
-        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1},
+        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1, "val01_status": "PASS"},
     )
 
 

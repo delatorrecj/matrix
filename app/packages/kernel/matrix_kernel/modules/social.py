@@ -23,6 +23,15 @@ from matrix_kernel.datasets import (
     mean_market_convenience_pois,
 )
 from matrix_kernel.results import DimensionResult
+from matrix_kernel.scoring_aperture import (
+    REROUTING_ASSUMPTION,
+    intervention_type,
+    na_result,
+    network_delta,
+    resolve_val01_status,
+    val01_volume_note,
+    volume_confidence,
+)
 from matrix_kernel.trajectory import Trajectory
 
 _VENDORS_PER_CLOSED_LANE = 12
@@ -30,13 +39,14 @@ _VENDORS_PER_CLOSED_LANE = 12
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
-    sc = trajectory.edge_counts
-    corridor = trajectory.meta.get("closed_edges", [])
     rng = random.Random(9)
     results: list[DimensionResult] = []
+    val01 = resolve_val01_status(trajectory.meta)
+    vol_note = val01_volume_note(val01)
+    itype = intervention_type(trajectory)
 
-    delta_trips = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor) if corridor else 0.0
-    base_trips = sum(base.get(e, 0) for e in corridor) if corridor else 0.0
+    delta_trips = network_delta(trajectory, base)
+    base_trips = float(sum(base.values())) if base else 0.0
     access_delta = float(delta_trips) / max(abs(base_trips), 1.0)
 
     # ── SOC-1: Equity-weighted access (isochrones × RWI) ──
@@ -45,15 +55,22 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         rwi_w = inverse_rwi_equity_weight()
         if rwi_w is None:
             val1 = float(delta_trips) * 0.001
-            conf1 = method_capped_confidence(["CCHAIN", "NHFR"], "L")
-            assumptions1 = ["CCHAIN RWI/isochrones missing — scalar stand-in", "confidence L"]
+            conf1 = volume_confidence(["CCHAIN", "NHFR"], val01, pass_method="L")
+            assumptions1 = [
+                "CCHAIN RWI/isochrones missing — scalar stand-in",
+                "confidence L",
+                vol_note,
+                REROUTING_ASSUMPTION,
+            ]
         else:
             weight, year = rwi_w
             val1 = weight * access_delta
-            conf1 = method_capped_confidence(["CCHAIN", "NHFR"], "M")
+            conf1 = volume_confidence(["CCHAIN", "NHFR"], val01, pass_method="M")
             assumptions1 = [
                 f"fallback city-mean inverse RWI = {weight:.4f} ({year}); isochrones unavailable",
                 f"Δaccess = {access_delta:.4f}",
+                vol_note,
+                REROUTING_ASSUMPTION,
             ]
     else:
         rows, vintage = joined
@@ -66,11 +83,13 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
             acc += w * d_b
             total_w += w
         val1 = acc / total_w if total_w else 0.0
-        conf1 = method_capped_confidence(["CCHAIN", "NHFR"], "M")
+        conf1 = volume_confidence(["CCHAIN", "NHFR"], val01, pass_method="M")
         assumptions1 = [
             f"equity-weighted access over {len(rows)} barangays ({vintage})",
             "A = mean_w( (1/(rwi+ε)) · (hospital_15min_pct/100) · Δtrips/base )",
-            f"corridor Δaccess share = {access_delta:.4f}",
+            f"network Δaccess share = {access_delta:.4f}",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
 
     lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.5, 1.5), n=500)
@@ -89,52 +108,74 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
 
     # ── SOC-2: Displacement risk count ──
     lanes_closed = int(trajectory.meta.get("lanes_closed", 0) or 0)
-    poi = mean_market_convenience_pois()
-    if poi is None:
-        val2 = float(lanes_closed * _VENDORS_PER_CLOSED_LANE)
-        conf2 = provisional_capped_confidence(["CCHAIN", "OSM-ILO"])
-        assumptions2 = [
-            f"CCHAIN amenity missing — fallback vendors/lane = {_VENDORS_PER_CLOSED_LANE} PROVISIONAL",
-        ]
+    if itype not in ("lane_closure", "full_closure"):
+        results.append(na_result(
+            dimension="social",
+            metric="Displacement risk count",
+            equation_id="SOC-2",
+            unit="count",
+            input_dataset_ids=["CCHAIN", "OSM-ILO"],
+            applicability="not_applicable",
+            confidence="M",
+            assumptions=[
+                f"not applicable: vendor displacement is a closure metric "
+                f"(intervention_type={itype})"
+            ],
+        ))
     else:
-        dens, year = poi
-        val2 = float(lanes_closed) * dens
-        conf2 = method_capped_confidence(["CCHAIN", "OSM-ILO"], "M")
-        assumptions2 = [
-            f"vendors/lane = city-mean(market+convenience) = {dens:.3f} (CCHAIN amenity {year})",
-            f"lanes_closed = {lanes_closed}",
-        ]
+        poi = mean_market_convenience_pois()
+        if poi is None:
+            val2 = float(lanes_closed * _VENDORS_PER_CLOSED_LANE)
+            conf2 = provisional_capped_confidence(["CCHAIN", "OSM-ILO"])
+            assumptions2 = [
+                f"CCHAIN amenity missing — fallback vendors/lane = {_VENDORS_PER_CLOSED_LANE} PROVISIONAL",
+            ]
+        else:
+            dens, year = poi
+            val2 = float(lanes_closed) * dens
+            conf2 = method_capped_confidence(["CCHAIN", "OSM-ILO"], "M")
+            assumptions2 = [
+                f"vendors/lane = city-mean(market+convenience) = {dens:.3f} (CCHAIN amenity {year})",
+                f"lanes_closed = {lanes_closed}",
+            ]
 
-    lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.8, 1.2), n=500)
-    results.append(DimensionResult(
-        dimension="social",
-        metric="Displacement risk count",
-        equation_id="SOC-2",
-        value=val2,
-        range=(lo2, hi2),
-        unit="count",
-        confidence=conf2,
-        input_dataset_ids=["CCHAIN", "OSM-ILO"],
-        references=[],
-        assumptions=assumptions2,
-    ))
+        lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.8, 1.2), n=500)
+        results.append(DimensionResult(
+            dimension="social",
+            metric="Displacement risk count",
+            equation_id="SOC-2",
+            value=val2,
+            range=(lo2, hi2),
+            unit="count",
+            confidence=conf2,
+            input_dataset_ids=["CCHAIN", "OSM-ILO"],
+            references=[],
+            assumptions=assumptions2,
+        ))
 
     # ── SOC-3: Distributional split ──
     rwi_means = latest_rwi_means()
     if rwi_means is None:
         val3 = val1 * 1.5
-        conf3 = method_capped_confidence(["CCHAIN", "WorldPop"], "L")
-        assumptions3 = ["CCHAIN RWI missing — 1.5× access scalar", "confidence L"]
+        conf3 = volume_confidence(["CCHAIN", "WorldPop"], val01, pass_method="L")
+        assumptions3 = [
+            "CCHAIN RWI missing — 1.5× access scalar",
+            "confidence L",
+            vol_note,
+            REROUTING_ASSUMPTION,
+        ]
     else:
         means, year = rwi_means
         cutoff = statistics.quantiles(means, n=3)[0] if len(means) >= 3 else statistics.median(means)
         low_share = sum(1 for r in means if r <= cutoff) / len(means)
         val3 = val1 * (1.0 + low_share)
-        conf3 = method_capped_confidence(["CCHAIN", "WorldPop"], "M")
+        conf3 = volume_confidence(["CCHAIN", "WorldPop"], val01, pass_method="M")
         assumptions3 = [
             f"bottom-tercile RWI cutoff = {cutoff:.4f} (CCHAIN {year})",
             f"low-income barangay share = {low_share:.3f}",
             "low_income_impact = A · (1 + low_share)",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
 
     lo3, hi3 = earned_confidence_interval(val3, lambda: val3 * rng.uniform(0.7, 1.3), n=500)

@@ -19,6 +19,7 @@ export interface ProvenanceWireFields {
   assumptions: string[];
   references: string[];
   confidenceBasis?: string;
+  applicability?: string;
 }
 
 export function buildProvenanceData(fields: ProvenanceWireFields): ProvenanceData {
@@ -34,6 +35,7 @@ export function buildProvenanceData(fields: ProvenanceWireFields): ProvenanceDat
     inputs: resolveDatasetInputs(fields.input_dataset_ids),
     assumptions: fields.assumptions,
     references: fields.references,
+    applicability: fields.applicability,
   };
 }
 

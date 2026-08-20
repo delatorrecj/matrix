@@ -20,6 +20,21 @@ describe("buildProvenanceData", () => {
     expect(prov.inputs[1]?.name).toMatch(/Overture/i);
   });
 
+  it("passes applicability through to Inspect", () => {
+    const prov = buildProvenanceData({
+      metric: "mode-share shift (jeepney)",
+      value: "0",
+      range: "0..0",
+      confidence: "M",
+      equationId: "BEH-2",
+      input_dataset_ids: ["PERSONA-POOL"],
+      assumptions: ["not modeled"],
+      references: [],
+      applicability: "not_modeled",
+    });
+    expect(prov.applicability).toBe("not_modeled");
+  });
+
   it("leaves unknown dataset ids as bare id rows", () => {
     const prov = buildProvenanceData({
       metric: "test",

@@ -10,6 +10,7 @@ def test_overlay_honest_for_keyword_match():
     assert overlay_honest("geometry") is True
     assert overlay_honest("keyword-span") is True
     assert overlay_honest("keyword-span-open") is True
+    assert overlay_honest("facility-adjacent") is True
 
 
 def test_overlay_honest_false_for_fallback_and_facility():

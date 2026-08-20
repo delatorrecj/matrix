@@ -186,6 +186,7 @@ def _scenario_params(scenario: Any) -> dict[str, Any]:
         "intervention_type": getattr(scenario, "intervention_type", None),
         "location": getattr(scenario, "location", None),
         "parameters": getattr(scenario, "parameters", None),
+        "flood_hazard": bool(getattr(scenario, "flood_hazard", False)),
     }
 
 
@@ -362,7 +363,7 @@ def get_run(run_id: str) -> dict[str, Any] | None:
         run = _mem_runs.get(run_id)
         if run is None:
             return None
-        return {**run, "results": [dict(r) for r in _mem_results.get(run_id, [])]}
+        return {**run, "results": [_row_to_result(dict(r)) for r in _mem_results.get(run_id, [])]}
 
 
 def get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
@@ -390,7 +391,7 @@ def get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
 
         latest = max(candidates, key=_sort_key)
         run_id = latest["run_id"]
-        return {**latest, "results": [dict(r) for r in _mem_results.get(run_id, [])]}
+        return {**latest, "results": [_row_to_result(dict(r)) for r in _mem_results.get(run_id, [])]}
 
 
 def _pg_get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
@@ -417,8 +418,7 @@ def _pg_get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
         ).fetchall()
     run["created_at"] = _iso(run["created_at"])
     run["completed_at"] = _iso(run["completed_at"])
-    run["results"] = [
-        {
+    run["results"] = [_row_to_result({
             "dimension": r["dimension"],
             "metric": r["metric"],
             "equation_id": r["equation_id"],
@@ -430,7 +430,7 @@ def _pg_get_latest_run_for_scenario(scenario_id: str) -> dict[str, Any] | None:
             "input_dataset_ids": list(r["input_dataset_ids"] or []),
             "references": list(r["references"] or []),
             "assumptions": r["assumptions"] or [],
-        }
+        })
         for r in rows
     ]
     return run
@@ -456,8 +456,7 @@ def _pg_get_run(run_id: str) -> dict[str, Any] | None:
         ).fetchall()
     run["created_at"] = _iso(run["created_at"])
     run["completed_at"] = _iso(run["completed_at"])
-    run["results"] = [
-        {
+    run["results"] = [_row_to_result({
             "dimension": r["dimension"],
             "metric": r["metric"],
             "equation_id": r["equation_id"],
@@ -469,7 +468,7 @@ def _pg_get_run(run_id: str) -> dict[str, Any] | None:
             "input_dataset_ids": list(r["input_dataset_ids"] or []),
             "references": list(r["references"] or []),
             "assumptions": r["assumptions"] or [],
-        }
+        })
         for r in rows
     ]
     return run
@@ -478,11 +477,48 @@ def _pg_get_run(run_id: str) -> dict[str, Any] | None:
 # ─── dimension results (glass box, PRD-F14) ─────────────────────────────────────────────
 
 
+_APPLICABILITY_PREFIX = "applicability:"
+
+
+def _pack_assumptions(record: dict[str, Any]) -> list:
+    assumptions = list(record.get("assumptions") or [])
+    app = str(record.get("applicability") or "computed")
+    tag = f"{_APPLICABILITY_PREFIX}{app}"
+    if not any(isinstance(a, str) and a.startswith(_APPLICABILITY_PREFIX) for a in assumptions):
+        assumptions = [tag, *assumptions]
+    return assumptions
+
+
+def _row_to_result(r: dict[str, Any]) -> dict[str, Any]:
+    assumptions = list(r.get("assumptions") or [])
+    applicability = r.get("applicability") or "computed"
+    kept: list = []
+    for a in assumptions:
+        if isinstance(a, str) and a.startswith(_APPLICABILITY_PREFIX):
+            applicability = a.split(":", 1)[1].strip() or "computed"
+        else:
+            kept.append(a)
+    return {
+        "dimension": r["dimension"],
+        "metric": r["metric"],
+        "equation_id": r["equation_id"],
+        "value": r["value"],
+        "range": r.get("range") or [r.get("range_low"), r.get("range_high")],
+        "unit": r["unit"],
+        "confidence": r["confidence"],
+        "directional": r.get("directional", r.get("directional_only")),
+        "applicability": applicability,
+        "input_dataset_ids": list(r.get("input_dataset_ids") or []),
+        "references": list(r.get("references") or []),
+        "assumptions": kept,
+    }
+
+
 def _result_record(r: Any) -> dict[str, Any]:
     """Serialize a DimensionResult duck-typed; same keys as the WS DIMENSION_RESULT event
     so a reloaded run feeds the Inspect drawer unchanged."""
     lo, hi = tuple(getattr(r, "range", (0.0, 0.0)))
-    return {
+    rec = {
         "dimension": getattr(r, "dimension"),
         "metric": getattr(r, "metric"),
         "equation_id": getattr(r, "equation_id"),
@@ -491,10 +527,13 @@ def _result_record(r: Any) -> dict[str, Any]:
         "unit": getattr(r, "unit"),
         "confidence": getattr(r, "confidence"),
         "directional": bool(getattr(r, "directional", getattr(r, "confidence", "") == "L")),
+        "applicability": getattr(r, "applicability", "computed") or "computed",
         "input_dataset_ids": list(getattr(r, "input_dataset_ids")),
         "references": list(getattr(r, "references", []) or []),
         "assumptions": list(getattr(r, "assumptions", []) or []),
     }
+    rec["assumptions"] = _pack_assumptions(rec)
+    return rec
 
 
 def save_dimension_results(run_id: str, results: list[Any]) -> int:

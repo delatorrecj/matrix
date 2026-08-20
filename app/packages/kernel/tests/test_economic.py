@@ -42,7 +42,7 @@ def _trajectory() -> Trajectory:
     return Trajectory(
         edge_counts={"C0": 20, "C1": 40, "OTHER": 210},
         frames=[],
-        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1},
+        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1, "val01_status": "PASS"},
     )
 
 
@@ -80,3 +80,16 @@ def test_economic_degrades_honestly_without_raw_datasets(raw_datasets):
         assert any("missing" in a for a in assumptions), eq
         assert any("capped at L" in a for a in assumptions), eq
         assert by_id[eq].range[0] <= by_id[eq].value <= by_id[eq].range[1], eq
+
+
+def test_economic_val01_fail_caps_volume_children(raw_datasets):
+    raw_datasets(present=True)
+    traj = Trajectory(
+        edge_counts={"C0": 20, "C1": 40, "OTHER": 210},
+        frames=[],
+        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1, "val01_status": "FAIL"},
+    )
+    by_id = {r.equation_id: r for r in score(traj, baseline=_BASELINE)}
+    for eq in ("ECON-1", "ECON-2", "ECON-3"):
+        assert by_id[eq].confidence == "L", eq
+        assert by_id[eq].directional is True, eq

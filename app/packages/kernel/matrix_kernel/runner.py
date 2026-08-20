@@ -315,9 +315,10 @@ def resolve_intervention_site(scenario: Scenario, top_n: int = 1) -> tuple[list[
 def _intervention_site(scenario: Scenario, top_n: int = 1) -> dict:
     if scenario.intervention_type == "new_facility":
         loc, frm, to = _span_fields(scenario)
+        edges = _facility_adjacent_edges(scenario)
         return {
-            "edges": [],
-            "method": "facility-demand",
+            "edges": edges,
+            "method": "facility-adjacent" if edges else "facility-demand",
             "from_cross": frm,
             "to_cross": to,
             "span_nodes": [],
@@ -325,6 +326,31 @@ def _intervention_site(scenario: Scenario, top_n: int = 1) -> dict:
             "corridor": loc,
         }
     return _resolve_site(scenario, top_n)
+
+
+_FACILITY_ADJACENT_RADIUS_M = 250.0
+_FACILITY_ADJACENT_CAP = 8
+
+
+def _facility_adjacent_edges(scenario: Scenario) -> list[str]:
+    """Nearest live-net edges to the facility centroid — scoring/overlay only, no TraCI edit."""
+    try:
+        from matrix_kernel.demand_delta import prepare_facility_demand
+        from matrix_kernel.geometry import nearest_edges
+
+        delta = prepare_facility_demand(
+            scenario.geometry,
+            scenario.effective_location,
+            scenario.effective_parameters(),
+        )
+        lon, lat = delta.facility_lonlat
+        return nearest_edges(
+            _net(), lon, lat,
+            radius_m=_FACILITY_ADJACENT_RADIUS_M,
+            cap=_FACILITY_ADJACENT_CAP,
+        )
+    except Exception:
+        return []
 
 
 def facility_demand_meta(scenario: Scenario) -> dict | None:
@@ -358,7 +384,8 @@ def _location_of_interest(affected: list[str], edge_resolution: str) -> list[flo
     between them. Only a real resolution (geometry/gazetteer/keyword) earns a marker --
     showing one for busiest-baseline-fallback would be a glass-box lie (PRD-F14).
     The results-map camera uses the corridor box, not this point.
-    new_facility (facility-demand) has no closed corridor, so no marker."""
+    new_facility with facility-adjacent edges earns a marker; facility-demand (no
+    resolved centroid) does not."""
     if (
         not affected
         or edge_resolution.startswith("busiest-baseline-fallback")
@@ -437,6 +464,26 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int | None
         edge_counts = _parse_edgecounts(edge_out)
         frames = _parse_frames(fcd_out, max_frames)
 
+    from matrix_kernel.baseline import load_baseline as _load_baseline
+    try:
+        base_counts = _load_baseline().edge_counts
+    except Exception:
+        base_counts = {}
+    impacted = [
+        e for e in (set(edge_counts) | set(base_counts))
+        if edge_counts.get(e, 0) != base_counts.get(e, 0)
+    ]
+    lengths: dict[str, float] = {}
+    try:
+        net = _net()
+        for eid in set(affected) | set(impacted):
+            try:
+                lengths[eid] = net.getEdge(eid).getLength() / 1000.0
+            except Exception:
+                continue
+    except Exception:
+        lengths = {}
+
     return Trajectory(
         edge_counts=edge_counts,
         frames=frames,
@@ -447,6 +494,9 @@ def simulate(scenario: Scenario, end: float = SIM_END, sample_period: int | None
             # -- Scenario v2 provenance (PRD-F14): the exact edit that was applied --
             "intervention_type": scenario.intervention_type,
             "affected_edges": affected,
+            "impacted_edges": impacted,
+            "edge_lengths_km": lengths,
+            "flood_hazard": bool(getattr(scenario, "flood_hazard", False)),
             "applied": applied,  # dispatch record: edges touched, parameters, TraCI calls, assumptions
             "edge_resolution": edge_resolution,  # "geometry" (map-drop) or "keyword-match" / "keyword-span"
             "overlay_honest": truth["overlay_honest"],

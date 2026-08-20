@@ -329,19 +329,35 @@ def test_location_of_interest_uses_first_edge_only_not_a_centroid(monkeypatch):
     assert seen_edge_ids == ["first"]
 
 
-def test_new_facility_site_is_facility_demand_not_a_corridor(monkeypatch):
+def test_new_facility_site_is_facility_adjacent_not_a_corridor(monkeypatch):
     """A school in Molo must not close Avanceña or hash onto the busiest edge."""
+    import matrix_kernel.geometry as geo
+
     monkeypatch.setattr(runner, "_keyword_edges", lambda loc: ["AVANCENA"])
     monkeypatch.setattr(runner, "_busiest_baseline_edges", lambda top_n=1: ["BUSIEST"])
-    monkeypatch.setattr(runner, "_edge_ids", lambda: frozenset({"E_molo_plaza"}))
-    import matrix_kernel.gazetteer as gaz
+    monkeypatch.setattr(runner, "_facility_adjacent_edges", lambda sc: ["E_molo_plaza"])
+    monkeypatch.setattr(runner, "_net", lambda: object())
+    monkeypatch.setattr(geo, "edge_midpoint_lonlat", lambda net, eid: (122.5446, 10.6969))
+    sc = Scenario(
+        "s1",
+        "3000-seat school in Molo",
+        intervention_type="new_facility",
+        location="Molo",
+        parameters={"facility_kind": "school", "capacity": 3000},
+    )
+    edges, method = runner.resolve_intervention_site(sc)
+    assert edges == ["E_molo_plaza"]
+    assert method == "facility-adjacent"
+    assert "AVANCENA" not in edges
+    assert "BUSIEST" not in edges
+    assert not method.startswith("busiest-baseline-fallback")
+    assert runner._location_of_interest(edges, method) == [122.5446, 10.6969]
 
-    class _Hit:
-        sumo_edge = "E_molo_plaza"
-        provisional = True
-        street_name = "Avanceña"
 
-    monkeypatch.setattr(gaz, "resolve_colloquial_term", lambda loc: _Hit())
+def test_new_facility_without_adjacent_edges_is_facility_demand(monkeypatch):
+    monkeypatch.setattr(runner, "_keyword_edges", lambda loc: ["AVANCENA"])
+    monkeypatch.setattr(runner, "_busiest_baseline_edges", lambda top_n=1: ["BUSIEST"])
+    monkeypatch.setattr(runner, "_facility_adjacent_edges", lambda sc: [])
     sc = Scenario(
         "s1",
         "3000-seat school in Molo",
@@ -352,7 +368,6 @@ def test_new_facility_site_is_facility_demand_not_a_corridor(monkeypatch):
     edges, method = runner.resolve_intervention_site(sc)
     assert edges == []
     assert method == "facility-demand"
-    assert not method.startswith("busiest-baseline-fallback")
     assert runner._location_of_interest(edges, method) is None
 
 

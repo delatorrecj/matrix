@@ -517,6 +517,7 @@ def _result_payload(r) -> dict:
         "references": r.references,
         "assumptions": r.assumptions,
         "focus_geometry": getattr(r, "focus_geometry", None),
+        "applicability": getattr(r, "applicability", "computed"),
     }
 
 
@@ -541,6 +542,7 @@ def _scenario_from_record(record: dict) -> "Scenario":
         location=record.get("location") or params.get("location") or "",
         geometry=geometry if isinstance(geometry, dict) else None,
         parameters=params.get("parameters") or {},
+        flood_hazard=bool(params.get("flood_hazard") or record.get("flood_hazard")),
     )
 
 

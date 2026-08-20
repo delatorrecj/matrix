@@ -161,6 +161,20 @@ def test_new_facility_maps_stated_kind_and_capacity():
     assert sc.corridor == "Molo"
     assert sc.parameters == {"facility_kind": "school", "capacity": 3000}
     assert sc.geometry is None
+    assert sc.flood_hazard is False
+
+
+def test_flood_query_sets_flood_hazard_on_full_closure():
+    schema = ScenarioSchema(
+        description="Flood closes Jaro",
+        intervention_type="full_closure",
+        location="Jaro",
+        is_ambiguous=False,
+        flood_hazard=True,
+    )
+    sc = parse_scenario("what if a flood closes Jaro?", client=FakeClient(schema))
+    assert sc.intervention_type == "full_closure"
+    assert sc.flood_hazard is True
 
 
 def test_system_instruction_classifies_new_facility_not_construction(monkeypatch):
@@ -197,6 +211,8 @@ def test_system_instruction_classifies_new_facility_not_construction(monkeypatch
     assert "new_facility" in text
     assert "construction-phase" not in text
     assert "BEH-4" in text
+    assert "flood_hazard" in text
+    assert "flood_hazard" in text
 
 
 def test_span_fields_map_onto_parameters_location_is_corridor_only():

@@ -34,6 +34,7 @@ def _fake_scenario(scenario_id: str):
         location="Diversion Rd",           # v2
         geometry={"type": "Point", "coordinates": [122.5621, 10.7202]},  # v2 GeoJSON
         parameters={"lanes_closed": 1},    # v2
+        flood_hazard=False,
     )
 
 
@@ -402,8 +403,33 @@ def test_runs_lifecycle_full_provenance(client):
     assert beh["input_dataset_ids"] == ["OSM-ILO", "SUMO-NET"]
     assert beh["references"] == ["Calderon 2014"]
     assert beh["assumptions"] == ["uncalibrated random demand"]
+    assert beh["applicability"] == "computed"
     eco = next(r for r in results if r["equation_id"] == "ECO-2")
     assert eco["confidence"] == "L" and eco["directional"] is True  # PRD-F5
+
+
+def test_applicability_survives_run_roundtrip(client):
+    scenario_id = db.save_scenario(_fake_scenario("scn-na"), raw_input="q")
+    run_id = db.save_run(scenario_id, status="running")
+    na = DimensionResult(
+        dimension="behavioral",
+        metric="mode-share shift (jeepney)",
+        equation_id="BEH-2",
+        value=0.0,
+        range=(0.0, 0.0),
+        unit="%-points",
+        confidence="M",
+        input_dataset_ids=["PERSONA-POOL"],
+        assumptions=["not modeled"],
+        applicability="not_modeled",
+    )
+    assert db.save_dimension_results(run_id, [na]) == 1
+    db.save_run(scenario_id, run_id=run_id, status="done", duration_ms=1)
+    beh2 = client.get(f"/runs/{run_id}").json()["results"][0]
+    assert beh2["applicability"] == "not_modeled"
+    assert beh2["directional"] is False
+    assert beh2["assumptions"] == ["not modeled"]
+    assert not any(str(a).startswith("applicability:") for a in beh2["assumptions"])
 
 
 def test_unknown_run_is_404(client):
@@ -804,6 +830,7 @@ def test_postgres_full_roundtrip():
         assert beh["range"] == [-1600.0, -900.0]
         assert beh["input_dataset_ids"] == ["OSM-ILO", "SUMO-NET"]
         assert beh["assumptions"] == ["uncalibrated random demand"]
+        assert beh["applicability"] == "computed"
 
         entry = audit_personas(observed={"jeepney": 0.54}, target={"jeepney": 0.55}, batch_id="b-pg")
         db.save_audit_entry(entry, run_id=run_id)

@@ -52,9 +52,7 @@ def test_provisional_constants_match_module_literals():
 
 def test_every_scored_equation_is_in_conformance_ledger():
     scored_ids = {r.equation_id for r in _all_scored_results()}
-    # BEH-4 is scored only when Trajectory.meta carries a demand_delta summary
-    expected = {eid for eid in EQUATION_CONFORMANCE if eid != "BEH-4"}
-    assert scored_ids == expected
+    assert scored_ids == set(EQUATION_CONFORMANCE)
 
 
 def test_beh4_scored_when_demand_delta_present_is_in_ledger():
@@ -88,7 +86,8 @@ def test_provisional_and_standin_emit_low_confidence():
         )
         if requires_low_confidence(eid):
             assert r.confidence == "L", f"{eid} must be L ({EQUATION_CONFORMANCE[eid][0]})"
-            assert r.directional is True
+            if r.applicability == "computed":
+                assert r.directional is True
 
 
 def test_glass_box_fields_present_on_every_result():
@@ -96,4 +95,15 @@ def test_glass_box_fields_present_on_every_result():
         assert r.equation_id
         assert r.input_dataset_ids
         assert r.confidence in ("H", "M", "L")
+        assert r.applicability in ("computed", "not_modeled", "not_applicable")
         assert r.range[0] <= r.value <= r.range[1]
+
+
+def test_unarmed_cards_are_na_not_fake_zeros_at_medium():
+    by_id = {r.equation_id: r for r in _all_scored_results()}
+    assert by_id["BEH-2"].applicability == "not_modeled"
+    assert by_id["BEH-4"].applicability == "not_applicable"
+    assert by_id["ECO-3"].applicability == "not_applicable"
+    assert by_id["ECO-4"].applicability == "not_applicable"
+    assert by_id["BEH-2"].directional is False
+    assert by_id["ECO-3"].directional is False

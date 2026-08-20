@@ -48,3 +48,28 @@ def test_missing_datasets_rejected():
 def test_inverted_range_rejected():
     with pytest.raises(ValueError):
         _valid(range=(1500.0, 900.0))
+
+
+def test_applicability_defaults_to_computed():
+    assert _valid().applicability == "computed"
+
+
+def test_not_modeled_is_not_directional():
+    r = _valid(confidence="L", applicability="not_modeled")
+    assert r.applicability == "not_modeled"
+    assert r.directional is False
+
+
+def test_not_applicable_is_not_directional():
+    r = _valid(confidence="M", applicability="not_applicable")
+    assert r.applicability == "not_applicable"
+    assert r.directional is False
+
+
+def test_computed_low_stays_directional():
+    assert _valid(confidence="L", applicability="computed").directional is True
+
+
+def test_unknown_applicability_rejected():
+    with pytest.raises(ValueError):
+        _valid(applicability="maybe")

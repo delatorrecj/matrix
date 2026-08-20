@@ -12,7 +12,7 @@ def test_social_results():
     scenario = Trajectory(
         edge_counts={"C0": 20, "C1": 40, "OTHER": 210},
         frames=[],
-        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1},
+        meta={"closed_edges": ["C0", "C1"], "lanes_closed": 1, "val01_status": "PASS"},
     )
     results = score(scenario, baseline=baseline)
 
@@ -28,3 +28,20 @@ def test_social_results():
     assert by_id["SOC-3"].confidence == "M"
     assert any("barangay" in a.lower() or "isochrone" in a.lower() or "RWI" in a
                for a in by_id["SOC-1"].assumptions)
+
+
+def test_soc2_not_applicable_on_speed_change():
+    traj = Trajectory(
+        edge_counts={"C0": 20},
+        frames=[],
+        meta={
+            "intervention_type": "speed_change",
+            "affected_edges": ["C0"],
+            "closed_edges": ["C0"],
+            "lanes_closed": 0,
+            "val01_status": "PASS",
+        },
+    )
+    soc2 = next(r for r in score(traj, baseline={"C0": 100}) if r.equation_id == "SOC-2")
+    assert soc2.applicability == "not_applicable"
+    assert soc2.directional is False

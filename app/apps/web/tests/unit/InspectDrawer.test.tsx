@@ -226,4 +226,22 @@ describe("InspectDrawer", () => {
       "keyword-span · Cuartero Street from Fajardo Street to El 98 Street",
     );
   });
+
+  it("shows Not modeled instead of a fake 0.0 for N/A cards", () => {
+    renderDrawer({
+      metricId: "BEH-2",
+      data: {
+        ...DATA,
+        metric: "mode-share shift (jeepney)",
+        value: "0",
+        range: "0..0",
+        confidence: "M",
+        equationId: "BEH-2",
+        applicability: "not_modeled",
+      },
+    });
+    expect(screen.getByText("Not modeled")).toBeInTheDocument();
+    expect(screen.getByText("N/A")).toBeInTheDocument();
+    expect(screen.queryByText("range: 0..0")).not.toBeInTheDocument();
+  });
 });

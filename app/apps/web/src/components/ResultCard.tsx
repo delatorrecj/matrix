@@ -1,4 +1,4 @@
-import { ConfidenceChip, toConfidenceLevel } from "@/components/ConfidenceChip";
+import { ConfidenceChip, chipLevel, applicabilityLabel } from "@/components/ConfidenceChip";
 import type { ProvenanceData } from "@/components/InspectDrawer";
 import { formatMetricValue, formatRange } from "@/lib/format";
 
@@ -18,6 +18,8 @@ export interface ResultCardData {
   rawRange: [number, number] | null;
   /** Low-confidence / directional-only (PRD-F5) — never present a precise headline. */
   directional?: boolean;
+  /** Kernel applicability: computed | not_modeled | not_applicable. */
+  applicability?: string;
   provData: ProvenanceData;
 }
 
@@ -34,12 +36,12 @@ interface ResultCardProps {
 
 export function ResultCard({ card, onInspect, variant = "panel" }: ResultCardProps) {
   const isPanel = variant === "panel";
-  // Analytics shows detail (precise, ~6 sig figs) — never the 17-digit raw float.
-  // The exact raw value still lives in the Inspect drawer (glass box).
+  const level = chipLevel(card.conf, card.applicability);
+  const naLabel = applicabilityLabel(card.applicability);
+  const directionalOnly =
+    !naLabel && (card.directional === true || level === "Low");
   const value = formatMetricValue(card.rawValue, card.equationId, { precise: true }).display;
   const range = formatRange(card.rawRange, card.equationId, { precise: true });
-  const directionalOnly =
-    card.directional === true || toConfidenceLevel(card.conf) === "Low";
 
   return (
     <div
@@ -51,16 +53,19 @@ export function ResultCard({ card, onInspect, variant = "panel" }: ResultCardPro
     >
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-sm font-medium print:text-black">{card.metric}</span>
-        <ConfidenceChip level={toConfidenceLevel(card.conf)} compact />
+        <ConfidenceChip level={level} compact />
       </div>
+      {naLabel ? (
+        <div className="text-base font-semibold text-text-muted mb-1 print:text-black">{naLabel}</div>
+      ) : directionalOnly ? (
+        <div className="text-base font-semibold text-text-muted mb-1 print:text-black">
+          Directional only — not a precise estimate
+        </div>
+      ) : (
       <div className="flex items-end gap-2 mb-1">
         <span className="text-2xl font-bold font-mono tabular-nums tracking-tight print:text-black">{value}</span>
         <span className="text-xs text-text-muted mb-1 print:text-black">{card.unit}</span>
       </div>
-      {directionalOnly && (
-        <div className="text-xs font-medium text-text-muted mb-1 print:text-black">
-          Directional only — not a precise estimate
-        </div>
       )}
       {isPanel && (
         <div className="text-xs text-text-muted font-mono flex items-center justify-between gap-2 print:text-black">

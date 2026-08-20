@@ -84,5 +84,6 @@ describe('confidence wording', () => {
 
   it('gives a plain-language sentence per level', () => {
     expect(confidenceSentence('Low')).toMatch(/rough indication/i);
+    expect(confidenceSentence('N/A')).toMatch(/did not run/i);
   });
 });

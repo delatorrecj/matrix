@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { ConfidenceChip, toConfidenceLevel } from "@/components/ConfidenceChip";
+import { ConfidenceChip, chipLevel, applicabilityLabel } from "@/components/ConfidenceChip";
 import { formatMetricValue, directionFor, confidenceSentence } from "@/lib/format";
 import { getMetricMeta } from "@/lib/metrics";
 import type { ResultCardData } from "@/components/ResultCard";
@@ -15,8 +15,9 @@ export function SummaryCard({ card, onInspect }: { card: ResultCardData; onInspe
   const label = meta?.humanLabel ?? card.metric;
   const { display, negligible } = formatMetricValue(card.rawValue, card.equationId);
   const dir = directionFor(card.rawValue, card.equationId, negligible);
-  const level = toConfidenceLevel(card.conf);
-  const directionalOnly = card.directional === true || level === "Low";
+  const level = chipLevel(card.conf, card.applicability);
+  const naLabel = applicabilityLabel(card.applicability);
+  const directionalOnly = !naLabel && (card.directional === true || level === "Low");
 
   const toneClass =
     dir.tone === "good" ? "text-success" : dir.tone === "bad" ? "text-error" : "text-text-muted";
@@ -34,7 +35,9 @@ export function SummaryCard({ card, onInspect }: { card: ResultCardData; onInspe
         <ConfidenceChip level={level} className="shrink-0" />
       </div>
 
-      {negligible ? (
+      {naLabel ? (
+        <div className="text-base font-semibold text-text-muted print:text-black">{naLabel}</div>
+      ) : negligible ? (
         <div className="text-base font-semibold text-text-muted print:text-black">No meaningful change</div>
       ) : directionalOnly ? (
         <>

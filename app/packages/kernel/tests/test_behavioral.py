@@ -34,7 +34,7 @@ def test_beh_results_are_glass_box():
     )
     results = score(scenario, baseline=baseline)
 
-    assert {r.equation_id for r in results} == {"BEH-1", "BEH-2", "BEH-3"}
+    assert {r.equation_id for r in results} == {"BEH-1", "BEH-2", "BEH-3", "BEH-4"}
     for r in results:
         assert r.dimension == "behavioral"
         assert r.equation_id and r.input_dataset_ids          # glass-box invariants hold
@@ -52,7 +52,12 @@ def test_beh_results_are_glass_box():
     assert beh1.range[0] < beh1.range[1]
 
     beh2 = next(r for r in results if r.equation_id == "BEH-2")
-    assert beh2.confidence == "M"       # Calderon2014 caps mode-share at Medium
+    assert beh2.applicability == "not_modeled"
+    assert beh2.directional is False
+    assert beh2.confidence == "M"       # dataset rubric still M; chip is N/A
+
+    beh4 = next(r for r in results if r.equation_id == "BEH-4")
+    assert beh4.applicability == "not_applicable"
 
     beh3 = next(r for r in results if r.equation_id == "BEH-3")
     assert beh3.confidence == "L"
@@ -72,7 +77,7 @@ def test_beh_on_real_cached_scenario():
 
     traj = Trajectory.from_json(raw)
     results = score(traj)  # loads the real baseline from Redis
-    assert {r.equation_id for r in results} == {"BEH-1", "BEH-2", "BEH-3"}
+    assert {r.equation_id for r in results} == {"BEH-1", "BEH-2", "BEH-3", "BEH-4"}
     beh1 = next(r for r in results if r.equation_id == "BEH-1")
     assert beh1.value <= 0.0            # closing a corridor lane removes trips from it
     assert beh1.input_dataset_ids and beh1.confidence in ("H", "M", "L")
@@ -108,6 +113,7 @@ def test_beh4_emitted_only_when_demand_delta_on_trajectory():
     ids = {r.equation_id for r in results}
     assert ids == {"BEH-1", "BEH-2", "BEH-3", "BEH-4"}
     beh4 = next(r for r in results if r.equation_id == "BEH-4")
+    assert beh4.applicability == "computed"
     assert beh4.value == 2700.0
     assert beh4.confidence == "L"
     assert beh4.directional is True
@@ -141,3 +147,71 @@ def test_beh1_beh3_lift_only_when_val01_pass():
     assert beh3.confidence == "H"
     assert any("VAL-01" in a and "PASS" in a for a in beh1.assumptions)
     assert not any("capped at L" in a for a in beh1.assumptions)
+
+
+def test_beh3_full_closure_has_no_phantom_lane():
+    traj = Trajectory(
+        edge_counts={"C0": 0},
+        frames=[],
+        meta={
+            "intervention_type": "full_closure",
+            "affected_edges": ["C0"],
+            "closed_edges": ["C0"],
+            "edge_lanes": {"C0": 2},
+            "lanes_closed": 2,
+            "applied": {"intervention_type": "full_closure", "parameters": {}},
+            "val01_status": "FAIL",
+        },
+    )
+    beh3 = next(r for r in score(traj, baseline={"C0": 100}) if r.equation_id == "BEH-3")
+    assert beh3.value == 0.0
+    assert any("phantom" in a for a in beh3.assumptions)
+
+
+def test_beh3_capacity_change_uses_capacity_factor():
+    """120 entered over 900s = 480 vph; 2 lanes × 1800 × 1.2 = 4320 → V/C = 480/4320."""
+    from matrix_kernel.baseline import SIM_END
+
+    traj = Trajectory(
+        edge_counts={"C0": 120},
+        frames=[],
+        meta={
+            "intervention_type": "capacity_change",
+            "affected_edges": ["C0"],
+            "closed_edges": ["C0"],
+            "edge_lanes": {"C0": 2},
+            "lanes_closed": 0,
+            "applied": {
+                "intervention_type": "capacity_change",
+                "parameters": {"capacity_factor": 1.2},
+            },
+            "val01_status": "FAIL",
+        },
+    )
+    beh3 = next(r for r in score(traj, baseline={"C0": 100}) if r.equation_id == "BEH-3")
+    vol_vph = 120 * 3600.0 / SIM_END
+    expected = vol_vph / (2 * 1800.0 * 1.2)
+    assert beh3.value == pytest.approx(expected)
+    assert any("capacity_factor" in a for a in beh3.assumptions)
+
+
+def test_beh3_speed_change_does_not_claim_capacity_change():
+    traj = Trajectory(
+        edge_counts={"C0": 120},
+        frames=[],
+        meta={
+            "intervention_type": "speed_change",
+            "affected_edges": ["C0"],
+            "closed_edges": ["C0"],
+            "edge_lanes": {"C0": 2},
+            "lanes_closed": 0,
+            "applied": {
+                "intervention_type": "speed_change",
+                "parameters": {"max_speed_kph": 30.0},
+            },
+            "val01_status": "FAIL",
+        },
+    )
+    beh3 = next(r for r in score(traj, baseline={"C0": 100}) if r.equation_id == "BEH-3")
+    assert any("not a speed-adjusted" in a for a in beh3.assumptions)
+    assert not any("lane(s) closed" in a for a in beh3.assumptions)

@@ -76,6 +76,7 @@ class Scenario:
     location: str = ""        # street / corridor / barangay / landmark keyword
     geometry: dict | None = None   # GeoJSON; resolved by matrix_kernel.geometry (later unit)
     parameters: dict = field(default_factory=dict)  # per-type knobs, see _PARAMETER_DEFAULTS
+    flood_hazard: bool = False  # ECO-4 arms only when this is True (flood shock, not a synonym of full_closure)
 
     def __post_init__(self) -> None:
         if self.intervention_type not in INTERVENTION_TYPES:

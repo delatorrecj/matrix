@@ -69,6 +69,12 @@ class ScenarioSchema(BaseModel):
         default=None)
     is_ambiguous: bool = Field(description="Set to true if the query is too ambiguous to simulate (missing location or action).")
     clarification_prompt: str = Field(description="If is_ambiguous is true, provide a helpful prompt asking the user for the missing information.", default="")
+    flood_hazard: bool = Field(
+        description="True only when the query is a flood / inundation / typhoon shock. "
+                    "False for festivals, construction, and every other query. "
+                    "A flood still classifies as full_closure for the network edit.",
+        default=False,
+    )
 
 
 def parse_scenario(
@@ -104,6 +110,9 @@ def parse_scenario(
         "- new_facility: a school, market, or terminal that changes travel demand (BEH-4), not "
         "road geometry. Fill facility_kind and capacity only when the user stated them. Do not "
         "model this as a construction lane_closure.\n"
+        "Set flood_hazard true when the query is a flood, inundation, or typhoon shock "
+        "(even though the network edit is full_closure). Leave it false for festivals, "
+        "construction closures, and every non-flood query.\n"
         "Only fill numeric parameters the user stated or clearly implied; otherwise leave them "
         "null/default -- never invent numbers.\n"
         "If the query lacks a location or an action (e.g., 'what if we build a school?' - where?), "
@@ -198,4 +207,5 @@ def parse_scenario(
         location=loc,
         geometry=resolved_geometry,
         parameters=parameters,
+        flood_hazard=bool(result.flood_hazard),
     )

@@ -88,6 +88,10 @@ function storedResultToCard(r: StoredDimensionResult, index: number): ResultCard
     typeof r.range[1] === "number"
       ? [r.range[0], r.range[1]]
       : null;
+  const applicability =
+    typeof r.applicability === "string" ? r.applicability : "computed";
+  const directional =
+    applicability === "computed" && (r.directional === true || confidence === "L");
   const range = rawRange ? `${rawRange[0]}..${rawRange[1]}` : "";
   return {
     key: `${r.dimension}:${metric}:${index}`,
@@ -98,7 +102,8 @@ function storedResultToCard(r: StoredDimensionResult, index: number): ResultCard
     conf: confidence,
     rawValue: value,
     rawRange,
-    directional: r.directional === true || confidence === "L",
+    directional,
+    applicability,
     provData: buildProvenanceData({
       metric,
       value: String(r.value),
@@ -108,6 +113,7 @@ function storedResultToCard(r: StoredDimensionResult, index: number): ResultCard
       input_dataset_ids: Array.isArray(r.input_dataset_ids) ? r.input_dataset_ids : [],
       assumptions: Array.isArray(r.assumptions) ? r.assumptions : [],
       references: Array.isArray(r.references) ? r.references : [],
+      applicability,
     }),
   };
 }
@@ -557,6 +563,10 @@ export default function ScenarioSimulation() {
         const confidence = typeof msg.confidence === "string" ? msg.confidence : "L";
         const equationId = String(msg.equation_id ?? "");
         const metric = typeof msg.metric === "string" ? msg.metric : (equationId || "metric");
+        const applicability =
+          typeof msg.applicability === "string" ? msg.applicability : "computed";
+        const directional =
+          applicability === "computed" && (msg.directional === true || confidence === "L");
         const provData = buildProvenanceData({
           metric,
           value: String(msg.value),
@@ -566,6 +576,7 @@ export default function ScenarioSimulation() {
           input_dataset_ids: Array.isArray(msg.input_dataset_ids) ? msg.input_dataset_ids : [],
           assumptions: Array.isArray(msg.assumptions) ? msg.assumptions : [],
           references: Array.isArray(msg.references) ? msg.references : [],
+          applicability,
         });
 
         setResults((prev) => [...prev, {
@@ -577,7 +588,8 @@ export default function ScenarioSimulation() {
           conf: confidence,
           rawValue: value,
           rawRange,
-          directional: msg.directional === true || confidence === "L",
+          directional,
+          applicability,
           provData
         }]);
       } else if (msg.type === "SYNTHESIS") {

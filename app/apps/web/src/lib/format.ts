@@ -133,5 +133,7 @@ export function confidenceSentence(level: ConfidenceLevel): string {
       return "A reasonable estimate — treat it as indicative, not exact.";
     case "Low":
       return "A rough indication only — not precise enough to rank options.";
+    case "N/A":
+      return "This equation did not run for this intervention.";
   }
 }

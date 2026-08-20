@@ -14,11 +14,17 @@ import random
 from matrix_kernel.baseline import load_baseline
 from matrix_kernel.confidence import (
     earned_confidence_interval,
-    method_capped_confidence,
     provisional_capped_confidence,
 )
 from matrix_kernel.datasets import bir_median_commercial_php_sqm
 from matrix_kernel.results import DimensionResult
+from matrix_kernel.scoring_aperture import (
+    REROUTING_ASSUMPTION,
+    network_delta,
+    resolve_val01_status,
+    val01_volume_note,
+    volume_confidence,
+)
 from matrix_kernel.trajectory import Trajectory
 
 # Fallback only when BIR CSV is missing (tests / incomplete checkout).
@@ -70,21 +76,22 @@ def _econ1_land_value_delta(delta_trips: float, base_trips: float) -> tuple[floa
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
-    sc = trajectory.edge_counts
-    corridor = trajectory.meta.get("closed_edges", [])
     rng = random.Random(10)
     results: list[DimensionResult] = []
+    val01 = resolve_val01_status(trajectory.meta)
+    vol_note = val01_volume_note(val01)
 
-    delta_trips = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor) if corridor else 0.0
-    base_trips = sum(base.get(e, 0) for e in corridor) if corridor else 0.0
+    delta_trips = network_delta(trajectory, base)
+    base_trips = float(sum(base.values())) if base else 0.0
 
     # ── ECON-1: Land-value Δ (≤1 km) ──
     val1, assumptions1, mode, ids = _econ1_land_value_delta(delta_trips, base_trips)
+    assumptions1 = assumptions1 + [vol_note, REROUTING_ASSUMPTION]
     lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.6, 1.4), n=500)
     conf = (
         provisional_capped_confidence(ids)
         if mode == "proxy"
-        else method_capped_confidence(ids, "M")
+        else volume_confidence(ids, val01, pass_method="M")
     )
 
     results.append(DimensionResult(
@@ -109,21 +116,25 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         places = None
     if places is None:
         val2 = float(delta_trips) * 1.2
-        conf2 = method_capped_confidence(["PERSONA-POOL", "OVERTURE"], "L")
+        conf2 = volume_confidence(["PERSONA-POOL", "OVERTURE"], val01, pass_method="L")
         assumptions2 = [
             "Overture/OSM places missing — footfall = Δtrips × 1.2 scalar stand-in",
             "confidence capped at L",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
     else:
         n_places, place_src = places
         # Scale footfall by places density proxy (methods §3.4 form with sourced factor).
         places_factor = max(0.5, min(2.0, n_places / 10_000.0))
         val2 = float(delta_trips) * 1.2 * places_factor
-        conf2 = method_capped_confidence(["PERSONA-POOL", "OVERTURE"], "M")
+        conf2 = volume_confidence(["PERSONA-POOL", "OVERTURE"], val01, pass_method="M")
         assumptions2 = [
             f"footfall = Δtrips × 1.2 × places_factor ({places_factor:.3f})",
             f"places_factor from {place_src}",
             "equation: methods §3.4 footfall ∝ trip delta × places density",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
 
     lo2, hi2 = earned_confidence_interval(val2, lambda: val2 * rng.uniform(0.75, 1.25), n=500)
@@ -150,10 +161,12 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         aspbi = None
     if aspbi is None:
         val3 = float(delta_trips) * 0.05
-        conf3 = method_capped_confidence(["PSA-ASPBI", "PSA-OpenStat"], "L")
+        conf3 = volume_confidence(["PSA-ASPBI", "PSA-OpenStat"], val01, pass_method="L")
         assumptions3 = [
             "PSA ASPBI missing — employment = Δtrips × 0.05 scalar stand-in",
             "confidence capped at L",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
     else:
         emp_base, emp_src = aspbi
@@ -161,11 +174,13 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None) -
         share = float(delta_trips) / denom
         # Jobs Δ ≈ regional employment × corridor trip-share × small multiplier
         val3 = emp_base * share * 0.001
-        conf3 = method_capped_confidence(["PSA-ASPBI", "PSA-OpenStat"], "M")
+        conf3 = volume_confidence(["PSA-ASPBI", "PSA-OpenStat"], val01, pass_method="M")
         assumptions3 = [
             f"regional employment base = {emp_base:,.0f} ({emp_src})",
-            f"corridor trip share = {share:.4f}; jobs = emp × share × 0.001",
+            f"network trip share = {share:.4f}; jobs = emp × share × 0.001",
             "equation: direct+indirect employment proxy from PSA ASPBI (methods §3.4)",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
 
     lo3, hi3 = earned_confidence_interval(val3, lambda: val3 * rng.uniform(0.5, 1.5), n=500)

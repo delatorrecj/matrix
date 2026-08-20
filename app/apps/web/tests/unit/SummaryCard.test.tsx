@@ -39,4 +39,23 @@ describe("SummaryCard", () => {
     expect(screen.queryByText("-14")).not.toBeInTheDocument();
     expect(screen.queryByText("High")).not.toBeInTheDocument();
   });
+
+  it("shows Not modeled instead of a fake zero", () => {
+    render(
+      <SummaryCard
+        card={card({
+          equationId: "BEH-2",
+          metric: "mode-share shift (jeepney)",
+          conf: "M",
+          rawValue: 0,
+          directional: false,
+          applicability: "not_modeled",
+        })}
+        onInspect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Not modeled")).toBeInTheDocument();
+    expect(screen.getByText("N/A")).toBeInTheDocument();
+    expect(screen.queryByText("No meaningful change")).not.toBeInTheDocument();
+  });
 });

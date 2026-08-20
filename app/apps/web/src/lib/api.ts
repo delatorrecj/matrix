@@ -145,6 +145,7 @@ export interface StoredDimensionResult {
   unit: string;
   confidence: string;
   directional?: boolean;
+  applicability?: string;
   input_dataset_ids?: string[];
   references?: string[];
   assumptions?: string[];

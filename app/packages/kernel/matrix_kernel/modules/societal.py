@@ -14,7 +14,6 @@ import random
 from matrix_kernel.baseline import load_baseline
 from matrix_kernel.confidence import (
     earned_confidence_interval,
-    method_capped_confidence,
     provisional_capped_confidence,
 )
 from matrix_kernel.datasets import (
@@ -23,6 +22,13 @@ from matrix_kernel.datasets import (
     tssp2019_walk_factors,
 )
 from matrix_kernel.results import DimensionResult
+from matrix_kernel.scoring_aperture import (
+    REROUTING_ASSUMPTION,
+    network_delta,
+    resolve_val01_status,
+    val01_volume_note,
+    volume_confidence,
+)
 from matrix_kernel.trajectory import Trajectory
 
 _GENERIC_POP_DENSITY = 5843.0  # persons/km², PSA 2020 CPH Iloilo City average
@@ -41,21 +47,23 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, eco2_val: float = 0.0) -> list[DimensionResult]:
     base = baseline if baseline is not None else load_baseline().edge_counts
-    sc = trajectory.edge_counts
-    corridor = trajectory.meta.get("closed_edges", [])
     rng = random.Random(11)
     results: list[DimensionResult] = []
+    val01 = resolve_val01_status(trajectory.meta)
+    vol_note = val01_volume_note(val01)
 
-    delta_trips = sum(sc.get(e, 0) - base.get(e, 0) for e in corridor) if corridor else 0.0
+    delta_trips = network_delta(trajectory, base)
 
     # ── SOCI-2: Heritage proximity ──
     hist = osm_historic_points()
     if hist is None:
         val2 = float(delta_trips) * 0.01
-        conf2 = method_capped_confidence(["OSM-ILO"], "L")
+        conf2 = volume_confidence(["OSM-ILO"], val01, pass_method="L")
         assumptions2 = [
             "OSM historic tags missing — heritage = Δtrips × 0.01 scalar stand-in",
             "confidence capped at L",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
         ids2 = ["OSM-ILO"]
     else:
@@ -63,14 +71,16 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
         # Mean distance-decay score: closer heritage → higher score; trip surge lowers it.
         decays = [math.exp(-_haversine_km(_CITY_LAT, _CITY_LON, lat, lon) / 2.0) for lat, lon in pts]
         mean_decay = sum(decays) / len(decays)
-        stress = abs(delta_trips) / max(abs(sum(base.get(e, 0) for e in corridor)), 1.0)
+        stress = abs(delta_trips) / max(abs(sum(base.values()) if base else 0.0), 1.0)
         val2 = mean_decay * (1.0 - min(0.5, 0.1 * stress))
-        conf2 = method_capped_confidence(["OSM-ILO"], "M")
+        conf2 = volume_confidence(["OSM-ILO"], val01, pass_method="M")
         assumptions2 = [
             f"OSM historic sites = {n_sites} (interim NHCP substitute; methods §3.5)",
             f"mean distance-decay from city centroid = {mean_decay:.4f}",
-            f"corridor stress = {stress:.4f}",
+            f"network stress = {stress:.4f}",
             "equation: heritage = mean(exp(-d/2km)) × (1 − stress penalty)",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
         ids2 = ["OSM-ILO"]
 
@@ -105,6 +115,7 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
             "uses ECO-2 passed value × population density",
             f"population density = {_GENERIC_POP_DENSITY:.0f} persons/km² (PSA 2020 CPH)",
             "confidence capped at L: §3.6 PROVISIONAL density (methods §2)",
+            REROUTING_ASSUMPTION,
         ],
     ))
 
@@ -113,10 +124,12 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
     factors = tssp2019_walk_factors()
     if density is None:
         val4 = float(delta_trips) * -0.005
-        conf4 = method_capped_confidence(["OSM-ILO", "TSSP-2019"], "L")
+        conf4 = volume_confidence(["OSM-ILO", "TSSP-2019"], val01, pass_method="L")
         assumptions4 = [
             "OSM walk/bike tags missing — walkability = Δtrips × -0.005 scalar",
             "confidence capped at L",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
     else:
         frac, n_ways = density
@@ -126,12 +139,14 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
         base_walk = frac * (w_side + w_bike)
         trip_stress = min(1.0, abs(delta_trips) / 500.0) * w_stress
         val4 = base_walk - trip_stress
-        conf4 = method_capped_confidence(["OSM-ILO", "TSSP-2019"], "M")
+        conf4 = volume_confidence(["OSM-ILO", "TSSP-2019"], val01, pass_method="M")
         assumptions4 = [
             f"OSM highway ways with walk/bike tags = {frac:.3%} of {n_ways}",
             f"TSSP factors: sidewalk={w_side}, bike={w_bike}, stress={w_stress} "
             f"({factors.get('source', 'TSSP-2019')})",
             f"walkability = tag_fraction×(sidewalk+bike) − trip_stress = {val4:.4f}",
+            vol_note,
+            REROUTING_ASSUMPTION,
         ]
 
     lo4, hi4 = earned_confidence_interval(val4, lambda: val4 * rng.uniform(0.6, 1.4), n=500)
@@ -152,7 +167,7 @@ def score(trajectory: Trajectory, datasets=None, baseline: dict | None = None, e
     val1 = (val2 * 0.3) + (val3 * -0.001) + (val4 * 0.5)
     lo1, hi1 = earned_confidence_interval(val1, lambda: val1 * rng.uniform(0.8, 1.2), n=500)
     # Worst of component ceilings: SOCI-3 still L → composite L
-    conf1 = method_capped_confidence(["OSM-ILO", "WorldPop", "TSSP-2019"], "L")
+    conf1 = volume_confidence(["OSM-ILO", "WorldPop", "TSSP-2019"], val01, pass_method="L")
     results.insert(0, DimensionResult(
         dimension="societal",
         metric="Societal composite",

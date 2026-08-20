@@ -68,6 +68,11 @@ describe("honestAffectedEdgeIds", () => {
     expect(honestAffectedEdgeIds("facility-demand", ["e1"])).toEqual([]);
   });
 
+  it("treats facility-adjacent as an honest overlay", () => {
+    expect(isHonestEdgeResolution("facility-adjacent")).toBe(true);
+    expect(honestAffectedEdgeIds("facility-adjacent", ["e1"])).toEqual(["e1"]);
+  });
+
   it("respects kernel overlay_honest=false over method string", () => {
     expect(honestAffectedEdgeIds("keyword-match", ["e1"], false)).toEqual([]);
     expect(overlayHonest(false, "keyword-match")).toBe(false);

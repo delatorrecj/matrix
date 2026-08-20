@@ -27,13 +27,13 @@ Conformance = Literal[
 # via the worst-factor rule (may still be L if data is weaker).
 EQUATION_CONFORMANCE: dict[str, tuple[Conformance, str]] = {
     "BEH-1": ("equation_backed", "H"),
-    "BEH-2": ("equation_backed", "M"),  # stub value 0; literature mode-share cap M
+    "BEH-2": ("equation_backed", "M"),  # not_modeled (no congestion elasticity); literature cap M
     "BEH-3": ("equation_backed", "H"),
     "BEH-4": ("provisional_proxy", "L"),
     "ECO-1": ("equation_backed", "H"),  # simplified VKT×EF; EF band-checked externally
     "ECO-2": ("provisional_proxy", "L"),
     "ECO-3": ("honest_stub", "H"),
-    "ECO-4": ("equation_backed", "M"),  # CCHAIN NOAH×WorldPop when flood_hazard; else 0
+    "ECO-4": ("equation_backed", "M"),  # CCHAIN NOAH×WorldPop when flood_hazard; else not_applicable
     "SOC-1": ("equation_backed", "M"),  # CCHAIN inverse-RWI × Δaccess
     "SOC-2": ("equation_backed", "M"),  # CCHAIN amenity density × lanes
     "SOC-3": ("equation_backed", "M"),  # CCHAIN RWI bottom-tercile split

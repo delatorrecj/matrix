@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ConfidenceChip, ConfidenceLevel, toConfidenceLevel } from "@/components/ConfidenceChip";
+import { ConfidenceChip, ConfidenceLevel, chipLevel, applicabilityLabel } from "@/components/ConfidenceChip";
 import { PlannerFeedback } from "@/components/PlannerFeedback";
 import { resolveReferenceMeta } from "@/lib/datasets";
 import { X, ChevronDown, ExternalLink } from "lucide-react";
@@ -48,6 +48,8 @@ export interface ProvenanceData {
   confidence: string; // "H" | "M" | "L" (kernel-computed, methods §2)
   confidenceBasis: string;
   equationId: string;
+  /** computed | not_modeled | not_applicable */
+  applicability?: string;
   /** Full equation text when available; absent over today's stream. */
   equationText?: string;
   inputs: InputDataset[];
@@ -59,6 +61,7 @@ const CONFIDENCE_BOX_STYLES: Record<ConfidenceLevel, string> = {
   High: "border-success/20 bg-success/5",
   Medium: "border-warning/20 bg-warning/5",
   Low: "border-error/20 bg-error/5",
+  "N/A": "border-border bg-surface",
 };
 
 const FOCUSABLE_SELECTOR =
@@ -159,12 +162,13 @@ export default function InspectDrawer({ isOpen, onClose, data, runId, site, chil
 
   if (!isOpen) return null;
 
-  const level = toConfidenceLevel(data?.confidence);
+  const level = chipLevel(data?.confidence, data?.applicability);
+  const naLabel = applicabilityLabel(data?.applicability);
   // Surface the specific capping factor next to the confidence chip (DSD §8 /
   // methods §2 Low-Confidence Protocol). The modules record it in assumptions
   // (e.g. "confidence capped at M: …"); pull it forward instead of burying it.
   const cappingReason =
-    level !== "High"
+    level !== "High" && level !== "N/A"
       ? data?.assumptions?.find((a) => /cap|confiden/i.test(a))
       : undefined;
   const corridorVolumeEq =
@@ -197,10 +201,11 @@ export default function InspectDrawer({ isOpen, onClose, data, runId, site, chil
 
       <div className="flex-1 overflow-y-auto min-h-0 rounded-xl">
         <div className="p-6 pr-16 border-b border-border bg-surface-elevated">
-          <div className="mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <span className="text-[10px] uppercase font-bold text-text-muted px-2 py-0.5 bg-surface border border-border rounded font-mono inline-block">
               {data?.equationId || "..."}
             </span>
+            {data && <ConfidenceChip level={level} compact />}
           </div>
           <h3 id="inspect-drawer-title" className="text-xl font-bold text-foreground leading-tight">
             {data?.metric || "Loading..."}
@@ -219,8 +224,12 @@ export default function InspectDrawer({ isOpen, onClose, data, runId, site, chil
             </p>
           ) : null}
           <div className="flex flex-col mt-4 min-w-0">
-            <span className="text-4xl font-mono font-bold tracking-tight wrap-break-word">{data?.value}</span>
-            <span className="text-xs font-mono text-text-muted mt-1 wrap-break-word">range: {data?.range}</span>
+            <span className="text-4xl font-mono font-bold tracking-tight wrap-break-word">
+              {naLabel ?? data?.value}
+            </span>
+            {!naLabel && (
+              <span className="text-xs font-mono text-text-muted mt-1 wrap-break-word">range: {data?.range}</span>
+            )}
             {fidelityNotice && (
               <p
                 className="mt-3 text-xs leading-relaxed text-foreground bg-warning/10 border border-warning/30 rounded-lg px-2.5 py-2"
@@ -243,7 +252,7 @@ export default function InspectDrawer({ isOpen, onClose, data, runId, site, chil
               <div className="flex items-center gap-2 mb-2">
                 <ConfidenceChip level={level} />
                 <span className="text-sm font-medium text-foreground">
-                  {level} confidence (computed)
+                  {level === "N/A" ? (naLabel ?? "Not applicable") : `${level} confidence (computed)`}
                 </span>
               </div>
               <p className="text-sm text-text-muted">{data?.confidenceBasis}</p>
