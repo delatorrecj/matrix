@@ -57,7 +57,7 @@ const handleViewStateChange = ({ viewState }: any) => {
 // Preset reference scenarios — each submits a real NL query to POST /scenario.
 const PRESETS: { label: string; query: string; icon: React.ElementType }[] = [
   { label: "School in Molo", query: "What if we build a 3,000-seat school in Molo?", icon: GraduationCap },
-  { label: "RDT on Diversion Rd", query: "What if we run a RDT line along Diversion Road?", icon: TrainFront },
+  { label: "RDT on Diversion Rd", query: "What if we build a 12-bay RDT terminal on Benigno S. Aquino Jr. Avenue (Diversion Road)?", icon: TrainFront },
   { label: "Flooding Closure", query: "What if flooding closes the Diversion Road corridor for a day?", icon: CloudRain },
 ];
 
