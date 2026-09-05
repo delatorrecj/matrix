@@ -52,6 +52,7 @@ To prevent context poisoning, **each concern has exactly one source of truth.** 
 | CLR - Compliance & Legal | [clr-matrix.md](clr-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (Update model provider terms, PWA GPS status) |
 | GTM - Go-To-Market | [gtm-matrix.md](gtm-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (ASEAN Clean Tourist City and competitor survey) |
 | OPS - Ops & Observability | [ops-matrix.md](ops-matrix.md) | 0.1 | Draft | 2026-06-24 | 2026-06-24 (CR-011 deployment runbook) |
+| Architecture canvas (as-deployed) | [architecture-canvas-matrix.md](architecture-canvas-matrix.md) · [HTML](architecture-canvas-matrix.html) | 0.1 | Draft | 2026-09-05 | 2026-09-05 (scenario submit path, BEH-4 facility demand, maps/location) |
 
 ### RFCs (one per major feature)
 

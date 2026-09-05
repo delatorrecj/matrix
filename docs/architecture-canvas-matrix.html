@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MATRIX Architecture Canvas — As-Deployed</title>
+  <style>
+    :root {
+      --ink: #0f1c24;
+      --muted: #4a5d68;
+      --line: #c9d5dc;
+      --bg: #f3f7f9;
+      --panel: #ffffff;
+      --teal: #0d7a7a;
+      --teal-soft: #d7eeee;
+      --slate: #2c3e4a;
+      --amber: #b86a16;
+      --amber-soft: #f8ebd8;
+      --green: #1f6b3a;
+      --green-soft: #dff0e5;
+      --coral: #9b3b3b;
+      --coral-soft: #f4e0e0;
+      --shadow: 0 10px 30px rgba(15, 28, 36, 0.08);
+      --radius: 14px;
+      --font: "IBM Plex Sans", "Segoe UI", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --display: "Fraunces", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--font);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #dff3f3 0%, transparent 55%),
+        radial-gradient(900px 420px at 100% 0%, #e8eef2 0%, transparent 50%),
+        linear-gradient(180deg, #f7fbfc 0%, var(--bg) 40%, #eef3f5 100%);
+      line-height: 1.45;
+    }
+    .shell { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+    header.hero {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 28px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(215,238,238,0.55));
+      box-shadow: var(--shadow);
+    }
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+      font-weight: 700;
+    }
+    h1 {
+      margin: 0;
+      font-family: var(--display);
+      font-weight: 650;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .lede { margin: 0; max-width: 62ch; color: var(--muted); font-size: 1.05rem; }
+    .meta {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--slate);
+    }
+    nav.toc {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 12px 0; margin-bottom: 18px;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+    }
+    nav.toc a {
+      text-decoration: none;
+      color: var(--slate);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+    nav.toc a:hover { border-color: var(--line); background: #fff; }
+    section.panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-bottom: 22px;
+    }
+    section.panel h2 {
+      margin: 0 0 6px;
+      font-family: var(--display);
+      font-size: 1.55rem;
+      letter-spacing: -0.01em;
+    }
+    section.panel .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      max-width: 75ch;
+    }
+    .overview-img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      display: block;
+      background: #fff;
+    }
+    .layers {
+      display: grid;
+      gap: 10px;
+    }
+    .layer {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 12px;
+      align-items: stretch;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fbfcfd;
+    }
+    .layer .label {
+      display: flex; align-items: center; justify-content: center;
+      writing-mode: horizontal-tb;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      padding: 12px;
+      text-align: center;
+    }
+    .layer.client .label { background: var(--teal); }
+    .layer.api .label { background: #1f6f8b; }
+    .layer.kernel .label { background: var(--slate); }
+    .layer.modules .label { background: #355c7d; }
+    .layer.data .label { background: #5a6a75; }
+    .layer.deploy .label { background: #3d5a45; }
+    .layer .body {
+      padding: 12px 14px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+      align-items: center;
+    }
+    .box {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      min-width: 120px;
+    }
+    .box strong { display: block; font-size: 13px; }
+    .box span { color: var(--muted); font-size: 11px; }
+    .grid-2 { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    @media (max-width: 900px) {
+      .layer { grid-template-columns: 1fr; }
+      .grid-2, .grid-3, .grid-5 { grid-template-columns: 1fr; }
+    }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .step {
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+    .step.accept { background: var(--teal-soft); border-color: #9dcece; }
+    .step.frame { background: #e8f0f7; border-color: #b7c9d8; }
+    .step.edge { background: var(--amber-soft); border-color: #e2c79a; }
+    .step.dim { background: var(--green-soft); border-color: #a9cfb6; }
+    .step.syn { background: #eee8f5; border-color: #c9bddc; }
+    .step.done { background: #e7efe9; border-color: #a8c4b1; }
+    .arrow { color: var(--muted); font-weight: 700; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fbfcfd;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .card p, .card li { font-size: 13.5px; color: var(--ink); }
+    .card ul { margin: 0; padding-left: 18px; }
+    code, .mono {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      background: #eef3f5;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef4f6; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .formula {
+      font-family: var(--mono);
+      background: #0f1c24;
+      color: #e8f4f4;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.55;
+    }
+    .callout {
+      border-left: 4px solid var(--teal);
+      background: var(--teal-soft);
+      padding: 12px 14px;
+      border-radius: 0 10px 10px 0;
+      font-size: 14px;
+    }
+    .warn {
+      border-left-color: var(--amber);
+      background: var(--amber-soft);
+    }
+    .priority {
+      counter-reset: pri;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .priority li {
+      counter-increment: pri;
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 10px;
+      align-items: start;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+    .priority li::before {
+      content: counter(pri);
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--slate);
+      color: #fff;
+      display: grid; place-items: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .split-path {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 800px) { .split-path { grid-template-columns: 1fr; } }
+    .path-a { border-top: 4px solid var(--coral); }
+    .path-b { border-top: 4px solid var(--teal); }
+    footer.note {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .dim-pill {
+      text-align: center;
+      border-radius: 10px;
+      padding: 10px 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .dim-pill span { display: block; font-weight: 500; color: var(--muted); font-size: 11px; margin-top: 4px; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,650&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div class="eyebrow">MATRIX · As-deployed architecture canvas</div>
+      <h1>How MATRIX runs a scenario</h1>
+      <p class="lede">
+        One unified SUMO kernel feeds five impact modules. The LLM parses and narrates;
+        it never invents numbers. This canvas mirrors the live stack: Vercel web + Hugging Face API,
+        Redis caches, and the Scenario v2 intervention model.
+      </p>
+      <div class="meta">
+        <span class="chip">Pilot: Iloilo City</span>
+        <span class="chip">LLM: Azure OpenAI gpt-5.4</span>
+        <span class="chip">Engine: Eclipse SUMO / TraCI</span>
+        <span class="chip">Budget: ≤ 90 s E2E</span>
+        <span class="chip">Glass-box: equation_id + datasets + confidence</span>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <a href="#map">System map</a>
+      <a href="#layers">Layers</a>
+      <a href="#submit">Scenario submit</a>
+      <a href="#sim">Simulation core</a>
+      <a href="#facility">School → demand</a>
+      <a href="#maps">Maps &amp; location</a>
+      <a href="#data">Data model</a>
+      <a href="#pipeline">Data pipeline</a>
+    </nav>
+
+    <section class="panel" id="map">
+      <h2>1. System architecture map</h2>
+      <p class="sub">Deployed topology: browser → FastAPI/WS → orchestrator + kernel → five modules → synthesis → progressive UI.</p>
+      <img class="overview-img" src="assets/matrix-architecture-overview.png" alt="MATRIX architecture overview diagram" />
+    </section>
+
+    <section class="panel" id="layers">
+      <h2>2. Layered stack (as built)</h2>
+      <p class="sub">Each layer’s job and the concrete packages that own it.</p>
+      <div class="layers">
+        <div class="layer client">
+          <div class="label">Client</div>
+          <div class="body">
+            <div class="box"><strong>apps/web</strong><span>Next.js 14 App Router</span></div>
+            <div class="box"><strong>ScenarioBuilder</strong><span>typed intervention → NL</span></div>
+            <div class="box"><strong>Mapbox + Deck.gl</strong><span>TripsLayer playback</span></div>
+            <div class="box"><strong>Summary / Analytics</strong><span>CR-010 plain language</span></div>
+            <div class="box"><strong>InspectDrawer</strong><span>glass-box provenance</span></div>
+          </div>
+        </div>
+        <div class="layer api">
+          <div class="label">API</div>
+          <div class="body">
+            <div class="box"><strong>POST /scenario</strong><span>parse + persist</span></div>
+            <div class="box"><strong>WS /simulate/{id}</strong><span>progressive stream</span></div>
+            <div class="box"><strong>GET /audit/{id}</strong><span>bias audit log</span></div>
+            <div class="box"><strong>auth + rate limit</strong><span>matrix_api/</span></div>
+          </div>
+        </div>
+        <div class="layer kernel">
+          <div class="label">Kernel</div>
+          <div class="body">
+            <div class="box"><strong>orchestrator.py</strong><span>NL → ScenarioSchema</span></div>
+            <div class="box"><strong>scenario.py</strong><span>v2 intervention dispatch</span></div>
+            <div class="box"><strong>runner.py</strong><span>TraCI delta simulate</span></div>
+            <div class="box"><strong>demand_delta.py</strong><span>BEH-4 facility gravity</span></div>
+            <div class="box"><strong>bias_auditor.py</strong><span>mode-share reweight</span></div>
+            <div class="box"><strong>synthesis.py</strong><span>cited BLUF narrative</span></div>
+          </div>
+        </div>
+        <div class="layer modules">
+          <div class="label">Modules</div>
+          <div class="body">
+            <div class="box"><strong>Behavioral</strong><span>BEH-1…4</span></div>
+            <div class="box"><strong>Ecological</strong><span>ECO-1…4</span></div>
+            <div class="box"><strong>Social</strong><span>SOC-1…3</span></div>
+            <div class="box"><strong>Economic</strong><span>ECON-1…3</span></div>
+            <div class="box"><strong>Societal</strong><span>SOCI-1…4</span></div>
+          </div>
+        </div>
+        <div class="layer data">
+          <div class="label">Data</div>
+          <div class="body">
+            <div class="box"><strong>Redis</strong><span>baseline · personas · traj cache</span></div>
+            <div class="box"><strong>Postgres / memory</strong><span>scenarios · runs · results</span></div>
+            <div class="box"><strong>ChromaDB</strong><span>GraphRAG corpus</span></div>
+            <div class="box"><strong>SUMO net + rou</strong><span>Iloilo OSM network</span></div>
+          </div>
+        </div>
+        <div class="layer deploy">
+          <div class="label">Deploy</div>
+          <div class="body">
+            <div class="box"><strong>Vercel</strong><span>frontend</span></div>
+            <div class="box"><strong>Hugging Face Spaces</strong><span>API + SUMO + Redis in Docker</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="submit">
+      <h2>3. What happens when the user submits a scenario</h2>
+      <p class="sub">End-to-end path from cockpit / ScenarioBuilder through WebSocket completion.</p>
+
+      <h3 style="margin-top:0">3.1 Input composition</h3>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Structured builder → NL sentence</h3>
+          <p><code>ScenarioBuilder.buildScenarioQuery</code> turns form state into a controlled English sentence:</p>
+          <ul>
+            <li><code>lane_closure</code> → “Close N lane(s) on &lt;LOC&gt;.”</li>
+            <li><code>full_closure</code> → “Fully close &lt;LOC&gt;.”</li>
+            <li><code>speed_change</code> → “Reduce speed to K km/h on &lt;LOC&gt;.”</li>
+            <li><code>capacity_change</code> → “Change capacity to P% on &lt;LOC&gt;.”</li>
+            <li><code>new_facility</code> → “Build a 3,000-seat school at Molo.”</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Cockpit free-text / presets</h3>
+          <p>Presets like <em>“What if we build a 3,000-seat school in Molo?”</em> post the same <code>POST /scenario</code> body.</p>
+          <p>Right-click “use location” inserts coordinates into the <strong>NL string</strong>, not structured GeoJSON (live UI reality).</p>
+        </div>
+      </div>
+
+      <h3>3.2 REST parse + persist</h3>
+      <ol>
+        <li><code>POST /scenario</code> with <code>{ query, input_type: "nl", geometry? }</code></li>
+        <li><code>annotate_query_with_gazetteer(query)</code> rewrites Hiligaynon / colloquial place names</li>
+        <li>GraphRAG <code>retrieve(query, top_k=3)</code> grounds the orchestrator</li>
+        <li>Azure OpenAI returns structured <code>ScenarioSchema</code>: intervention_type, location, parameters, description</li>
+        <li><code>db.save_scenario</code> stores <code>raw_input</code>, <code>parsed_params</code>, optional PostGIS <code>geometry</code></li>
+        <li>Client navigates to <code>/scenario/{id}</code> and opens the WebSocket</li>
+      </ol>
+
+      <h3>3.3 WebSocket event sequence (live contract)</h3>
+      <div class="flow" style="margin-bottom:14px">
+        <div class="step accept">ACCEPTED</div><span class="arrow">→</span>
+        <div class="step">[QUEUED]</div><span class="arrow">→</span>
+        <div class="step frame">PLAYBACK_FRAME×</div><span class="arrow">→</span>
+        <div class="step edge">EDGE_COUNTS</div><span class="arrow">→</span>
+        <div class="step dim">DIMENSION_RESULT×5</div><span class="arrow">→</span>
+        <div class="step syn">SYNTHESIS</div><span class="arrow">→</span>
+        <div class="step done">DONE</div>
+      </div>
+      <div class="callout">
+        Trajectory source: Redis <code>scenario:{id}:latest</code> if warm; else live <code>simulate(Scenario)</code>, then write-back (TTL ~7200s). Repeated runs can be &lt;1s.
+      </div>
+    </section>
+
+    <section class="panel" id="sim">
+      <h2>4. How the actual simulation works</h2>
+      <p class="sub">Two intervention families share one kernel: <strong>network edits</strong> vs <strong>demand edits</strong>.</p>
+
+      <div class="split-path">
+        <div class="card path-a">
+          <h3>Road interventions</h3>
+          <p><code>lane_closure</code> · <code>full_closure</code> · <code>speed_change</code> · <code>capacity_change</code></p>
+          <ol>
+            <li>Resolve affected SUMO edges (geometry → gazetteer → keyword → busy-edge fallback)</li>
+            <li><code>apply_intervention</code> issues TraCI edits (disallow lanes / setMaxSpeed / speed×factor proxy)</li>
+            <li>Existing demand re-routes around capacity loss</li>
+            <li>Modules score Δtrips vs Redis baseline <code>edge_counts</code></li>
+          </ol>
+        </div>
+        <div class="card path-b">
+          <h3>New facility (demand-only)</h3>
+          <p><code>new_facility</code> — school / market / terminal</p>
+          <ol>
+            <li><code>resolve_intervention_site</code> returns <code>([], "facility-demand")</code> — no corridor TraCI</li>
+            <li><code>prepare_facility_demand</code> builds BEH-4 gravity trip list</li>
+            <li><code>inject_facility_demand</code> adds ≤80 sample vehicles via <code>findRoute</code></li>
+            <li>BEH-4 exposes full demand total; other dims react to injected edge activity</li>
+          </ol>
+        </div>
+      </div>
+
+      <h3>Kernel simulate loop</h3>
+      <ol>
+        <li>Start SUMO TraCI on Iloilo <code>.net.xml</code> + route file</li>
+        <li>Apply intervention (or no-op for facilities)</li>
+        <li>Optionally inject facility vehicles</li>
+        <li>Step to <code>SIM_END</code> (default <strong>900 s</strong> AM-peak window)</li>
+        <li>Emit FCD frames + edgeData → <code>Trajectory{edge_counts, frames, meta}</code></li>
+        <li>Score five modules on that same trajectory vs baseline</li>
+        <li>Citation-guarded Azure synthesis → BLUF brief</li>
+      </ol>
+
+      <div class="grid-5" style="margin-top:14px">
+        <div class="dim-pill">Behavioral<span>Δtrips, V/C, BEH-4</span></div>
+        <div class="dim-pill">Ecological<span>CO₂e, PM, flood</span></div>
+        <div class="dim-pill">Social<span>equity, displacement</span></div>
+        <div class="dim-pill">Economic<span>land value, footfall</span></div>
+        <div class="dim-pill">Societal<span>heritage, health, walk</span></div>
+      </div>
+    </section>
+
+    <section class="panel" id="facility">
+      <h2>5. School example — seats → net+ traffic</h2>
+      <p class="sub">Exact BEH-4 translation used in production (<code>demand_delta.py</code> / <code>FACILITY_PROFILES</code>).</p>
+
+      <div class="callout warn" style="margin-bottom:14px">
+        Classification: user says “school” → orchestrator sets <code>intervention_type=new_facility</code>,
+        <code>parameters.facility_kind=school</code>, <code>parameters.capacity=&lt;seats&gt;</code>.
+        This is <strong>not</strong> a road geometry change.
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Facility</th><th>Capacity unit</th><th>trips_per_capacity</th><th>redirected_fraction</th><th>catchment</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>school</td><td>seat</td><td>0.9</td><td>0.8 (80% retargeted)</td><td>3,000 m</td></tr>
+          <tr><td>market</td><td>stall</td><td>1.2</td><td>0.6</td><td>2,000 m</td></tr>
+          <tr><td>terminal</td><td>bay</td><td>4.0</td><td>0.7</td><td>5,000 m</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3,000-seat school in Molo</h3>
+      <div class="formula">demand_trips_total = round(capacity × trips_per_capacity)
+                    = round(3000 × 0.9) = 2700 trips / AM window
+
+n_redirected = round(2700 × 0.8) = 2160   # shift from existing travel
+n_induced    = 2700 − 2160      =  540   # net-new (+) trips
+
+Origins: gravity sample d^(1−β), β=2.0, ring 100–3000 m around facility
+Dest:    facility centroid (map geometry → facility_lonlat → gazetteer "Molo")
+Modes:   ILOILO_MODE_SHARE (jeepney 50%, car 15%, motorcycle 15%, …)
+Inject:  ≤ 80 vehicles into live SUMO (latency sample; full 2700 still scored as BEH-4)
+Confidence: L (provisional uncalibrated gravity → directional only)</div>
+    </section>
+
+    <section class="panel" id="maps">
+      <h2>6. How the maps work &amp; how location is determined</h2>
+      <p class="sub">Mapbox base + Deck.gl overlays; location resolution is an ordered fallback chain.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Map surfaces</h3>
+          <ul>
+            <li><strong>Base:</strong> Mapbox GL, default view lon <code>122.56</code>, lat <code>10.72</code>, zoom 13, pitch 45°</li>
+            <li><strong>Clamp:</strong> Iloilo pilot bbox lng 122.48–122.62 · lat 10.64–10.79 · minZoom 11</li>
+            <li><strong>TripsLayer:</strong> animated agents from <code>PLAYBACK_FRAME</code></li>
+            <li><strong>Congestion:</strong> GeoJSON edges keyed by <code>edge_id</code> ← <code>EDGE_COUNTS</code></li>
+            <li><strong>Flood / confidence:</strong> static <code>public/layers/*.geojson</code></li>
+            <li><strong>Pin / camera:</strong> honest corridor midpoint, else <code>location_of_interest</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Location resolution priority</h3>
+          <ol class="priority">
+            <li><div><strong>Structured GeoJSON</strong> on <code>POST /scenario</code> (Point/Polygon). Centroid → edges via <code>geometry.resolve_geometry</code> or facility lon/lat.</div></li>
+            <li><div><strong>Hiligaynon gazetteer</strong> (<code>gazetteer_iloilo.json</code>): “Molo” → coords / <code>sumo_edge</code> / street alias.</div></li>
+            <li><div><strong>Street-name keyword</strong> scan against SUMO network edge names.</div></li>
+            <li><div><strong>Busy-edge fallback</strong> — deterministic hash into top-50 baseline edges; labeled honestly; no LoI pin.</div></li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:14px">
+        Kernel OSM bbox: <code>ILOILO_BBOX = (10.65, 122.50, 10.78, 122.61)</code> — lat_min, lon_min, lat_max, lon_max.
+        Facilities do not draw a corridor halo; the camera flies to gazetteer / map-drop LoI when available.
+      </div>
+    </section>
+
+    <section class="panel" id="data">
+      <h2>7. Data model (scenario → run → results)</h2>
+      <p class="sub">Persisted in Postgres+PostGIS when available; otherwise the in-memory fallback in <code>matrix_api/db.py</code>.</p>
+      <table>
+        <thead><tr><th>Entity</th><th>Key fields</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>scenarios</code></td>
+            <td><code>id</code>, <code>input_type</code> (nl|map), <code>raw_input</code>, <code>parsed_params</code> JSONB, <code>geometry</code></td>
+            <td>User intent + orchestrator parse</td>
+          </tr>
+          <tr>
+            <td><code>Scenario</code> (kernel)</td>
+            <td><code>intervention_type</code>, <code>location</code>, <code>geometry</code>, <code>parameters</code>, legacy <code>corridor</code>/<code>lanes_closed</code></td>
+            <td>Runtime intervention object</td>
+          </tr>
+          <tr>
+            <td><code>simulation_runs</code></td>
+            <td><code>scenario_id</code>, <code>status</code>, <code>duration_ms</code>, <code>agent_count</code>, <code>baseline_id</code></td>
+            <td>Run lifecycle + 90 s SLO</td>
+          </tr>
+          <tr>
+            <td><code>dimension_results</code></td>
+            <td><code>score</code>, <code>confidence</code>, <code>equation_id</code>, <code>input_dataset_ids</code>, ranges</td>
+            <td>Glass-box metrics per dimension</td>
+          </tr>
+          <tr>
+            <td><code>Trajectory</code></td>
+            <td><code>edge_counts</code>, <code>frames[]</code>, <code>meta</code> (applied, demand_delta, LoI, resolution)</td>
+            <td>Single shared simulated reality</td>
+          </tr>
+          <tr>
+            <td><code>bias_audit_log</code></td>
+            <td>mode_share vs ground truth, <code>max_delta</code>, reweighted</td>
+            <td>Public audit (PRD-F6)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3><code>parameters</code> by intervention</h3>
+      <table>
+        <thead><tr><th>Type</th><th>Parameters</th></tr></thead>
+        <tbody>
+          <tr><td>lane_closure</td><td><code>lanes_closed</code> (default 1)</td></tr>
+          <tr><td>speed_change</td><td><code>max_speed_kph</code> (default 30)</td></tr>
+          <tr><td>capacity_change</td><td><code>capacity_factor</code> (default 1.2) — speed proxy; SUMO cannot add lanes at runtime</td></tr>
+          <tr><td>new_facility</td><td><code>facility_kind</code>, <code>capacity</code> (required; no silent default)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel" id="pipeline">
+      <h2>8. Data pipeline &amp; warm caches</h2>
+      <p class="sub">Open-data ingest offline; hot path depends on Redis + startup warmers.</p>
+      <div class="grid-3">
+        <div class="card">
+          <h3>Offline / nightly</h3>
+          <ul>
+            <li><code>data/fetch/*</code> → raw OSM, CCHAIN, PSA, …</li>
+            <li>Build SUMO net + demand (<code>build_demand.py</code>)</li>
+            <li>Nightly baseline → Redis <code>baseline:iloilo:latest</code></li>
+            <li>GraphRAG corpus ingest → Chroma</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>API startup</h3>
+          <ul>
+            <li>Warm persona pool: generate → audit → reweight</li>
+            <li>Redis <code>personas:iloilo:v1</code> (+ audit key)</li>
+            <li>Ingest GraphRAG if empty</li>
+            <li>Health: <code>GET /health</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Per scenario</h3>
+          <ul>
+            <li>Parse + gazetteer + RAG</li>
+            <li>SUMO delta vs baseline</li>
+            <li>Cache traj <code>scenario:{id}:latest</code></li>
+            <li>Persist runs / results / audit</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="note">
+      Source of truth: as-built <code>app/</code> through CR-010/CR-011 · Companion markdown: <code>docs/architecture-canvas-matrix.md</code> · Equations: <code>docs/methods-matrix.md</code>
+    </footer>
+  </div>
+</body>
+</html>
